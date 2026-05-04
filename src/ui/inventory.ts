@@ -1,6 +1,7 @@
 import { ITEMS, stackSize } from "../data/items";
 import {
   carryCap,
+  eat,
   inventorySlotsUsed,
   pickUpAllFromFloor,
   pickUpFromFloor,
@@ -135,6 +136,8 @@ export function mountInventory(root: HTMLElement): void {
     }
     for (let i = fills.length; i < cap; i++) grid.appendChild(emptySlot());
 
+    const pantry = renderPantry(entries as [ItemId, number][]);
+
     root.appendChild(
       el("div", { class: "panel" }, [
         el("div", { class: "inv-head" }, [
@@ -151,6 +154,7 @@ export function mountInventory(root: HTMLElement): void {
           trashZone,
         ]),
         grid,
+        pantry,
         floorEntries.length > 0
           ? el("div", { class: "floor-pile" }, [
               el("div", { class: "floor-head" }, [
@@ -182,6 +186,39 @@ export function mountInventory(root: HTMLElement): void {
   render();
   store.subscribe(render);
   subscribeTrashMode(render);
+}
+
+function renderPantry(entries: [ItemId, number][]): HTMLElement | null {
+  const foods = entries.filter(([id]) => ITEMS[id]?.food);
+  if (foods.length === 0) return null;
+  return el("div", { class: "pantry" }, [
+    el("h3", {}, "Pantry"),
+    el("p", { class: "muted small" }, "Eat to refill your time-budget."),
+    el(
+      "div",
+      { class: "pantry-list" },
+      foods.map(([id, qty]) => {
+        const it = ITEMS[id]!;
+        const mins = it.food!.satiatesMinutes;
+        return el(
+          "button",
+          {
+            class: "eat-btn",
+            title: `Eat one ${it.name} (+${mins} min). You have ${qty}.`,
+            onclick: () => {
+              if (eat(id)) save();
+            },
+          },
+          [
+            el("span", { class: "icon" }, it.icon),
+            el("span", {}, `Eat ${it.name}`),
+            el("span", { class: "eat-mins" }, `+${mins}m`),
+            el("span", { class: "eat-qty" }, `×${qty}`),
+          ],
+        );
+      }),
+    ),
+  ]);
 }
 
 function renderFloorGrid(

@@ -8,6 +8,8 @@ export interface WanderOutcome {
 }
 
 export const WANDER_DURATION_MS = 5000;
+/** In-world minutes spent on a wander. Wandering is a real trek. */
+export const WANDER_ACTIVE_TIME = 90;
 
 // Foothills is weighted high so flint (and the first real toolkit) is
 // reliably reachable within a couple of wanders, even on an unlucky run.

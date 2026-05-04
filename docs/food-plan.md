@@ -64,7 +64,7 @@ free so the loop is never bricked.
 - No state schema changes. No UI changes (existing gather panel
   already renders ambient `GATHER_ACTIONS`).
 
-### Stage 2 — Hunger as time budget
+### Stage 2 — Hunger as time budget [done]
 
 - Add `timeBudget` (minutes remaining today) and `dayLength` (16h
   default) to `GameState`. Bump schemaVersion.
@@ -76,7 +76,7 @@ free so the loop is never bricked.
 - No gating yet. Just show the meter and let the player eat. This
   isolates the visualization work from the rules work.
 
-### Stage 3 — `activeTime` on actions; budget gating
+### Stage 3 — `activeTime` on actions; budget gating [done]
 
 - Add `activeTime` to `GatherAction`, `ResourceNode`, `Recipe`,
   `BiomeOutcome` etc. Migrate existing `baseDurationMs` / speedups to
@@ -88,7 +88,7 @@ free so the loop is never bricked.
 - At this point starvation gating is real: at 0 budget only food-tagged
   actions remain.
 
-### Stage 4 — Day length + Sleep
+### Stage 4 — Day length + Sleep [done]
 
 - Add `worldClock` (minutes since dawn of day N) and `dayNumber` to
   `GameState`. Active actions advance `worldClock` by their
