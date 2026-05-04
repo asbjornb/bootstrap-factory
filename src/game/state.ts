@@ -1,17 +1,25 @@
+import { BIOMES } from "../data/biomes";
 import { GATHER_ACTIONS } from "../data/gather";
 import { ITEMS, stackSize } from "../data/items";
 import { MACHINES } from "../data/machines";
+import { NODES } from "../data/nodes";
 import { ALL_QUESTS } from "../data/quests";
 import { RECIPES } from "../data/recipes";
 import type {
+  Biome,
+  BiomeId,
   Chest,
+  DropEntry,
   GatherAction,
   GatherId,
+  GatherSpeedup,
   ItemId,
   MachineId,
+  NodeId,
   QuestId,
   Recipe,
   RecipeId,
+  ResourceNode,
   Room,
   Stack,
   ToolRequirement,
@@ -25,11 +33,10 @@ export interface MachineJob {
   endsAt: number;
 }
 
-export interface GatherJob {
-  gatherId: GatherId;
-  startedAt: number;
-  endsAt: number;
-}
+export type ActionJob =
+  | { kind: "gather"; gatherId: GatherId; startedAt: number; endsAt: number }
+  | { kind: "harvest"; nodeId: NodeId; startedAt: number; endsAt: number }
+  | { kind: "explore"; biomeId: BiomeId; startedAt: number; endsAt: number };
 
 export interface GameState {
   schemaVersion: number;
@@ -37,7 +44,12 @@ export interface GameState {
   /** Items that overflowed when the player's inventory was full. Workshop floor pile. */
   floor: Record<ItemId, number>;
   jobs: MachineJob[];
-  gatherJob: GatherJob | null;
+  /** The single foreground gather/harvest/explore action in progress, if any. */
+  actionJob: ActionJob | null;
+  /** Charges remaining on each discovered resource node. Hidden when 0. */
+  nodeCharges: Record<NodeId, number>;
+  /** Last exploration outcome message — surfaced in the UI for one explore. */
+  lastExploreMessage: string | null;
   rooms: Room[];
   /** Machines the player has ever finished crafting. Gates "you know what this rock is for". */
   everBuilt: Record<MachineId, boolean>;
@@ -45,7 +57,7 @@ export interface GameState {
   pinnedRecipes: RecipeId[];
 }
 
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 
 /** Slots in the player's bare-hands inventory before any carry-gear bonus. */
 export const BASE_CARRY_SLOTS = 8;
@@ -65,7 +77,9 @@ export function emptyState(): GameState {
     inventory: {},
     floor: {},
     jobs: [],
-    gatherJob: null,
+    actionJob: null,
+    nodeCharges: {},
+    lastExploreMessage: null,
     rooms: [{ id: "room-starter", name: "Workshop", machines: {}, chests: [] }],
     everBuilt: {},
     completedQuests: [],
@@ -94,7 +108,8 @@ class Store {
       inventory: { ...this.state.inventory },
       floor: { ...this.state.floor },
       jobs: [...this.state.jobs],
-      gatherJob: this.state.gatherJob ? { ...this.state.gatherJob } : null,
+      actionJob: this.state.actionJob ? { ...this.state.actionJob } : null,
+      nodeCharges: { ...this.state.nodeCharges },
       rooms: this.state.rooms.map((r) => ({
         ...r,
         machines: { ...r.machines },
@@ -385,8 +400,8 @@ export function craft(recipeId: RecipeId): CraftResult {
 export function tickJobs(now: number = Date.now()): boolean {
   const s = store.get();
   const machineDue = s.jobs.some((j) => j.endsAt <= now);
-  const gatherDue = s.gatherJob !== null && s.gatherJob.endsAt <= now;
-  if (!machineDue && !gatherDue) return false;
+  const actionDue = s.actionJob !== null && s.actionJob.endsAt <= now;
+  if (!machineDue && !actionDue) return false;
   store.update((draft) => {
     const remaining: MachineJob[] = [];
     for (const j of draft.jobs) {
@@ -398,10 +413,9 @@ export function tickJobs(now: number = Date.now()): boolean {
       }
     }
     draft.jobs = remaining;
-    if (draft.gatherJob && draft.gatherJob.endsAt <= now) {
-      const action = GATHER_ACTIONS[draft.gatherJob.gatherId];
-      if (action) applyGatherDrops(draft, action);
-      draft.gatherJob = null;
+    if (draft.actionJob && draft.actionJob.endsAt <= now) {
+      finishActionJob(draft, draft.actionJob);
+      draft.actionJob = null;
     }
   });
   return true;
@@ -415,10 +429,14 @@ export function startTickLoop(intervalMs = 200): () => void {
   return () => clearInterval(handle);
 }
 
-/** Duration of a gather action given the player's current tools. */
-export function gatherDuration(state: GameState, action: GatherAction): number {
-  let best = action.baseDurationMs;
-  for (const sp of action.speedups ?? []) {
+/** Best (shortest) duration among matching speedups, or base if none match. */
+function speedupDuration(
+  state: GameState,
+  baseMs: number,
+  speedups: GatherSpeedup[] | undefined,
+): number {
+  let best = baseMs;
+  for (const sp of speedups ?? []) {
     if (bestToolTier(state, sp.type) >= sp.minTier && sp.durationMs < best) {
       best = sp.durationMs;
     }
@@ -426,38 +444,139 @@ export function gatherDuration(state: GameState, action: GatherAction): number {
   return best;
 }
 
-function applyGatherDrops(state: GameState, action: GatherAction): void {
+/** Duration of a gather action given the player's current tools. */
+export function gatherDuration(state: GameState, action: GatherAction): number {
+  return speedupDuration(state, action.baseDurationMs, action.speedups);
+}
+
+/** Duration of harvesting a node given the player's current tools. */
+export function nodeHarvestDuration(state: GameState, node: ResourceNode): number {
+  return speedupDuration(state, node.baseDurationMs, node.speedups);
+}
+
+function rollDrops(state: GameState, drops: DropEntry[]): Record<ItemId, number> {
   const got: Record<ItemId, number> = {};
-  for (const drop of action.drops) {
+  for (const drop of drops) {
     if (!meetsToolReq(state, drop.requiresTool)) continue;
     if (drop.requiresMachineEverBuilt && !state.everBuilt[drop.requiresMachineEverBuilt]) continue;
     if (Math.random() > drop.chance) continue;
     const qty = randInt(drop.qty[0], drop.qty[1]);
     got[drop.item] = (got[drop.item] ?? 0) + qty;
   }
+  return got;
+}
+
+function applyDrops(state: GameState, drops: DropEntry[]): void {
+  const got = rollDrops(state, drops);
   for (const [item, qty] of Object.entries(got)) add(state, item, qty);
 }
 
-export interface GatherResult {
-  ok: boolean;
-  reason?: "busy" | "unknown";
+function finishActionJob(state: GameState, job: ActionJob): void {
+  if (job.kind === "gather") {
+    const action = GATHER_ACTIONS[job.gatherId];
+    if (action) applyDrops(state, action.drops);
+  } else if (job.kind === "harvest") {
+    const node = NODES[job.nodeId];
+    if (!node) return;
+    // Charges already debited at start of harvest; just apply drops.
+    applyDrops(state, node.drops);
+  } else {
+    const biome = BIOMES[job.biomeId];
+    if (!biome) return;
+    const outcome = pickOutcome(biome);
+    if (!outcome) return;
+    state.lastExploreMessage = outcome.message;
+    for (const c of outcome.charges) {
+      const qty = randInt(c.qty[0], c.qty[1]);
+      state.nodeCharges[c.node] = (state.nodeCharges[c.node] ?? 0) + qty;
+    }
+  }
 }
 
-export function gather(actionId: GatherId): GatherResult {
+function pickOutcome(biome: Biome): Biome["outcomes"][number] | null {
+  const total = biome.outcomes.reduce((n, o) => n + o.weight, 0);
+  if (total <= 0) return null;
+  let roll = Math.random() * total;
+  for (const o of biome.outcomes) {
+    roll -= o.weight;
+    if (roll <= 0) return o;
+  }
+  return biome.outcomes[biome.outcomes.length - 1] ?? null;
+}
+
+export interface ActionResult {
+  ok: boolean;
+  reason?: "busy" | "unknown" | "no_charges" | "missing_tool";
+}
+
+export function gather(actionId: GatherId): ActionResult {
   const action = GATHER_ACTIONS[actionId];
   if (!action) return { ok: false, reason: "unknown" };
-  let result: GatherResult = { ok: false };
+  let result: ActionResult = { ok: false };
   store.update((s) => {
-    if (s.gatherJob) {
+    if (s.actionJob) {
       result = { ok: false, reason: "busy" };
       return;
     }
     const dur = gatherDuration(s, action);
     if (dur <= 0) {
-      applyGatherDrops(s, action);
+      applyDrops(s, action.drops);
     } else {
       const now = Date.now();
-      s.gatherJob = { gatherId: action.id, startedAt: now, endsAt: now + dur };
+      s.actionJob = { kind: "gather", gatherId: action.id, startedAt: now, endsAt: now + dur };
+    }
+    result = { ok: true };
+  });
+  return result;
+}
+
+export function harvestNode(nodeId: NodeId): ActionResult {
+  const node = NODES[nodeId];
+  if (!node) return { ok: false, reason: "unknown" };
+  let result: ActionResult = { ok: false };
+  store.update((s) => {
+    if (s.actionJob) {
+      result = { ok: false, reason: "busy" };
+      return;
+    }
+    if ((s.nodeCharges[nodeId] ?? 0) <= 0) {
+      result = { ok: false, reason: "no_charges" };
+      return;
+    }
+    if (!meetsToolReq(s, node.requiresTool)) {
+      result = { ok: false, reason: "missing_tool" };
+      return;
+    }
+    s.nodeCharges[nodeId] = (s.nodeCharges[nodeId] ?? 0) - 1;
+    if (s.nodeCharges[nodeId]! <= 0) delete s.nodeCharges[nodeId];
+    const dur = nodeHarvestDuration(s, node);
+    if (dur <= 0) {
+      applyDrops(s, node.drops);
+    } else {
+      const now = Date.now();
+      s.actionJob = { kind: "harvest", nodeId, startedAt: now, endsAt: now + dur };
+    }
+    result = { ok: true };
+  });
+  return result;
+}
+
+export function exploreBiome(biomeId: BiomeId): ActionResult {
+  const biome = BIOMES[biomeId];
+  if (!biome) return { ok: false, reason: "unknown" };
+  let result: ActionResult = { ok: false };
+  store.update((s) => {
+    if (s.actionJob) {
+      result = { ok: false, reason: "busy" };
+      return;
+    }
+    s.lastExploreMessage = null;
+    const dur = biome.exploreDurationMs;
+    if (dur <= 0) {
+      finishActionJob(s, { kind: "explore", biomeId, startedAt: 0, endsAt: 0 });
+    } else {
+      const now = Date.now();
+      s.actionJob = { kind: "explore", biomeId, startedAt: now, endsAt: now + dur };
     }
     result = { ok: true };
   });
@@ -783,7 +902,9 @@ export function load(): void {
     if (!Array.isArray(parsed.rooms)) parsed.rooms = [];
     if (!Array.isArray(parsed.completedQuests)) parsed.completedQuests = [];
     if (!Array.isArray(parsed.pinnedRecipes)) parsed.pinnedRecipes = [];
-    if (parsed.gatherJob === undefined) parsed.gatherJob = null;
+    if (parsed.actionJob === undefined) parsed.actionJob = null;
+    if (!parsed.nodeCharges || typeof parsed.nodeCharges !== "object") parsed.nodeCharges = {};
+    if (parsed.lastExploreMessage === undefined) parsed.lastExploreMessage = null;
     if (!parsed.everBuilt || typeof parsed.everBuilt !== "object") parsed.everBuilt = {};
     for (const r of parsed.rooms) {
       if (!Array.isArray(r.chests)) r.chests = [];

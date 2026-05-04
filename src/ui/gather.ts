@@ -1,84 +1,53 @@
+import { ALL_BIOMES } from "../data/biomes";
 import { ALL_GATHER_ACTIONS } from "../data/gather";
 import { ITEMS } from "../data/items";
 import { MACHINES } from "../data/machines";
-import { bestToolTier, gather, gatherDuration, onTick, store } from "../game/state";
+import { ALL_NODES } from "../data/nodes";
+import {
+  bestToolTier,
+  exploreBiome,
+  gather,
+  gatherDuration,
+  harvestNode,
+  nodeHarvestDuration,
+  onTick,
+  store,
+} from "../game/state";
+import type { Biome, GatherAction, ResourceNode } from "../data/types";
 import { clear, el } from "./dom";
 
 export function mountGather(root: HTMLElement): void {
   const render = () => {
     const s = store.get();
-    const active = s.gatherJob;
+    const job = s.actionJob;
+    const busy = job !== null;
     clear(root);
+
+    const cards: (HTMLElement | null)[] = [];
+
+    // Always-on gather actions (Forage, Turn Soil, Quarry).
+    for (const a of ALL_GATHER_ACTIONS) {
+      cards.push(renderGatherCard(a, s, busy, job));
+    }
+
+    // Biome explore + currently-charged node cards.
+    for (const biome of ALL_BIOMES) {
+      cards.push(renderExploreCard(biome, s, busy, job));
+      for (const node of ALL_NODES) {
+        if (node.biome !== biome.id) continue;
+        const charges = s.nodeCharges[node.id] ?? 0;
+        if (charges <= 0) continue;
+        cards.push(renderNodeCard(node, charges, s, busy, job));
+      }
+    }
+
     root.appendChild(
       el("div", { class: "panel" }, [
         el("h2", {}, "Gather"),
-        el(
-          "div",
-          { class: "gather-grid" },
-          ALL_GATHER_ACTIONS.map((a) => {
-            const toolLocked = new Set<string>();
-            const machineLocked = new Map<string, Set<string>>();
-            for (const d of a.drops) {
-              const itemName = ITEMS[d.item]!.name;
-              if (d.requiresTool && bestToolTier(s, d.requiresTool.type) < d.requiresTool.minTier) {
-                toolLocked.add(itemName);
-              }
-              const gate = d.requiresMachineEverBuilt;
-              if (gate && !s.everBuilt[gate]) {
-                if (!machineLocked.has(gate)) machineLocked.set(gate, new Set());
-                machineLocked.get(gate)!.add(itemName);
-              }
-            }
-            const dur = gatherDuration(s, a);
-            const isThisActive = active?.gatherId === a.id;
-            const otherBusy = active !== null && !isThisActive;
-            return el("div", { class: "gather-card" }, [
-              el(
-                "button",
-                {
-                  class: "gather-btn",
-                  disabled: active !== null,
-                  title: otherBusy
-                    ? "Another gather action is in progress"
-                    : `Takes ${formatDuration(dur)}`,
-                  onclick: (ev: Event) => {
-                    const btn = ev.currentTarget as HTMLElement;
-                    btn.classList.add("flash");
-                    requestAnimationFrame(() => {
-                      setTimeout(() => gather(a.id), 60);
-                    });
-                  },
-                },
-                [el("span", { class: "icon big" }, a.icon), el("span", {}, a.name)],
-              ),
-              isThisActive
-                ? el("div", { class: "gather-progress" }, [
-                    el("div", {
-                      class: "gather-progress-fill",
-                      style: `width: ${progressPct(active.startedAt, active.endsAt)}%`,
-                      "data-start": String(active.startedAt),
-                      "data-end": String(active.endsAt),
-                    }),
-                  ])
-                : el("p", { class: "muted small" }, `⏱ ${formatDuration(dur)}`),
-              el("p", { class: "muted small" }, a.description ?? ""),
-              ...Array.from(machineLocked.entries()).map(([machineId, items]) =>
-                el(
-                  "p",
-                  { class: "small" },
-                  `Build a ${MACHINES[machineId]?.name ?? machineId} and you'll start collecting: ${Array.from(items).join(", ")}.`,
-                ),
-              ),
-              toolLocked.size > 0
-                ? el(
-                    "p",
-                    { class: "small" },
-                    `Better tools could yield more: ${Array.from(toolLocked).join(", ")}.`,
-                  )
-                : null,
-            ]);
-          }),
-        ),
+        s.lastExploreMessage
+          ? el("p", { class: "small explore-msg" }, s.lastExploreMessage)
+          : null,
+        el("div", { class: "gather-grid" }, cards),
       ]),
     );
   };
@@ -91,6 +60,173 @@ export function mountGather(root: HTMLElement): void {
       if (!start || !end) continue;
       bar.style.width = `${progressPct(start, end)}%`;
     }
+  });
+}
+
+function renderGatherCard(
+  a: GatherAction,
+  s: ReturnType<typeof store.get>,
+  busy: boolean,
+  job: ReturnType<typeof store.get>["actionJob"],
+): HTMLElement {
+  const toolLocked = new Set<string>();
+  const machineLocked = new Map<string, Set<string>>();
+  for (const d of a.drops) {
+    const itemName = ITEMS[d.item]!.name;
+    if (d.requiresTool && bestToolTier(s, d.requiresTool.type) < d.requiresTool.minTier) {
+      toolLocked.add(itemName);
+    }
+    const gate = d.requiresMachineEverBuilt;
+    if (gate && !s.everBuilt[gate]) {
+      if (!machineLocked.has(gate)) machineLocked.set(gate, new Set());
+      machineLocked.get(gate)!.add(itemName);
+    }
+  }
+  const dur = gatherDuration(s, a);
+  const isThisActive = job?.kind === "gather" && job.gatherId === a.id;
+  return el("div", { class: "gather-card" }, [
+    el(
+      "button",
+      {
+        class: "gather-btn",
+        disabled: busy,
+        title:
+          busy && !isThisActive
+            ? "Another action is in progress"
+            : `Takes ${formatDuration(dur)}`,
+        onclick: (ev: Event) => flashThen(ev, () => gather(a.id)),
+      },
+      [el("span", { class: "icon big" }, a.icon), el("span", {}, a.name)],
+    ),
+    isThisActive
+      ? renderProgressBar(job!.startedAt, job!.endsAt)
+      : el("p", { class: "muted small" }, `⏱ ${formatDuration(dur)}`),
+    el("p", { class: "muted small" }, a.description ?? ""),
+    ...Array.from(machineLocked.entries()).map(([machineId, items]) =>
+      el(
+        "p",
+        { class: "small" },
+        `Build a ${MACHINES[machineId]?.name ?? machineId} and you'll start collecting: ${Array.from(items).join(", ")}.`,
+      ),
+    ),
+    toolLocked.size > 0
+      ? el(
+          "p",
+          { class: "small" },
+          `Better tools could yield more: ${Array.from(toolLocked).join(", ")}.`,
+        )
+      : null,
+  ]);
+}
+
+function renderExploreCard(
+  biome: Biome,
+  _s: ReturnType<typeof store.get>,
+  busy: boolean,
+  job: ReturnType<typeof store.get>["actionJob"],
+): HTMLElement {
+  const dur = biome.exploreDurationMs;
+  const isThisActive = job?.kind === "explore" && job.biomeId === biome.id;
+  return el("div", { class: "gather-card explore-card" }, [
+    el(
+      "button",
+      {
+        class: "gather-btn",
+        disabled: busy,
+        title:
+          busy && !isThisActive
+            ? "Another action is in progress"
+            : `Takes ${formatDuration(dur)}`,
+        onclick: (ev: Event) => flashThen(ev, () => exploreBiome(biome.id)),
+      },
+      [
+        el("span", { class: "icon big" }, biome.icon),
+        el("span", {}, `Explore ${biome.name}`),
+      ],
+    ),
+    isThisActive
+      ? renderProgressBar(job!.startedAt, job!.endsAt)
+      : el("p", { class: "muted small" }, `⏱ ${formatDuration(dur)}`),
+    el("p", { class: "muted small" }, biome.description ?? ""),
+  ]);
+}
+
+function renderNodeCard(
+  node: ResourceNode,
+  charges: number,
+  s: ReturnType<typeof store.get>,
+  busy: boolean,
+  job: ReturnType<typeof store.get>["actionJob"],
+): HTMLElement {
+  const dur = nodeHarvestDuration(s, node);
+  const isThisActive = job?.kind === "harvest" && job.nodeId === node.id;
+  const toolOk = !node.requiresTool || bestToolTier(s, node.requiresTool.type) >= node.requiresTool.minTier;
+  const disabled = busy || !toolOk;
+  const title = !toolOk
+    ? `Needs ${node.requiresTool!.type} (tier ≥ ${node.requiresTool!.minTier})`
+    : busy && !isThisActive
+      ? "Another action is in progress"
+      : `Takes ${formatDuration(dur)} · ${charges} charge${charges === 1 ? "" : "s"} left`;
+
+  const toolLocked = new Set<string>();
+  for (const d of node.drops) {
+    if (d.requiresTool && bestToolTier(s, d.requiresTool.type) < d.requiresTool.minTier) {
+      toolLocked.add(ITEMS[d.item]!.name);
+    }
+  }
+
+  return el("div", { class: "gather-card node-card" }, [
+    el(
+      "button",
+      {
+        class: "gather-btn",
+        disabled,
+        title,
+        onclick: (ev: Event) => flashThen(ev, () => harvestNode(node.id)),
+      },
+      [
+        el("span", { class: "icon big" }, node.icon),
+        el("span", {}, node.name),
+        el("span", { class: "node-charges", title: "Charges left" }, `×${charges}`),
+      ],
+    ),
+    isThisActive
+      ? renderProgressBar(job!.startedAt, job!.endsAt)
+      : el("p", { class: "muted small" }, `⏱ ${formatDuration(dur)}`),
+    el("p", { class: "muted small" }, node.description ?? ""),
+    !toolOk
+      ? el(
+          "p",
+          { class: "small" },
+          `Needs ${node.requiresTool!.type} (tier ≥ ${node.requiresTool!.minTier}).`,
+        )
+      : null,
+    toolLocked.size > 0
+      ? el(
+          "p",
+          { class: "small" },
+          `Better tools could yield more: ${Array.from(toolLocked).join(", ")}.`,
+        )
+      : null,
+  ]);
+}
+
+function renderProgressBar(startedAt: number, endsAt: number): HTMLElement {
+  return el("div", { class: "gather-progress" }, [
+    el("div", {
+      class: "gather-progress-fill",
+      style: `width: ${progressPct(startedAt, endsAt)}%`,
+      "data-start": String(startedAt),
+      "data-end": String(endsAt),
+    }),
+  ]);
+}
+
+function flashThen(ev: Event, fn: () => void): void {
+  const btn = ev.currentTarget as HTMLElement;
+  btn.classList.add("flash");
+  requestAnimationFrame(() => {
+    setTimeout(fn, 60);
   });
 }
 

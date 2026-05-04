@@ -3,6 +3,7 @@ import type { Item, ItemId } from "./types";
 const list: Item[] = [
   // raw / woodland
   { id: "log", name: "Log", icon: "🪵", description: "A rough length of split wood from a felled tree." },
+  { id: "stick", name: "Stick", icon: "🥢", description: "A handful of dry sticks pulled from the brush. Whittles into rough hafts." },
   { id: "plant_fiber", name: "Plant Fiber", icon: "🌿", description: "Tough strands of grass and bark. Twists into cordage." },
   { id: "resin", name: "Resin", icon: "💧", description: "Sticky tree sap. Useful, eventually." },
 
