@@ -308,6 +308,69 @@ body {
 .inv-cap.full {
   color: var(--bad);
 }
+
+/* slot grid (inventory + chests + floor pile) */
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), 1fr);
+  gap: 4px;
+}
+.slot {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 60ms ease, background-color 60ms ease, transform 60ms ease;
+  user-select: none;
+}
+.slot:hover {
+  border-color: var(--accent);
+}
+.slot:active {
+  transform: translateY(1px);
+}
+.slot.empty {
+  background: rgba(0, 0, 0, 0.2);
+  cursor: default;
+  border-style: dashed;
+}
+.slot.empty:hover {
+  border-color: var(--border);
+}
+.slot .slot-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+.slot .slot-qty {
+  position: absolute;
+  right: 2px;
+  bottom: 1px;
+  font-size: 11px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+.slot.floor {
+  border-color: var(--bad);
+  background: var(--panel-2);
+}
+.slot.floor .slot-qty {
+  color: var(--bad);
+}
+body.trash-armed .slot:not(.empty) {
+  outline: 1px dashed var(--bad);
+  outline-offset: -1px;
+}
+body.trash-armed .slot:not(.empty):hover {
+  background: rgba(201, 122, 108, 0.15);
+}
+
 .trash-zone {
   display: inline-flex;
   align-items: center;

@@ -7,6 +7,7 @@ import {
   save,
   store,
 } from "../game/state";
+import type { ItemId } from "../data/types";
 import { clear, el } from "./dom";
 import { selectItem } from "./recipe-index";
 import {
@@ -14,15 +15,71 @@ import {
   isTrashMode,
   makeDraggable,
   subscribeTrashMode,
+  TrashSource,
   wireTrashTarget,
 } from "./trash-drag";
+
+interface SlotFill {
+  id: ItemId;
+  qty: number;
+}
+
+/** Expand item totals into per-slot fills (one entry per slot). */
+function explodeToSlots(entries: Array<[ItemId, number]>): SlotFill[] {
+  const out: SlotFill[] = [];
+  for (const [id, total] of entries) {
+    let remaining = total;
+    const stack = stackSize(id);
+    while (remaining > 0) {
+      const take = Math.min(remaining, stack);
+      out.push({ id, qty: take });
+      remaining -= take;
+    }
+  }
+  return out;
+}
+
+interface SlotOptions {
+  /** "" if not draggable. */
+  drag?: TrashSource;
+  /** Hover title. Receives item, total qty across the same item-type, slot qty. */
+  title: (id: ItemId, totalQty: number, slotQty: number) => string;
+  onClick: (id: ItemId) => void;
+  extraClass?: string;
+}
+
+function renderSlot(
+  fill: SlotFill,
+  totalQty: number,
+  opts: SlotOptions,
+): HTMLElement {
+  const it = ITEMS[fill.id]!;
+  const slot = el(
+    "div",
+    {
+      class: "slot" + (opts.extraClass ? ` ${opts.extraClass}` : ""),
+      title: opts.title(fill.id, totalQty, fill.qty),
+      onclick: () => opts.onClick(fill.id),
+    },
+    [
+      el("span", { class: "slot-icon" }, it.icon),
+      el("span", { class: "slot-qty" }, String(fill.qty)),
+    ],
+  );
+  if (opts.drag) makeDraggable(slot, opts.drag);
+  return slot;
+}
+
+function emptySlot(): HTMLElement {
+  return el("div", { class: "slot empty" });
+}
 
 export function mountInventory(root: HTMLElement): void {
   const render = () => {
     const s = store.get();
-    const entries = Object.entries(s.inventory).sort((a, b) =>
-      ITEMS[a[0]]!.name.localeCompare(ITEMS[b[0]]!.name),
-    );
+    const entries = Object.entries(s.inventory)
+      .filter(([, q]) => q > 0)
+      .sort((a, b) => ITEMS[a[0]]!.name.localeCompare(ITEMS[b[0]]!.name));
     const used = inventorySlotsUsed(s);
     const cap = carryCap(s);
     const full = used >= cap;
@@ -50,6 +107,34 @@ export function mountInventory(root: HTMLElement): void {
     );
     wireTrashTarget(trashZone);
 
+    const totals = new Map<ItemId, number>(entries as [ItemId, number][]);
+    const fills = explodeToSlots(entries as [ItemId, number][]);
+
+    const grid = el("div", { class: "slot-grid", style: "--cols: 4" });
+    for (const f of fills) {
+      grid.appendChild(
+        renderSlot(f, totals.get(f.id)!, {
+          drag: { source: "inventory", itemId: f.id },
+          title: (id, total, slotQty) => {
+            const it = ITEMS[id]!;
+            return armed
+              ? `Tap to discard ${total}× ${it.name}`
+              : `${it.name} — ${slotQty}${
+                  total !== slotQty ? ` (of ${total})` : ""
+                } — click to open in Recipe Index, or drag to trash`;
+          },
+          onClick: (id) => {
+            if (isTrashMode()) {
+              if (applyTrash({ source: "inventory", itemId: id })) save();
+              return;
+            }
+            selectItem(id);
+          },
+        }),
+      );
+    }
+    for (let i = fills.length; i < cap; i++) grid.appendChild(emptySlot());
+
     root.appendChild(
       el("div", { class: "panel" }, [
         el("div", { class: "inv-head" }, [
@@ -58,46 +143,14 @@ export function mountInventory(root: HTMLElement): void {
             "span",
             {
               class: "inv-cap small" + (full ? " full" : ""),
-              title: "Slots used / total carry capacity. Each item type uses at least one slot; bigger stacks need more.",
+              title:
+                "Slots used / total carry capacity. Each item type uses at least one slot; bigger stacks need more.",
             },
             `${used} / ${cap} slots`,
           ),
           trashZone,
         ]),
-        entries.length === 0
-          ? el("p", { class: "muted" }, "Empty. Try gathering something.")
-          : el(
-              "ul",
-              { class: "inventory-list" },
-              entries.map(([id, qty]) => {
-                const it = ITEMS[id]!;
-                const stack = stackSize(id);
-                const slots = Math.ceil(qty / stack);
-                const row = el(
-                  "li",
-                  {
-                    class: "inv-row",
-                    title: armed
-                      ? `Tap to discard ${qty}× ${it.name}`
-                      : `${it.name} — ${qty} (${slots} slot${slots === 1 ? "" : "s"} of ${stack}) — click to open in Recipe Index, or drag to trash`,
-                    onclick: () => {
-                      if (isTrashMode()) {
-                        if (applyTrash({ source: "inventory", itemId: id })) save();
-                        return;
-                      }
-                      selectItem(id);
-                    },
-                  },
-                  [
-                    el("span", { class: "icon" }, it.icon),
-                    el("span", { class: "name" }, it.name),
-                    el("span", { class: "qty" }, String(qty)),
-                  ],
-                );
-                makeDraggable(row, { source: "inventory", itemId: id });
-                return row;
-              }),
-            ),
+        grid,
         floorEntries.length > 0
           ? el("div", { class: "floor-pile" }, [
               el("div", { class: "floor-head" }, [
@@ -120,37 +173,7 @@ export function mountInventory(root: HTMLElement): void {
                 { class: "muted small" },
                 "Stuff that didn't fit in your pockets. Build a crate, free up some slots, or pick it back up.",
               ),
-              el(
-                "ul",
-                { class: "inventory-list" },
-                floorEntries.map(([id, qty]) => {
-                  const it = ITEMS[id]!;
-                  const row = el(
-                    "li",
-                    {
-                      class: "inv-row floor-row",
-                      title: armed
-                        ? `Tap to discard ${qty}× ${it.name}`
-                        : `Click to pick up ${qty}× ${it.name}, or drag to trash`,
-                      onclick: () => {
-                        if (isTrashMode()) {
-                          if (applyTrash({ source: "floor", itemId: id })) save();
-                          return;
-                        }
-                        pickUpFromFloor(id);
-                        save();
-                      },
-                    },
-                    [
-                      el("span", { class: "icon" }, it.icon),
-                      el("span", { class: "name" }, it.name),
-                      el("span", { class: "qty" }, String(qty)),
-                    ],
-                  );
-                  makeDraggable(row, { source: "floor", itemId: id });
-                  return row;
-                }),
-              ),
+              renderFloorGrid(floorEntries as [ItemId, number][], armed),
             ])
           : null,
       ]),
@@ -159,4 +182,36 @@ export function mountInventory(root: HTMLElement): void {
   render();
   store.subscribe(render);
   subscribeTrashMode(render);
+}
+
+function renderFloorGrid(
+  entries: [ItemId, number][],
+  armed: boolean,
+): HTMLElement {
+  const totals = new Map<ItemId, number>(entries);
+  const fills = explodeToSlots(entries);
+  const grid = el("div", { class: "slot-grid", style: "--cols: 4" });
+  for (const f of fills) {
+    grid.appendChild(
+      renderSlot(f, totals.get(f.id)!, {
+        extraClass: "floor",
+        drag: { source: "floor", itemId: f.id },
+        title: (id, total) => {
+          const it = ITEMS[id]!;
+          return armed
+            ? `Tap to discard ${total}× ${it.name}`
+            : `Click to pick up ${total}× ${it.name}, or drag to trash`;
+        },
+        onClick: (id) => {
+          if (isTrashMode()) {
+            if (applyTrash({ source: "floor", itemId: id })) save();
+            return;
+          }
+          pickUpFromFloor(id);
+          save();
+        },
+      }),
+    );
+  }
+  return grid;
 }

@@ -242,53 +242,7 @@ function renderChest(roomId: string, chest: Chest): HTMLElement {
         "↑",
       ),
     ]),
-    stored.length === 0
-      ? el("p", { class: "muted small chest-empty" }, "Empty.")
-      : el(
-          "ul",
-          { class: "chest-contents" },
-          stored.map(([id, qty]) => {
-            const it = ITEMS[id]!;
-            const armed = isTrashMode();
-            const row = el(
-              "li",
-              {
-                class: "chest-row",
-                title: armed
-                  ? `Tap to discard ${qty}× ${it.name}`
-                  : `Click to withdraw ${qty}× ${it.name}, or drag to trash`,
-                onclick: () => {
-                  if (isTrashMode()) {
-                    if (
-                      applyTrash({
-                        source: "chest",
-                        itemId: id,
-                        roomId,
-                        chestId: chest.id,
-                      })
-                    )
-                      save();
-                    return;
-                  }
-                  if (withdrawFromChest(roomId, chest.id, id)) save();
-                },
-              },
-              [
-                el("span", { class: "icon" }, it.icon),
-                el("span", { class: "name" }, it.name),
-                el("span", { class: "qty" }, String(qty)),
-                el("span", { class: "withdraw-arrow small muted" }, "↑"),
-              ],
-            );
-            makeDraggable(row, {
-              source: "chest",
-              itemId: id,
-              roomId,
-              chestId: chest.id,
-            });
-            return row;
-          }),
-        ),
+    renderChestSlotGrid(roomId, chest, stored, cap),
     depositable.length > 0
       ? el("div", { class: "chest-deposit-row" }, [
           el("span", { class: "small muted" }, "Deposit:"),
@@ -313,4 +267,74 @@ function renderChest(roomId: string, chest: Chest): HTMLElement {
         ])
       : null,
   ]);
+}
+
+function renderChestSlotGrid(
+  roomId: string,
+  chest: Chest,
+  stored: [string, number][],
+  cap: number,
+): HTMLElement {
+  if (stored.length === 0) {
+    const grid = el("div", { class: "slot-grid", style: "--cols: 4" });
+    for (let i = 0; i < cap; i++) grid.appendChild(el("div", { class: "slot empty" }));
+    return grid;
+  }
+  const armed = isTrashMode();
+  const fills: { id: ItemId; qty: number }[] = [];
+  const totals = new Map<ItemId, number>();
+  for (const [id, total] of stored) {
+    totals.set(id, total);
+    let remaining = total;
+    const stack = stackSize(id);
+    while (remaining > 0) {
+      const take = Math.min(remaining, stack);
+      fills.push({ id, qty: take });
+      remaining -= take;
+    }
+  }
+  const grid = el("div", { class: "slot-grid", style: "--cols: 4" });
+  for (const f of fills) {
+    const it = ITEMS[f.id]!;
+    const total = totals.get(f.id)!;
+    const slot = el(
+      "div",
+      {
+        class: "slot",
+        title: armed
+          ? `Tap to discard ${total}× ${it.name}`
+          : `${it.name} — ${f.qty}${total !== f.qty ? ` (of ${total})` : ""} — click to withdraw all, or drag to trash`,
+        onclick: () => {
+          if (isTrashMode()) {
+            if (
+              applyTrash({
+                source: "chest",
+                itemId: f.id,
+                roomId,
+                chestId: chest.id,
+              })
+            )
+              save();
+            return;
+          }
+          if (withdrawFromChest(roomId, chest.id, f.id)) save();
+        },
+      },
+      [
+        el("span", { class: "slot-icon" }, it.icon),
+        el("span", { class: "slot-qty" }, String(f.qty)),
+      ],
+    );
+    makeDraggable(slot, {
+      source: "chest",
+      itemId: f.id,
+      roomId,
+      chestId: chest.id,
+    });
+    grid.appendChild(slot);
+  }
+  for (let i = fills.length; i < cap; i++) {
+    grid.appendChild(el("div", { class: "slot empty" }));
+  }
+  return grid;
 }
