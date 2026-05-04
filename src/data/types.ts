@@ -96,6 +96,8 @@ export interface GatherAction {
 
 export type QuestId = string;
 
+export type QuestKind = "progression" | "utility";
+
 export interface QuestContext {
   has: (item: ItemId, qty?: number) => boolean;
   completed: (questId: QuestId) => boolean;
@@ -105,6 +107,10 @@ export interface Quest {
   id: QuestId;
   title: string;
   description: string;
+  /** Progression quests open new tiers; utility quests just make life easier. */
+  kind: QuestKind;
+  /** Short note on what completing this quest gets the player. */
+  benefit: string;
   /** Quest is shown (as active) when this returns true and it isn't completed yet. */
   visible: (ctx: QuestContext) => boolean;
   /** Quest is checked off when this returns true. */

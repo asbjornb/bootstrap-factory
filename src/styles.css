@@ -1005,11 +1005,42 @@ body.trash-armed .chest-row:hover {
 .qb-quest.done .qb-check {
   color: var(--good);
 }
+.qb-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
 .qb-title {
   color: var(--text);
   font-weight: 600;
-  margin-bottom: 2px;
+}
+.qb-kind {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: var(--panel-2);
+}
+.qb-kind-progression {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.qb-kind-utility {
+  color: var(--good);
+  border-color: var(--good);
 }
 .qb-desc {
   line-height: 1.4;
+}
+.qb-benefit {
+  margin-top: 4px;
+  line-height: 1.4;
+  color: var(--text);
+}
+.qb-benefit-label {
+  color: var(--muted);
 }
