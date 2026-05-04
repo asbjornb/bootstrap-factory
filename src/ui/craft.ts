@@ -68,8 +68,14 @@ function recipeButton(r: Recipe): HTMLElement {
         {
           class: "recipe-craft-btn",
           title: `Craft ${out.qty}× ${outItem.name}`,
-          onclick: () => {
-            if (craft(r.id).ok) save();
+          onclick: (ev: Event) => {
+            const btn = ev.currentTarget as HTMLElement;
+            btn.classList.add("flash");
+            requestAnimationFrame(() => {
+              setTimeout(() => {
+                if (craft(r.id).ok) save();
+              }, 60);
+            });
           },
         },
         [
