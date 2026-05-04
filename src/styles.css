@@ -810,7 +810,7 @@ body {
   padding: 6px 8px;
   background: var(--panel);
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   gap: 8px;
   align-items: center;
 }
@@ -861,4 +861,113 @@ body {
 .arrow {
   color: var(--muted);
   margin: 0 2px;
+}
+
+/* pin button (recipe-index + craft pinned card) */
+.pin-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+  transition: border-color 60ms ease, color 60ms ease, background-color 60ms ease;
+}
+.pin-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.pin-btn.pinned {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--panel);
+}
+.pin-btn.card-pin {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+}
+
+/* pinned section in craft panel */
+.craft-pinned {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border);
+}
+.recipe-card {
+  position: relative;
+}
+.recipe-card.pinned {
+  border-color: var(--accent);
+}
+.ingredient.short,
+.tool-req.short {
+  color: var(--bad);
+  border-color: var(--bad);
+}
+
+/* questbook */
+.questbook {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.qb-intro {
+  margin: 0;
+  font-style: italic;
+}
+.qb-section h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+}
+.qb-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.qb-quest {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.qb-quest.done {
+  opacity: 0.7;
+}
+.qb-quest.done .qb-title {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+.qb-check {
+  font-size: 18px;
+  line-height: 1.1;
+  color: var(--muted);
+}
+.qb-quest.done .qb-check {
+  color: var(--good);
+}
+.qb-title {
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.qb-desc {
+  line-height: 1.4;
 }
