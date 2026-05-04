@@ -16,7 +16,8 @@ There is no single optimal path. Sometimes the best solution is a clean automate
 
 Your first actions are simple:
 
-- **Forage Woodland** — gain logs and plant fiber, with a chance of resin
+- **Chop Tree** — gain logs, with a chance of resin
+- **Gather Plant Fiber** — strip undergrowth for fiber
 - **Turn Soil** — gain loam and clay, with a chance of seeds
 - **Quarry Outcrop** — gain rubble, fieldstone, and flint, with chances for copper, tin, iron, and coal as your picks improve
 
