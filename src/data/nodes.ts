@@ -55,7 +55,7 @@ const list: ResourceNode[] = [
     id: "soil_patch",
     name: "Turn Soil",
     icon: "🟤",
-    biome: "forest",
+    biome: "meadow",
     description:
       "Open ground for loam and clay. A shovel works the deeper layers and brings up more clay.",
     baseDurationMs: 5000,
@@ -76,7 +76,7 @@ const list: ResourceNode[] = [
     id: "rock_outcrop",
     name: "Quarry Outcrop",
     icon: "⛰️",
-    biome: "forest",
+    biome: "foothills",
     description:
       "A rocky face poking through the loam. You only pocket what you know what to do with — rubble and flint at first, ores once you have somewhere to smelt them. Better picks chip stone faster and pull more from each swing.",
     baseDurationMs: 6000,

@@ -14,9 +14,10 @@ There is no single optimal path. Sometimes the best solution is a clean automate
 
 ## Gather, Craft, Expand
 
-Your first action is simple:
+Your first actions are simple:
 
-- **Explore Forest** — wander the woods until you turn up something to work with: stands of trees, fiber thickets, brushy forage patches, soft soil, or rocky outcrops. Each find is a finite resource node you can come back to harvest until its charges run out.
+- **Explore Forest** — wander the woods around the workshop and turn up something to work with: stands of trees, fiber thickets, or brushy forage patches. Each find is a finite resource node you can come back to harvest until its charges run out.
+- **Wander Further** — strike out beyond the familiar woods to discover new biomes. The Meadow is good for soil, clay, and seeds; the Foothills are where flint, stone, and ore live. Once you've discovered a place, it gets its own Explore action.
 
 Once a node is on the board, the work begins:
 

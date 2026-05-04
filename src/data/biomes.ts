@@ -6,7 +6,7 @@ const list: Biome[] = [
     name: "Forest",
     icon: "🌲",
     description:
-      "Mixed woodland — undergrowth, deadfall, standing trees, soil patches, and the odd rocky outcrop. Each foray turns up something different.",
+      "Mixed woodland — undergrowth, deadfall, and standing trees. The familiar wood around the workshop.",
     exploreDurationMs: 2500,
     outcomes: [
       {
@@ -39,20 +39,68 @@ const list: Biome[] = [
         ],
       },
       {
-        weight: 3,
-        message: "You scuff up a patch of soft loam.",
+        weight: 1,
+        message: "You wander a while and turn up nothing useful.",
+        charges: [],
+      },
+    ],
+  },
+  {
+    id: "meadow",
+    name: "Meadow",
+    icon: "🌾",
+    description:
+      "Open ground past the trees. Soft loam, the odd patch of clay, seeds catching in the grass.",
+    exploreDurationMs: 3000,
+    outcomes: [
+      {
+        weight: 5,
+        message: "You scuff up a wide patch of soft loam.",
         charges: [{ node: "soil_patch", qty: [4, 7] }],
-        drops: [{ item: "loam", qty: [1, 1], chance: 0.4 }],
+        drops: [{ item: "loam", qty: [1, 1], chance: 0.5 }],
       },
       {
         weight: 3,
-        message: "A rocky outcrop pokes through the leaf litter.",
-        charges: [{ node: "rock_outcrop", qty: [3, 6] }],
-        drops: [{ item: "rubble", qty: [1, 1], chance: 0.4 }],
+        message: "Tall grass and turned earth — seeds catch in your sleeves.",
+        charges: [{ node: "soil_patch", qty: [2, 4] }],
+        drops: [
+          { item: "wheat_seed", qty: [1, 1], chance: 0.4 },
+          { item: "sunflower_seed", qty: [1, 1], chance: 0.15 },
+        ],
       },
       {
         weight: 1,
-        message: "You wander a while and turn up nothing useful.",
+        message: "Rolling fields, but nothing within reach today.",
+        charges: [],
+      },
+    ],
+  },
+  {
+    id: "foothills",
+    name: "Foothills",
+    icon: "⛰️",
+    description:
+      "Stony ground rising toward the hills. Rocky outcrops, loose scree, and the flint and ore that come with them.",
+    exploreDurationMs: 3500,
+    outcomes: [
+      {
+        weight: 5,
+        message: "A weather-cracked outcrop, ready to be worked.",
+        charges: [{ node: "rock_outcrop", qty: [4, 7] }],
+        drops: [{ item: "rubble", qty: [1, 1], chance: 0.4 }],
+      },
+      {
+        weight: 3,
+        message: "A scree of broken stone — easy pickings underfoot.",
+        charges: [{ node: "rock_outcrop", qty: [2, 4] }],
+        drops: [
+          { item: "rubble", qty: [1, 2], chance: 0.6 },
+          { item: "flint", qty: [1, 1], chance: 0.3 },
+        ],
+      },
+      {
+        weight: 1,
+        message: "Stony ground that yields nothing this time.",
         charges: [],
       },
     ],
