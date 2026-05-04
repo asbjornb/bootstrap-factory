@@ -45,8 +45,7 @@ export function mountRecipeIndex(root: HTMLElement): void {
   const render = () => {
     clear(root);
     root.appendChild(
-      el("div", { class: "panel recipe-index" }, [
-        el("h2", {}, "Recipe Index"),
+      el("div", { class: "recipe-index" }, [
         el("input", {
           class: "search",
           type: "search",
