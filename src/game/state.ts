@@ -6,6 +6,7 @@ import { NODES } from "../data/nodes";
 import { ALL_QUESTS } from "../data/quests";
 import { RECIPES } from "../data/recipes";
 import { WANDER_DURATION_MS, WANDER_OUTCOMES, type WanderOutcome } from "../data/wander";
+import { migrate } from "./migrations";
 import type {
   Biome,
   BiomeId,
@@ -1135,6 +1136,8 @@ export function withdrawFromChest(
 
 const SAVE_KEY = "bootstrap-factory:save:v1";
 
+export { SCHEMA_VERSION, SAVE_KEY };
+
 export function load(): void {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -1142,10 +1145,14 @@ export function load(): void {
       store.set(emptyState());
       return;
     }
-    const parsed = JSON.parse(raw) as GameState;
-    if (parsed.schemaVersion !== SCHEMA_VERSION) {
+    const result = migrate(JSON.parse(raw), SCHEMA_VERSION);
+    if (!result) {
       store.set(emptyState());
       return;
+    }
+    const parsed = result.state as GameState;
+    if (result.migrated) {
+      console.info(`[save] migrated v${result.fromVersion} -> v${result.toVersion}`);
     }
     // Defensive: ensure fields exist.
     if (!parsed.floor) parsed.floor = {};

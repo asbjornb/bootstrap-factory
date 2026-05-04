@@ -1,3 +1,4 @@
+import { installDevApi } from "./game/dev";
 import { load, reset, save, startTickLoop, store } from "./game/state";
 import { el } from "./ui/dom";
 import { mountCraft } from "./ui/craft";
@@ -102,6 +103,7 @@ function buildShell(): void {
 function start(): void {
   load();
   buildShell();
+  installDevApi();
   // Best-effort: persist on every state change.
   store.subscribe(() => save());
   window.addEventListener("beforeunload", save);
