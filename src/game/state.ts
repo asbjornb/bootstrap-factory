@@ -13,20 +13,12 @@ import type {
 export interface GameState {
   schemaVersion: number;
   inventory: Record<ItemId, number>;
-  /** Cumulative log of recent events (newest first, capped). */
-  log: LogEntry[];
 }
 
-export interface LogEntry {
-  ts: number;
-  text: string;
-}
-
-const SCHEMA_VERSION = 1;
-const LOG_CAP = 40;
+const SCHEMA_VERSION = 2;
 
 export function emptyState(): GameState {
-  return { schemaVersion: SCHEMA_VERSION, inventory: {}, log: [] };
+  return { schemaVersion: SCHEMA_VERSION, inventory: {} };
 }
 
 type Listener = (s: GameState) => void;
@@ -50,7 +42,6 @@ class Store {
     const draft: GameState = {
       ...this.state,
       inventory: { ...this.state.inventory },
-      log: this.state.log.slice(),
     };
     fn(draft);
     this.set(draft);
@@ -136,7 +127,6 @@ export function craft(recipeId: RecipeId): CraftResult {
       return;
     }
     for (const o of recipe.outputs) add(s, o.item, o.qty);
-    pushLog(s, `Crafted ${recipe.outputs.map((o) => `${o.qty}× ${ITEMS[o.item]!.name}`).join(", ")}.`);
     result = { ok: true };
   });
   return result;
@@ -154,19 +144,11 @@ export function gather(actionId: GatherId): void {
       got[drop.item] = (got[drop.item] ?? 0) + qty;
     }
     for (const [item, qty] of Object.entries(got)) add(s, item, qty);
-    const summary = Object.entries(got)
-      .map(([id, q]) => `${q}× ${ITEMS[id]!.name}`)
-      .join(", ");
-    pushLog(s, `${action.name}: ${summary || "nothing of note."}`);
   });
 }
 
 function randInt(lo: number, hi: number): number {
   return Math.floor(Math.random() * (hi - lo + 1)) + lo;
-}
-
-function pushLog(s: GameState, text: string): void {
-  s.log = [{ ts: Date.now(), text }, ...s.log].slice(0, LOG_CAP);
 }
 
 // ---- save ----

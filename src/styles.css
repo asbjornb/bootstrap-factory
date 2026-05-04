@@ -253,21 +253,6 @@ body {
   text-align: right;
 }
 
-/* log */
-.log-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 2px;
-  max-height: 220px;
-  overflow-y: auto;
-}
-.log-row {
-  padding: 2px 4px;
-  border-bottom: 1px dashed var(--border);
-}
-
 /* recipe index */
 .recipe-index .search {
   width: 100%;

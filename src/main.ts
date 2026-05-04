@@ -3,7 +3,6 @@ import { el } from "./ui/dom";
 import { mountCraft } from "./ui/craft";
 import { mountGather } from "./ui/gather";
 import { mountInventory } from "./ui/inventory";
-import { mountLog } from "./ui/log";
 import { mountRecipeIndex } from "./ui/recipe-index";
 
 function buildShell(): void {
@@ -31,10 +30,8 @@ function buildShell(): void {
   const right = el("section", { id: "right", class: "col col-right" });
 
   const inventory = el("div");
-  const log = el("div");
   gather.appendChild(el("div", { id: "gather-mount" }));
   gather.appendChild(inventory);
-  gather.appendChild(log);
 
   const craft = el("div", { id: "craft-mount" });
   middle.appendChild(craft);
@@ -48,7 +45,6 @@ function buildShell(): void {
 
   mountGather(gather.querySelector("#gather-mount") as HTMLElement);
   mountInventory(inventory);
-  mountLog(log);
   mountCraft(craft);
   mountRecipeIndex(recipe);
 }
