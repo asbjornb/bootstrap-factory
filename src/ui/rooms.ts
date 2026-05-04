@@ -1,31 +1,53 @@
 import { ITEMS, stackSize } from "../data/items";
 import { ALL_MACHINES, MACHINES } from "../data/machines";
+import { ALL_RECIPES, RECIPES } from "../data/recipes";
 import {
   CHEST_SLOT_CAP,
   ROOM_BUILD_COST,
   ROOM_BUILD_TOOL,
-  activeJobsFor,
+  bestToolTier,
   buildRoom,
   canBuildRoom,
+  canCraft,
   chestSlotCap,
   chestSlotsUsed,
+  craftAt,
   depositToChest,
+  hasInputsAndTool,
+  jobForInstance,
   meetsToolReq,
+  onTick,
   pickupChest,
   pickupMachine,
   placeChest,
   placeMachine,
-  placedMachineCount,
+  producesObsoleteTool,
   renameRoom,
   save,
   store,
+  takeMachineOutput,
   withdrawFromChest,
 } from "../game/state";
-import type { Chest, ItemId, Room } from "../data/types";
+import type {
+  ItemId,
+  PlacedChest,
+  PlacedMachine,
+  Recipe,
+  Room,
+} from "../data/types";
 import { clear, el } from "./dom";
-import { applyTrash, isTrashMode, makeDraggable, subscribeTrashMode } from "./trash-drag";
+import { selectItem } from "./recipe-index";
+import {
+  applyTrash,
+  isTrashMode,
+  makeDraggable,
+  subscribeTrashMode,
+} from "./trash-drag";
 
 const CHEST_TYPES = Object.keys(CHEST_SLOT_CAP);
+
+/** UI-only selection: which cell instance has its detail panel open. */
+let selectedInstanceId: string | null = null;
 
 export function mountRooms(root: HTMLElement): void {
   const render = () => {
@@ -49,7 +71,7 @@ export function mountRooms(root: HTMLElement): void {
         el(
           "p",
           { class: "muted small" },
-          "Machines must be placed in a room before you can use them. Chests in any room act as a shared pantry — recipes pull from them automatically.",
+          "Click a machine to load it with a recipe. Chests in any room act as a shared pantry — recipes pull from them automatically.",
         ),
         el("div", { class: "room-build-row" }, [
           el(
@@ -91,6 +113,26 @@ export function mountRooms(root: HTMLElement): void {
   render();
   store.subscribe(render);
   subscribeTrashMode(render);
+  // Repaint progress bars between state changes.
+  onTick(() => {
+    for (const bar of root.querySelectorAll<HTMLElement>(".job-progress-fill")) {
+      const start = Number(bar.dataset.start);
+      const end = Number(bar.dataset.end);
+      if (!start || !end) continue;
+      const pct = Math.min(
+        100,
+        Math.max(0, ((Date.now() - start) / (end - start)) * 100),
+      );
+      bar.style.width = `${pct}%`;
+    }
+  });
+}
+
+function selectCell(instanceId: string): void {
+  selectedInstanceId = selectedInstanceId === instanceId ? null : instanceId;
+  // Trigger a re-render through the store. State doesn't change but the
+  // UI does — flush via a no-op update.
+  store.update(() => {});
 }
 
 function renderRoom(
@@ -98,8 +140,7 @@ function renderRoom(
   placeableMachines: { id: string; name: string; icon: string }[],
   placeableChests: ItemId[],
 ): HTMLElement {
-  const s = store.get();
-  const placedEntries = Object.entries(room.machines).filter(([, n]) => n > 0);
+  const selected = room.cells.find((c) => c.instanceId === selectedInstanceId);
 
   return el("div", { class: "room-card" }, [
     el("div", { class: "room-head" }, [
@@ -115,50 +156,19 @@ function renderRoom(
         },
       }),
     ]),
-    placedEntries.length === 0
-      ? el("p", { class: "muted small" }, "Empty. Place a machine below.")
-      : el(
-          "div",
-          { class: "room-machines" },
-          placedEntries.map(([machineId, count]) => {
-            const m = MACHINES[machineId];
-            if (!m) return null;
-            const busy = activeJobsFor(s, machineId).length;
-            const totalPlaced = placedMachineCount(s, machineId);
-            const canPickup = totalPlaced - busy >= 1;
-            return el("div", { class: "room-machine" }, [
-              el("span", { class: "icon" }, m.icon),
-              el("span", { class: "name" }, m.name),
-              el("span", { class: "qty" }, `×${count}`),
-              el(
-                "button",
-                {
-                  class: "pickup-btn small",
-                  disabled: !canPickup,
-                  title: canPickup
-                    ? "Take one back into inventory"
-                    : "All instances are currently busy",
-                  onclick: () => {
-                    if (pickupMachine(room.id, machineId)) save();
-                  },
-                },
-                "↑",
-              ),
-            ]);
-          }),
-        ),
-    room.chests.length > 0
-      ? el(
-          "div",
-          { class: "room-chests" },
-          room.chests.map((c) => renderChest(room.id, c)),
-        )
+    room.cells.length === 0
+      ? el("p", { class: "muted small" }, "Empty. Place a machine or chest below.")
+      : renderRoomGrid(room),
+    selected
+      ? selected.kind === "machine"
+        ? renderMachineDetail(selected)
+        : renderChestDetail(room.id, selected)
       : null,
     placeableMachines.length > 0 || placeableChests.length > 0
       ? el("div", { class: "room-place-row" }, [
           el("span", { class: "small muted" }, "Place:"),
           ...placeableMachines.map((m) => {
-            const owned = s.inventory[m.id] ?? 0;
+            const owned = store.get().inventory[m.id] ?? 0;
             return el(
               "button",
               {
@@ -174,7 +184,7 @@ function renderRoom(
           }),
           ...placeableChests.map((id) => {
             const it = ITEMS[id]!;
-            const owned = s.inventory[id] ?? 0;
+            const owned = store.get().inventory[id] ?? 0;
             return el(
               "button",
               {
@@ -189,15 +199,311 @@ function renderRoom(
             );
           }),
         ])
-      : el(
-          "p",
-          { class: "muted small" },
-          "Craft a machine or chest to place it here.",
-        ),
+      : el("p", { class: "muted small" }, "Craft a machine or chest to place it here."),
   ]);
 }
 
-function renderChest(roomId: string, chest: Chest): HTMLElement {
+function renderRoomGrid(room: Room): HTMLElement {
+  return el(
+    "div",
+    { class: "room-grid" },
+    room.cells.map((cell) =>
+      cell.kind === "machine" ? renderMachineTile(cell) : renderChestTile(cell),
+    ),
+  );
+}
+
+function renderMachineTile(cell: PlacedMachine): HTMLElement {
+  const m = MACHINES[cell.machineId];
+  if (!m) return el("div");
+  const s = store.get();
+  const job = jobForInstance(s, cell.instanceId);
+  const hasOutput = Object.values(cell.output).some((q) => q > 0);
+  const status: "working" | "output" | "idle" = job
+    ? "working"
+    : hasOutput
+      ? "output"
+      : "idle";
+  const isSelected = selectedInstanceId === cell.instanceId;
+
+  const tile = el(
+    "div",
+    {
+      class:
+        "room-tile machine-tile" +
+        (isSelected ? " selected" : "") +
+        ` status-${status}`,
+      title: `${m.name} — ${tileStatusLabel(status)} — click to open`,
+      onclick: () => selectCell(cell.instanceId),
+    },
+    [
+      el("span", { class: "tile-icon" }, m.icon),
+      el("span", { class: "tile-name small" }, m.name),
+      job
+        ? el("div", { class: "job-progress tile-progress" }, [
+            el("div", {
+              class: "job-progress-fill",
+              style: progressStyle(job.startedAt, job.endsAt),
+              "data-start": String(job.startedAt),
+              "data-end": String(job.endsAt),
+            }),
+          ])
+        : null,
+      el(
+        "span",
+        { class: "tile-status small" },
+        tileStatusLabel(status),
+      ),
+    ],
+  );
+  return tile;
+}
+
+function tileStatusLabel(status: "working" | "output" | "idle"): string {
+  if (status === "working") return "Working";
+  if (status === "output") return "Output ready";
+  return "Idle";
+}
+
+function progressStyle(start: number, end: number): string {
+  const pct = Math.min(100, Math.max(0, ((Date.now() - start) / (end - start)) * 100));
+  return `width: ${pct}%`;
+}
+
+function renderChestTile(cell: PlacedChest): HTMLElement {
+  const it = ITEMS[cell.type]!;
+  const cap = chestSlotCap(cell.type);
+  const used = chestSlotsUsed(cell);
+  const isSelected = selectedInstanceId === cell.instanceId;
+
+  return el(
+    "div",
+    {
+      class: "room-tile chest-tile" + (isSelected ? " selected" : ""),
+      title: `${it.name} — ${used}/${cap} slots — click to open`,
+      onclick: () => selectCell(cell.instanceId),
+    },
+    [
+      el("span", { class: "tile-icon" }, it.icon),
+      el("span", { class: "tile-name small" }, it.name),
+      el("span", { class: "tile-status small" }, `${used}/${cap}`),
+    ],
+  );
+}
+
+function renderMachineDetail(cell: PlacedMachine): HTMLElement {
+  const s = store.get();
+  const m = MACHINES[cell.machineId]!;
+  const job = jobForInstance(s, cell.instanceId);
+  const recipe = job ? RECIPES[job.recipeId] : null;
+  const outputEntries = Object.entries(cell.output).filter(([, q]) => q > 0);
+
+  // Recipes the player could plausibly run here right now.
+  const candidateRecipes = ALL_RECIPES.filter(
+    (r) =>
+      r.machine === cell.machineId &&
+      hasInputsAndTool(s, r) &&
+      !producesObsoleteTool(s, r),
+  );
+
+  const canPickup =
+    !job && outputEntries.length === 0;
+
+  return el("div", { class: "cell-detail machine-detail" }, [
+    el("div", { class: "detail-head" }, [
+      el("span", { class: "icon big" }, m.icon),
+      el("span", { class: "detail-title" }, m.name),
+      el(
+        "span",
+        { class: "detail-status small" },
+        job ? "Working" : outputEntries.length > 0 ? "Output ready" : "Idle",
+      ),
+      el(
+        "button",
+        {
+          class: "pickup-btn small",
+          disabled: !canPickup,
+          title: canPickup
+            ? "Take this machine back into inventory"
+            : job
+              ? "Wait for the current job to finish"
+              : "Empty the output buffer first",
+          onclick: () => {
+            if (pickupMachine(cell.instanceId)) {
+              selectedInstanceId = null;
+              save();
+            }
+          },
+        },
+        "↑",
+      ),
+      el(
+        "button",
+        {
+          class: "modal-close",
+          title: "Close",
+          onclick: () => selectCell(cell.instanceId),
+        },
+        "×",
+      ),
+    ]),
+    job && recipe ? renderJobProgress(job.startedAt, job.endsAt, recipe) : null,
+    outputEntries.length > 0
+      ? el("div", { class: "detail-section" }, [
+          el("h4", {}, "Output"),
+          el(
+            "div",
+            { class: "output-row" },
+            outputEntries.map(([id, qty]) => {
+              const it = ITEMS[id]!;
+              return el(
+                "button",
+                {
+                  class: "output-btn",
+                  title: `Take ${qty}× ${it.name}`,
+                  onclick: () => {
+                    if (takeMachineOutput(cell.instanceId, id)) save();
+                  },
+                },
+                [
+                  el("span", { class: "icon" }, it.icon),
+                  ` ${qty}`,
+                ],
+              );
+            }),
+          ),
+          el(
+            "button",
+            {
+              class: "small take-all-btn",
+              title: "Take everything",
+              onclick: () => {
+                if (takeMachineOutput(cell.instanceId)) save();
+              },
+            },
+            "Take all",
+          ),
+        ])
+      : null,
+    el("div", { class: "detail-section" }, [
+      el("h4", {}, "Recipes"),
+      candidateRecipes.length === 0
+        ? el(
+            "p",
+            { class: "muted small" },
+            "No runnable recipes — gather more materials, or check the Recipe Index for what this machine can make.",
+          )
+        : el(
+            "div",
+            { class: "recipe-grid" },
+            candidateRecipes.map((r) => renderInstanceRecipe(cell, r)),
+          ),
+    ]),
+  ]);
+}
+
+function renderJobProgress(start: number, end: number, recipe: Recipe): HTMLElement {
+  const out = recipe.outputs[0];
+  const outItem = out ? ITEMS[out.item] : undefined;
+  return el("div", { class: "detail-section job-running" }, [
+    el("div", { class: "job-row" }, [
+      el("span", { class: "icon" }, outItem?.icon ?? "⏳"),
+      el(
+        "span",
+        { class: "job-label small" },
+        out && outItem ? `Producing ${out.qty}× ${outItem.name}` : recipe.id,
+      ),
+      el("div", { class: "job-progress" }, [
+        el("div", {
+          class: "job-progress-fill",
+          style: progressStyle(start, end),
+          "data-start": String(start),
+          "data-end": String(end),
+        }),
+      ]),
+    ]),
+  ]);
+}
+
+function renderInstanceRecipe(cell: PlacedMachine, r: Recipe): HTMLElement {
+  const out = r.outputs[0]!;
+  const outItem = ITEMS[out.item]!;
+  const s = store.get();
+  const check = canCraft(s, r);
+  const busy = !!cell.jobId;
+  const disabled = !check.ok || busy;
+
+  return el("div", { class: "recipe-card" + (disabled ? " locked" : "") }, [
+    el(
+      "button",
+      {
+        class: "recipe-craft-btn",
+        disabled: disabled,
+        title: busy
+          ? `${MACHINES[r.machine]!.name} is busy`
+          : `Craft ${out.qty}× ${outItem.name} here`,
+        onclick: (ev: Event) => {
+          const btn = ev.currentTarget as HTMLElement;
+          btn.classList.add("flash");
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              if (craftAt(cell.instanceId, r.id).ok) save();
+            }, 60);
+          });
+        },
+      },
+      [
+        el("span", { class: "icon big" }, outItem.icon),
+        el("span", {}, `${out.qty}× ${outItem.name}`),
+      ],
+    ),
+    el(
+      "div",
+      { class: "recipe-meta" },
+      [
+        ...r.inputs.map((i) => {
+          return el(
+            "span",
+            {
+              class: "ingredient",
+              title: `${ITEMS[i.item]!.name} — open in Recipe Index`,
+              onclick: (ev: Event) => {
+                ev.stopPropagation();
+                selectItem(i.item);
+              },
+            },
+            [
+              el("span", { class: "icon" }, ITEMS[i.item]!.icon),
+              ` ${i.qty}`,
+            ],
+          );
+        }),
+        r.tool
+          ? (() => {
+              const tier = bestToolTier(s, r.tool!.type);
+              const short = tier < r.tool!.minTier;
+              return el(
+                "span",
+                { class: "tool-req" + (short ? " short" : "") },
+                `🛠 ${r.tool!.type} ≥${r.tool!.minTier}`,
+              );
+            })()
+          : null,
+        r.durationMs && r.durationMs > 0
+          ? el("span", { class: "duration" }, `⏱ ${formatDuration(r.durationMs)}`)
+          : null,
+      ],
+    ),
+  ]);
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  const s = ms / 1000;
+  return s % 1 === 0 ? `${s}s` : `${s.toFixed(1)}s`;
+}
+
+function renderChestDetail(roomId: string, chest: PlacedChest): HTMLElement {
   const s = store.get();
   const chestItem = ITEMS[chest.type]!;
   const cap = chestSlotCap(chest.type);
@@ -208,8 +514,6 @@ function renderChest(roomId: string, chest: Chest): HTMLElement {
     .filter(([, q]) => q > 0)
     .sort((a, b) => ITEMS[a[0]]!.name.localeCompare(ITEMS[b[0]]!.name));
 
-  // Items in player inventory that this chest could accept (it has slot space
-  // for them either in an existing partial stack of the same type or in a fresh slot).
   const depositable = Object.entries(s.inventory)
     .filter(([id, qty]) => {
       if (qty <= 0) return false;
@@ -222,11 +526,11 @@ function renderChest(roomId: string, chest: Chest): HTMLElement {
     })
     .sort((a, b) => ITEMS[a[0]]!.name.localeCompare(ITEMS[b[0]]!.name));
 
-  return el("div", { class: "chest-card" }, [
-    el("div", { class: "chest-head" }, [
-      el("span", { class: "icon" }, chestItem.icon),
-      el("span", { class: "name" }, chestItem.name),
-      el("span", { class: "small muted" }, `${used} / ${cap} slots`),
+  return el("div", { class: "cell-detail chest-detail" }, [
+    el("div", { class: "detail-head" }, [
+      el("span", { class: "icon big" }, chestItem.icon),
+      el("span", { class: "detail-title" }, chestItem.name),
+      el("span", { class: "detail-status small" }, `${used} / ${cap} slots`),
       el(
         "button",
         {
@@ -236,10 +540,22 @@ function renderChest(roomId: string, chest: Chest): HTMLElement {
             ? "Take this chest back into inventory"
             : "Empty the chest before picking it up",
           onclick: () => {
-            if (pickupChest(roomId, chest.id)) save();
+            if (pickupChest(roomId, chest.instanceId)) {
+              selectedInstanceId = null;
+              save();
+            }
           },
         },
         "↑",
+      ),
+      el(
+        "button",
+        {
+          class: "modal-close",
+          title: "Close",
+          onclick: () => selectCell(chest.instanceId),
+        },
+        "×",
       ),
     ]),
     renderChestSlotGrid(roomId, chest, stored, cap),
@@ -255,13 +571,10 @@ function renderChest(roomId: string, chest: Chest): HTMLElement {
                 title: `Deposit ${qty}× ${it.name}`,
                 onclick: (ev: Event) => {
                   ev.stopPropagation();
-                  if (depositToChest(roomId, chest.id, id)) save();
+                  if (depositToChest(roomId, chest.instanceId, id)) save();
                 },
               },
-              [
-                el("span", { class: "icon" }, it.icon),
-                ` ${qty}`,
-              ],
+              [el("span", { class: "icon" }, it.icon), ` ${qty}`],
             );
           }),
         ])
@@ -271,7 +584,7 @@ function renderChest(roomId: string, chest: Chest): HTMLElement {
 
 function renderChestSlotGrid(
   roomId: string,
-  chest: Chest,
+  chest: PlacedChest,
   stored: [string, number][],
   cap: number,
 ): HTMLElement {
@@ -311,13 +624,13 @@ function renderChestSlotGrid(
                 source: "chest",
                 itemId: f.id,
                 roomId,
-                chestId: chest.id,
+                chestId: chest.instanceId,
               })
             )
               save();
             return;
           }
-          if (withdrawFromChest(roomId, chest.id, f.id)) save();
+          if (withdrawFromChest(roomId, chest.instanceId, f.id)) save();
         },
       },
       [
@@ -329,7 +642,7 @@ function renderChestSlotGrid(
       source: "chest",
       itemId: f.id,
       roomId,
-      chestId: chest.id,
+      chestId: chest.instanceId,
     });
     grid.appendChild(slot);
   }

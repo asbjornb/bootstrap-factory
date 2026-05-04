@@ -652,6 +652,153 @@ body.trash-armed .chest-row:hover {
   flex-direction: column;
   gap: 6px;
 }
+
+/* room grid (machine + chest tiles) */
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+}
+.room-tile {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 60ms ease, transform 60ms ease, background-color 60ms ease;
+  min-height: 88px;
+}
+.room-tile:hover {
+  border-color: var(--accent);
+}
+.room-tile:active {
+  transform: translateY(1px);
+}
+.room-tile.selected {
+  border-color: var(--accent);
+  background: var(--panel-2);
+  box-shadow: 0 0 0 1px var(--accent) inset;
+}
+.room-tile .tile-icon {
+  font-size: 28px;
+  line-height: 1;
+  margin-top: 4px;
+}
+.room-tile .tile-name {
+  color: var(--text);
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.1;
+}
+.room-tile .tile-status {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.room-tile.machine-tile.status-working {
+  border-color: var(--good);
+}
+.room-tile.machine-tile.status-working .tile-status {
+  color: var(--good);
+}
+.room-tile.machine-tile.status-output {
+  border-color: var(--accent);
+}
+.room-tile.machine-tile.status-output .tile-status {
+  color: var(--accent);
+}
+.room-tile .tile-progress {
+  width: 100%;
+  margin-top: 2px;
+}
+
+/* machine / chest detail panel (shown below the grid for the selected cell) */
+.cell-detail {
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.detail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.detail-head .detail-title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--accent);
+}
+.detail-status {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-size: 11px;
+}
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.detail-section h4 {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+}
+.output-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+.output-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.output-btn:hover {
+  background: var(--accent);
+  color: var(--bg);
+}
+.take-all-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+.take-all-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.job-running .job-row {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
 .room-head {
   display: flex;
   align-items: center;

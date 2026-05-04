@@ -25,7 +25,9 @@ export function mountCraft(root: HTMLElement): void {
     const s = store.get();
     clear(root);
 
-    const groups = ALL_MACHINES.map((m) => {
+    // Only show hand recipes here — recipes for placed machines are accessed
+    // by clicking the machine itself in its room.
+    const groups = ALL_MACHINES.filter((m) => m.id === "hand").map((m) => {
       const capacity = machineCapacity(s, m.id);
       const recipes =
         capacity > 0
@@ -50,7 +52,7 @@ export function mountCraft(root: HTMLElement): void {
         el(
           "p",
           { class: "muted small" },
-          "Recipes you can run right now. Look up others in the Recipe Index.",
+          "By-hand recipes. For machine recipes, click a machine in its room. Look up the full set in the Recipe Index.",
         ),
         pinnedRecipes.length > 0
           ? el("div", { class: "craft-pinned" }, [

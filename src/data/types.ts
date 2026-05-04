@@ -60,21 +60,32 @@ export interface DropEntry {
   requiresMachineEverBuilt?: MachineId;
 }
 
-export interface Chest {
-  id: string;
-  /** Item id of the chest type (e.g. "chest", "bronze_chest"). */
+export interface PlacedMachine {
+  kind: "machine";
+  instanceId: string;
+  machineId: MachineId;
+  /** Outputs that have completed and are waiting for the player to take. */
+  output: Record<ItemId, number>;
+  /** Active job running on this machine, if any. */
+  jobId: string | null;
+}
+
+export interface PlacedChest {
+  kind: "chest";
+  instanceId: string;
+  /** Item id of the chest type (e.g. "crate", "bound_crate"). */
   type: ItemId;
   /** Stored contents. */
   contents: Record<ItemId, number>;
 }
 
+export type RoomCell = PlacedMachine | PlacedChest;
+
 export interface Room {
   id: string;
   name: string;
-  /** Count of each machine placed in this room. */
-  machines: Record<MachineId, number>;
-  /** Storage chests placed in this room. */
-  chests: Chest[];
+  /** All placed machines and chests in this room, in placement order. */
+  cells: RoomCell[];
 }
 
 export interface GatherSpeedup {
