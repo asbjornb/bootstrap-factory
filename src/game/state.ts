@@ -9,7 +9,6 @@ import { WANDER_DURATION_MS, WANDER_OUTCOMES, type WanderOutcome } from "../data
 import type {
   Biome,
   BiomeId,
-  Chest,
   DropEntry,
   GatherAction,
   GatherId,
@@ -17,6 +16,8 @@ import type {
   ItemId,
   MachineId,
   NodeId,
+  PlacedChest,
+  PlacedMachine,
   QuestId,
   Recipe,
   RecipeId,
@@ -29,6 +30,8 @@ import type {
 export interface MachineJob {
   id: string;
   machineId: MachineId;
+  /** Which placed instance is busy; null for hand recipes. */
+  instanceId: string | null;
   recipeId: RecipeId;
   startedAt: number;
   endsAt: number;
@@ -61,7 +64,7 @@ export interface GameState {
   pinnedRecipes: RecipeId[];
 }
 
-const SCHEMA_VERSION = 8;
+const SCHEMA_VERSION = 9;
 
 /** Slots in the player's bare-hands inventory before any carry-gear bonus. */
 export const BASE_CARRY_SLOTS = 8;
@@ -85,7 +88,7 @@ export function emptyState(): GameState {
     nodeCharges: {},
     discoveredBiomes: { forest: true },
     lastExploreMessage: null,
-    rooms: [{ id: "room-starter", name: "Workshop", machines: {}, chests: [] }],
+    rooms: [{ id: "room-starter", name: "Workshop", cells: [] }],
     everBuilt: {},
     completedQuests: [],
     pinnedRecipes: [],
@@ -118,8 +121,11 @@ class Store {
       discoveredBiomes: { ...this.state.discoveredBiomes },
       rooms: this.state.rooms.map((r) => ({
         ...r,
-        machines: { ...r.machines },
-        chests: r.chests.map((c) => ({ ...c, contents: { ...c.contents } })),
+        cells: r.cells.map((c) =>
+          c.kind === "machine"
+            ? { ...c, output: { ...c.output } }
+            : { ...c, contents: { ...c.contents } },
+        ),
       })),
       everBuilt: { ...this.state.everBuilt },
       completedQuests: [...this.state.completedQuests],
@@ -224,7 +230,9 @@ export function tryConsume(state: GameState, stacks: Stack[]): boolean {
 export function totalAvailable(state: GameState, id: ItemId): number {
   let total = state.inventory[id] ?? 0;
   for (const r of state.rooms) {
-    for (const c of r.chests) total += c.contents[id] ?? 0;
+    for (const c of r.cells) {
+      if (c.kind === "chest") total += c.contents[id] ?? 0;
+    }
   }
   return total;
 }
@@ -247,13 +255,14 @@ function tryConsumeLenient(state: GameState, stacks: Stack[]): boolean {
     }
     if (need <= 0) continue;
     for (const r of state.rooms) {
-      for (const c of r.chests) {
+      for (const cell of r.cells) {
         if (need <= 0) break;
-        const have = c.contents[s.item] ?? 0;
+        if (cell.kind !== "chest") continue;
+        const have = cell.contents[s.item] ?? 0;
         if (have <= 0) continue;
         const take = Math.min(have, need);
-        c.contents[s.item] = have - take;
-        if (c.contents[s.item]! <= 0) delete c.contents[s.item];
+        cell.contents[s.item] = have - take;
+        if (cell.contents[s.item]! <= 0) delete cell.contents[s.item];
         need -= take;
       }
       if (need <= 0) break;
@@ -295,7 +304,12 @@ export function ownedToolTier(
       (state.inventory[id] ?? 0) +
       (state.floor[id] ?? 0) +
       state.rooms.reduce(
-        (n, r) => n + r.chests.reduce((m, c) => m + (c.contents[id] ?? 0), 0),
+        (n, r) =>
+          n +
+          r.cells.reduce(
+            (m, c) => m + (c.kind === "chest" ? (c.contents[id] ?? 0) : 0),
+            0,
+          ),
         0,
       );
     if (qty > 0 && tool.tier > best) best = tool.tier;
@@ -317,13 +331,25 @@ export function producesObsoleteTool(state: GameState, recipe: Recipe): boolean 
   return true;
 }
 
-// ---- machine capacity ----
+// ---- machine instances & capacity ----
+
+/** All placed machine instances of the given type, across all rooms. */
+export function machineInstancesFor(
+  state: GameState,
+  machineId: MachineId,
+): PlacedMachine[] {
+  const out: PlacedMachine[] = [];
+  for (const r of state.rooms) {
+    for (const c of r.cells) {
+      if (c.kind === "machine" && c.machineId === machineId) out.push(c);
+    }
+  }
+  return out;
+}
 
 /** Total of a given machine type placed across all rooms. */
 export function placedMachineCount(state: GameState, machineId: MachineId): number {
-  let n = 0;
-  for (const r of state.rooms) n += r.machines[machineId] ?? 0;
-  return n;
+  return machineInstancesFor(state, machineId).length;
 }
 
 /** Total slots available for a machine. Hand always has 1; everything else must be placed in a room. */
@@ -337,7 +363,46 @@ export function activeJobsFor(state: GameState, machineId: MachineId): MachineJo
 }
 
 export function freeSlotsFor(state: GameState, machineId: MachineId): number {
-  return machineCapacity(state, machineId) - activeJobsFor(state, machineId).length;
+  if (machineId === "hand") return 1;
+  return machineInstancesFor(state, machineId).filter((m) => !m.jobId).length;
+}
+
+/** Find a placed machine instance by id, plus the room it lives in. */
+export function findMachineInstance(
+  state: GameState,
+  instanceId: string,
+): { roomId: string; cell: PlacedMachine } | null {
+  for (const r of state.rooms) {
+    for (const c of r.cells) {
+      if (c.kind === "machine" && c.instanceId === instanceId) {
+        return { roomId: r.id, cell: c };
+      }
+    }
+  }
+  return null;
+}
+
+/** Find a placed chest instance by id, plus the room it lives in. */
+export function findChestInstance(
+  state: GameState,
+  instanceId: string,
+): { roomId: string; cell: PlacedChest } | null {
+  for (const r of state.rooms) {
+    for (const c of r.cells) {
+      if (c.kind === "chest" && c.instanceId === instanceId) {
+        return { roomId: r.id, cell: c };
+      }
+    }
+  }
+  return null;
+}
+
+/** Active job for a specific machine instance, if any. */
+export function jobForInstance(
+  state: GameState,
+  instanceId: string,
+): MachineJob | null {
+  return state.jobs.find((j) => j.instanceId === instanceId) ?? null;
 }
 
 // ---- recipe / gather actions ----
@@ -370,9 +435,31 @@ function newJobId(): string {
   return `${Date.now().toString(36)}-${jobSeq}`;
 }
 
+/** Add a recipe's outputs into a placed machine's output buffer. */
+function depositOutputsToInstance(cell: PlacedMachine, recipe: Recipe): void {
+  for (const o of recipe.outputs) {
+    cell.output[o.item] = (cell.output[o.item] ?? 0) + o.qty;
+    if (MACHINES[o.item]) {
+      // Tracked at the state level — handled in tickJobs / craftAt callers via applyRecipeOutputs.
+    }
+  }
+}
+
+/**
+ * Craft a recipe. For hand recipes outputs go straight to inventory; for
+ * machine recipes the call is forwarded to the first idle instance and outputs
+ * land in that instance's output buffer.
+ */
 export function craft(recipeId: RecipeId): CraftResult {
   const recipe = RECIPES[recipeId];
   if (!recipe) throw new Error(`Unknown recipe: ${recipeId}`);
+  if (recipe.machine !== "hand") {
+    const idle = machineInstancesFor(store.get(), recipe.machine).find(
+      (m) => !m.jobId,
+    );
+    if (!idle) return { ok: false, reason: "machine_busy" };
+    return craftAt(idle.instanceId, recipeId);
+  }
   let result: CraftResult = { ok: false };
   store.update((s) => {
     const check = canCraft(s, recipe);
@@ -392,6 +479,7 @@ export function craft(recipeId: RecipeId): CraftResult {
       s.jobs.push({
         id: newJobId(),
         machineId: recipe.machine,
+        instanceId: null,
         recipeId: recipe.id,
         startedAt: now,
         endsAt: now + dur,
@@ -400,6 +488,77 @@ export function craft(recipeId: RecipeId): CraftResult {
     result = { ok: true };
   });
   return result;
+}
+
+/** Run a recipe at a specific placed machine. Outputs go into the machine's output buffer. */
+export function craftAt(instanceId: string, recipeId: RecipeId): CraftResult {
+  const recipe = RECIPES[recipeId];
+  if (!recipe) throw new Error(`Unknown recipe: ${recipeId}`);
+  let result: CraftResult = { ok: false };
+  store.update((s) => {
+    const found = findMachineInstance(s, instanceId);
+    if (!found || found.cell.machineId !== recipe.machine) {
+      result = { ok: false, reason: "machine_busy" };
+      return;
+    }
+    if (found.cell.jobId) {
+      result = { ok: false, reason: "machine_busy" };
+      return;
+    }
+    if (!meetsToolReq(s, recipe.tool)) {
+      result = { ok: false, reason: "missing_tool" };
+      return;
+    }
+    for (const i of recipe.inputs) {
+      if (totalAvailable(s, i.item) < i.qty) {
+        result = { ok: false, reason: "missing_inputs" };
+        return;
+      }
+    }
+    if (!tryConsumeLenient(s, recipe.inputs)) {
+      result = { ok: false, reason: "missing_inputs" };
+      return;
+    }
+    const dur = recipe.durationMs ?? 0;
+    if (dur <= 0) {
+      depositOutputsToInstance(found.cell, recipe);
+      for (const o of recipe.outputs) {
+        if (MACHINES[o.item]) s.everBuilt[o.item] = true;
+      }
+    } else {
+      const now = Date.now();
+      const jobId = newJobId();
+      found.cell.jobId = jobId;
+      s.jobs.push({
+        id: jobId,
+        machineId: recipe.machine,
+        instanceId: found.cell.instanceId,
+        recipeId: recipe.id,
+        startedAt: now,
+        endsAt: now + dur,
+      });
+    }
+    result = { ok: true };
+  });
+  return result;
+}
+
+/** Move output buffer contents back into the player's inventory (overflow → floor). */
+export function takeMachineOutput(instanceId: string, itemId?: ItemId): boolean {
+  let ok = false;
+  store.update((s) => {
+    const found = findMachineInstance(s, instanceId);
+    if (!found) return;
+    const ids = itemId ? [itemId] : Object.keys(found.cell.output);
+    for (const id of ids) {
+      const qty = found.cell.output[id] ?? 0;
+      if (qty <= 0) continue;
+      delete found.cell.output[id];
+      add(s, id, qty);
+      ok = true;
+    }
+  });
+  return ok;
 }
 
 /** Complete any jobs whose endsAt has passed. Returns true if any changed. */
@@ -411,11 +570,24 @@ export function tickJobs(now: number = Date.now()): boolean {
   store.update((draft) => {
     const remaining: MachineJob[] = [];
     for (const j of draft.jobs) {
-      if (j.endsAt <= now) {
-        const r = RECIPES[j.recipeId];
-        if (r) applyRecipeOutputs(draft, r);
-      } else {
+      if (j.endsAt > now) {
         remaining.push(j);
+        continue;
+      }
+      const r = RECIPES[j.recipeId];
+      if (!r) continue;
+      if (j.instanceId) {
+        const found = findMachineInstance(draft, j.instanceId);
+        if (found) {
+          depositOutputsToInstance(found.cell, r);
+          for (const o of r.outputs) {
+            if (MACHINES[o.item]) draft.everBuilt[o.item] = true;
+          }
+          found.cell.jobId = null;
+        }
+        // else: instance was somehow removed; output is lost.
+      } else {
+        applyRecipeOutputs(draft, r);
       }
     }
     draft.jobs = remaining;
@@ -692,15 +864,13 @@ export function trashFromFloor(id: ItemId): boolean {
 }
 
 /** Discard the entire stack of an item from a placed chest. */
-export function trashFromChest(roomId: string, chestId: string, id: ItemId): boolean {
+export function trashFromChest(roomId: string, instanceId: string, id: ItemId): boolean {
   let ok = false;
   store.update((s) => {
-    const room = s.rooms.find((r) => r.id === roomId);
-    if (!room) return;
-    const chest = room.chests.find((c) => c.id === chestId);
-    if (!chest) return;
-    if ((chest.contents[id] ?? 0) <= 0) return;
-    delete chest.contents[id];
+    const found = findChestInstance(s, instanceId);
+    if (!found || found.roomId !== roomId) return;
+    if ((found.cell.contents[id] ?? 0) <= 0) return;
+    delete found.cell.contents[id];
     ok = true;
   });
   return ok;
@@ -714,10 +884,10 @@ function newRoomId(): string {
   return `room-${Date.now().toString(36)}-${roomSeq}`;
 }
 
-let chestSeq = 0;
-function newChestId(): string {
-  chestSeq += 1;
-  return `chest-${Date.now().toString(36)}-${chestSeq}`;
+let instanceSeq = 0;
+function newInstanceId(prefix: string): string {
+  instanceSeq += 1;
+  return `${prefix}-${Date.now().toString(36)}-${instanceSeq}`;
 }
 
 export interface BuildRoomResult {
@@ -752,8 +922,7 @@ export function buildRoom(name?: string): BuildRoomResult {
     const room: Room = {
       id: newRoomId(),
       name: (name && name.trim()) || defaultRoomName(s),
-      machines: {},
-      chests: [],
+      cells: [],
     };
     s.rooms.push(room);
     result = { ok: true };
@@ -770,7 +939,7 @@ export function renameRoom(roomId: string, name: string): void {
   });
 }
 
-/** Move a machine from inventory into the given room. */
+/** Move a machine from inventory into the given room as a new instance. */
 export function placeMachine(roomId: string, machineId: MachineId): boolean {
   if (machineId === "hand") return false;
   let ok = false;
@@ -780,27 +949,38 @@ export function placeMachine(roomId: string, machineId: MachineId): boolean {
     if (!room) return;
     s.inventory[machineId] = s.inventory[machineId]! - 1;
     if (s.inventory[machineId]! <= 0) delete s.inventory[machineId];
-    room.machines[machineId] = (room.machines[machineId] ?? 0) + 1;
+    room.cells.push({
+      kind: "machine",
+      instanceId: newInstanceId("m"),
+      machineId,
+      output: {},
+      jobId: null,
+    });
     ok = true;
   });
   return ok;
 }
 
-/** Take a machine back out of a room into inventory. Refuses if it would interrupt a running job. */
-export function pickupMachine(roomId: string, machineId: MachineId): boolean {
-  if (machineId === "hand") return false;
+/**
+ * Take a specific placed machine instance back into inventory. Refuses if it
+ * is currently running a job or has unclaimed output.
+ */
+export function pickupMachine(instanceId: string): boolean {
   let ok = false;
   store.update((s) => {
-    const room = s.rooms.find((r) => r.id === roomId);
-    if (!room) return;
-    if ((room.machines[machineId] ?? 0) < 1) return;
-    const totalPlaced = placedMachineCount(s, machineId);
-    const busy = activeJobsFor(s, machineId).length;
-    if (totalPlaced - busy < 1) return;
-    room.machines[machineId] = room.machines[machineId]! - 1;
-    if (room.machines[machineId]! <= 0) delete room.machines[machineId];
-    s.inventory[machineId] = (s.inventory[machineId] ?? 0) + 1;
-    ok = true;
+    for (const r of s.rooms) {
+      const idx = r.cells.findIndex(
+        (c) => c.kind === "machine" && c.instanceId === instanceId,
+      );
+      if (idx < 0) continue;
+      const cell = r.cells[idx] as PlacedMachine;
+      if (cell.jobId) return;
+      if (Object.values(cell.output).some((q) => q > 0)) return;
+      r.cells.splice(idx, 1);
+      s.inventory[cell.machineId] = (s.inventory[cell.machineId] ?? 0) + 1;
+      ok = true;
+      return;
+    }
   });
   return ok;
 }
@@ -858,11 +1038,11 @@ export function chestSlotCap(type: ItemId): number {
   return CHEST_SLOT_CAP[type] ?? 16;
 }
 
-export function chestSlotsUsed(chest: Chest): number {
+export function chestSlotsUsed(chest: PlacedChest): number {
   return slotsUsedIn(chest.contents);
 }
 
-/** Place a chest item from inventory into the given room. */
+/** Place a chest item from inventory into the given room as a new instance. */
 export function placeChest(roomId: string, chestType: ItemId): boolean {
   if (CHEST_SLOT_CAP[chestType] === undefined) return false;
   let ok = false;
@@ -872,23 +1052,30 @@ export function placeChest(roomId: string, chestType: ItemId): boolean {
     if (!room) return;
     s.inventory[chestType] = s.inventory[chestType]! - 1;
     if (s.inventory[chestType]! <= 0) delete s.inventory[chestType];
-    room.chests.push({ id: newChestId(), type: chestType, contents: {} });
+    room.cells.push({
+      kind: "chest",
+      instanceId: newInstanceId("c"),
+      type: chestType,
+      contents: {},
+    });
     ok = true;
   });
   return ok;
 }
 
 /** Pick up a placed chest. Refuses if it still has contents. */
-export function pickupChest(roomId: string, chestId: string): boolean {
+export function pickupChest(roomId: string, instanceId: string): boolean {
   let ok = false;
   store.update((s) => {
     const room = s.rooms.find((r) => r.id === roomId);
     if (!room) return;
-    const idx = room.chests.findIndex((c) => c.id === chestId);
+    const idx = room.cells.findIndex(
+      (c) => c.kind === "chest" && c.instanceId === instanceId,
+    );
     if (idx < 0) return;
-    const chest = room.chests[idx]!;
+    const chest = room.cells[idx] as PlacedChest;
     if (chestSlotsUsed(chest) > 0) return;
-    room.chests.splice(idx, 1);
+    room.cells.splice(idx, 1);
     s.inventory[chest.type] = (s.inventory[chest.type] ?? 0) + 1;
     ok = true;
   });
@@ -896,13 +1083,16 @@ export function pickupChest(roomId: string, chestId: string): boolean {
 }
 
 /** Move all of an item from inventory into a chest, capped by chest slot space. */
-export function depositToChest(roomId: string, chestId: string, itemId: ItemId): boolean {
+export function depositToChest(
+  roomId: string,
+  instanceId: string,
+  itemId: ItemId,
+): boolean {
   let ok = false;
   store.update((s) => {
-    const room = s.rooms.find((r) => r.id === roomId);
-    if (!room) return;
-    const chest = room.chests.find((c) => c.id === chestId);
-    if (!chest) return;
+    const found = findChestInstance(s, instanceId);
+    if (!found || found.roomId !== roomId) return;
+    const chest = found.cell;
     const have = s.inventory[itemId] ?? 0;
     if (have <= 0) return;
     const stack = stackSize(itemId);
@@ -923,16 +1113,18 @@ export function depositToChest(roomId: string, chestId: string, itemId: ItemId):
 }
 
 /** Move all of an item from a chest back into inventory, capped by carry cap (overflow → floor). */
-export function withdrawFromChest(roomId: string, chestId: string, itemId: ItemId): boolean {
+export function withdrawFromChest(
+  roomId: string,
+  instanceId: string,
+  itemId: ItemId,
+): boolean {
   let ok = false;
   store.update((s) => {
-    const room = s.rooms.find((r) => r.id === roomId);
-    if (!room) return;
-    const chest = room.chests.find((c) => c.id === chestId);
-    if (!chest) return;
-    const have = chest.contents[itemId] ?? 0;
+    const found = findChestInstance(s, instanceId);
+    if (!found || found.roomId !== roomId) return;
+    const have = found.cell.contents[itemId] ?? 0;
     if (have <= 0) return;
-    delete chest.contents[itemId];
+    delete found.cell.contents[itemId];
     add(s, itemId, have);
     ok = true;
   });
@@ -969,7 +1161,7 @@ export function load(): void {
     if (parsed.lastExploreMessage === undefined) parsed.lastExploreMessage = null;
     if (!parsed.everBuilt || typeof parsed.everBuilt !== "object") parsed.everBuilt = {};
     for (const r of parsed.rooms) {
-      if (!Array.isArray(r.chests)) r.chests = [];
+      if (!Array.isArray(r.cells)) r.cells = [];
     }
     evaluateQuests(parsed);
     store.set(parsed);
