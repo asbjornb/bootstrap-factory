@@ -7,6 +7,10 @@ const list: Item[] = [
   { id: "plant_fiber", name: "Plant Fiber", icon: "🌿", description: "Tough strands of grass and bark. Twists into cordage." },
   { id: "resin", name: "Resin", icon: "💧", description: "Sticky tree sap. Useful, eventually." },
 
+  // forage food (perishable; spoilage lands in a later stage)
+  { id: "berries", name: "Wild Berries", icon: "🫐", description: "A handful of bramble berries. Eat soon — they don't keep." },
+  { id: "edible_root", name: "Edible Root", icon: "🥕", description: "A stubby tuber pulled from the soil. Earthy. Filling." },
+
   // soil
   { id: "loam", name: "Loam", icon: "🟤", description: "Dark crumbly soil. Binds clay into daub." },
   { id: "clay_lump", name: "Clay Lump", icon: "🟫", description: "Wet, plastic clay. Fires into bricks." },

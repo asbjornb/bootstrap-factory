@@ -1,9 +1,24 @@
 import type { GatherAction, GatherId, ItemId } from "./types";
 
-// All gathering happens via finite ResourceNodes discovered through exploration.
-// This list is intentionally empty — the system is kept available for future
-// always-on actions that aren't really "gathering" (e.g. tinkering, resting).
-const list: GatherAction[] = [];
+// Always-on gather actions with no node and no charges. The "Forage
+// Nearby" action is the always-available floor of the food loop —
+// once the hunger system lands, this is what guarantees the player
+// can never be fully bricked.
+const list: GatherAction[] = [
+  {
+    id: "forage_nearby",
+    name: "Forage Nearby",
+    icon: "🫐",
+    description:
+      "Walk the edges of camp turning over leaves and stripping low brambles. Slow but always available.",
+    baseDurationMs: 6000,
+    drops: [
+      { item: "berries", qty: [1, 2], chance: 0.7 },
+      { item: "edible_root", qty: [1, 1], chance: 0.35 },
+      { item: "plant_fiber", qty: [1, 1], chance: 0.2 },
+    ],
+  },
+];
 
 export const GATHER_ACTIONS: Record<GatherId, GatherAction> = Object.fromEntries(
   list.map((g) => [g.id, g]),
