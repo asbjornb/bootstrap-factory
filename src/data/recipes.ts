@@ -177,6 +177,40 @@ const list: Recipe[] = [
     durationMs: 3500,
   },
 
+  // carry gear
+  {
+    id: "tool_belt",
+    machine: "crafting_table",
+    inputs: [
+      { item: "planks", qty: 2 },
+      { item: "stick", qty: 4 },
+    ],
+    outputs: [{ item: "tool_belt", qty: 1 }],
+    durationMs: 1500,
+  },
+  {
+    id: "backpack",
+    machine: "crafting_table",
+    inputs: [
+      { item: "planks", qty: 6 },
+      { item: "stick", qty: 4 },
+    ],
+    outputs: [{ item: "backpack", qty: 1 }],
+    durationMs: 2500,
+  },
+  {
+    id: "bronze_backpack",
+    machine: "crafting_table",
+    inputs: [
+      { item: "planks", qty: 6 },
+      { item: "stick", qty: 4 },
+      { item: "bronze_ingot", qty: 4 },
+    ],
+    outputs: [{ item: "bronze_backpack", qty: 1 }],
+    tool: { type: "axe", minTier: 2 },
+    durationMs: 4000,
+  },
+
   // misc
   {
     id: "torch",

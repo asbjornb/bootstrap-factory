@@ -1,21 +1,30 @@
-import { ITEMS } from "../data/items";
+import { ITEMS, stackSize } from "../data/items";
 import { ALL_MACHINES, MACHINES } from "../data/machines";
 import {
+  CHEST_SLOT_CAP,
   ROOM_BUILD_COST,
   ROOM_BUILD_TOOL,
   activeJobsFor,
   buildRoom,
   canBuildRoom,
+  chestSlotCap,
+  chestSlotsUsed,
+  depositToChest,
   meetsToolReq,
+  pickupChest,
   pickupMachine,
+  placeChest,
   placeMachine,
   placedMachineCount,
   renameRoom,
   save,
   store,
+  withdrawFromChest,
 } from "../game/state";
-import type { Room } from "../data/types";
+import type { Chest, ItemId, Room } from "../data/types";
 import { clear, el } from "./dom";
+
+const CHEST_TYPES = Object.keys(CHEST_SLOT_CAP);
 
 export function mountRooms(root: HTMLElement): void {
   const render = () => {
@@ -31,6 +40,7 @@ export function mountRooms(root: HTMLElement): void {
     const placeableMachines = ALL_MACHINES.filter(
       (m) => m.id !== "hand" && (s.inventory[m.id] ?? 0) > 0,
     );
+    const placeableChests = CHEST_TYPES.filter((id) => (s.inventory[id] ?? 0) > 0);
 
     root.appendChild(
       el("div", { class: "panel" }, [
@@ -38,7 +48,7 @@ export function mountRooms(root: HTMLElement): void {
         el(
           "p",
           { class: "muted small" },
-          "Machines must be placed in a room before you can use them. Hand-crafting works anywhere.",
+          "Machines must be placed in a room before you can use them. Chests in any room act as a shared pantry — recipes pull from them automatically.",
         ),
         el("div", { class: "room-build-row" }, [
           el(
@@ -72,7 +82,7 @@ export function mountRooms(root: HTMLElement): void {
           : el(
               "div",
               { class: "room-list" },
-              s.rooms.map((r) => renderRoom(r, placeableMachines)),
+              s.rooms.map((r) => renderRoom(r, placeableMachines, placeableChests)),
             ),
       ]),
     );
@@ -83,7 +93,8 @@ export function mountRooms(root: HTMLElement): void {
 
 function renderRoom(
   room: Room,
-  placeable: { id: string; name: string; icon: string }[],
+  placeableMachines: { id: string; name: string; icon: string }[],
+  placeableChests: ItemId[],
 ): HTMLElement {
   const s = store.get();
   const placedEntries = Object.entries(room.machines).filter(([, n]) => n > 0);
@@ -134,10 +145,17 @@ function renderRoom(
             ]);
           }),
         ),
-    placeable.length > 0
+    room.chests.length > 0
+      ? el(
+          "div",
+          { class: "room-chests" },
+          room.chests.map((c) => renderChest(room.id, c)),
+        )
+      : null,
+    placeableMachines.length > 0 || placeableChests.length > 0
       ? el("div", { class: "room-place-row" }, [
           el("span", { class: "small muted" }, "Place:"),
-          ...placeable.map((m) => {
+          ...placeableMachines.map((m) => {
             const owned = s.inventory[m.id] ?? 0;
             return el(
               "button",
@@ -152,11 +170,123 @@ function renderRoom(
               [el("span", { class: "icon" }, m.icon), ` ${m.name}`],
             );
           }),
+          ...placeableChests.map((id) => {
+            const it = ITEMS[id]!;
+            const owned = s.inventory[id] ?? 0;
+            return el(
+              "button",
+              {
+                class: "place-btn small",
+                disabled: owned < 1,
+                title: `Place ${it.name} here (${owned} in inventory)`,
+                onclick: () => {
+                  if (placeChest(room.id, id)) save();
+                },
+              },
+              [el("span", { class: "icon" }, it.icon), ` ${it.name}`],
+            );
+          }),
         ])
       : el(
           "p",
           { class: "muted small" },
-          "Craft a machine to place it here.",
+          "Craft a machine or chest to place it here.",
         ),
+  ]);
+}
+
+function renderChest(roomId: string, chest: Chest): HTMLElement {
+  const s = store.get();
+  const chestItem = ITEMS[chest.type]!;
+  const cap = chestSlotCap(chest.type);
+  const used = chestSlotsUsed(chest);
+  const empty = used === 0;
+
+  const stored = Object.entries(chest.contents)
+    .filter(([, q]) => q > 0)
+    .sort((a, b) => ITEMS[a[0]]!.name.localeCompare(ITEMS[b[0]]!.name));
+
+  // Items in player inventory that this chest could accept (it has slot space
+  // for them either in an existing partial stack of the same type or in a fresh slot).
+  const depositable = Object.entries(s.inventory)
+    .filter(([id, qty]) => {
+      if (qty <= 0) return false;
+      const stack = stackSize(id);
+      const currentQty = chest.contents[id] ?? 0;
+      const currentSlots = Math.ceil(currentQty / stack);
+      const availableSlots = cap - (used - currentSlots);
+      const maxQty = availableSlots * stack;
+      return maxQty > currentQty;
+    })
+    .sort((a, b) => ITEMS[a[0]]!.name.localeCompare(ITEMS[b[0]]!.name));
+
+  return el("div", { class: "chest-card" }, [
+    el("div", { class: "chest-head" }, [
+      el("span", { class: "icon" }, chestItem.icon),
+      el("span", { class: "name" }, chestItem.name),
+      el("span", { class: "small muted" }, `${used} / ${cap} slots`),
+      el(
+        "button",
+        {
+          class: "pickup-btn small",
+          disabled: !empty,
+          title: empty
+            ? "Take this chest back into inventory"
+            : "Empty the chest before picking it up",
+          onclick: () => {
+            if (pickupChest(roomId, chest.id)) save();
+          },
+        },
+        "↑",
+      ),
+    ]),
+    stored.length === 0
+      ? el("p", { class: "muted small chest-empty" }, "Empty.")
+      : el(
+          "ul",
+          { class: "chest-contents" },
+          stored.map(([id, qty]) => {
+            const it = ITEMS[id]!;
+            return el(
+              "li",
+              {
+                class: "chest-row",
+                title: `Click to withdraw ${qty}× ${it.name}`,
+                onclick: () => {
+                  if (withdrawFromChest(roomId, chest.id, id)) save();
+                },
+              },
+              [
+                el("span", { class: "icon" }, it.icon),
+                el("span", { class: "name" }, it.name),
+                el("span", { class: "qty" }, String(qty)),
+                el("span", { class: "withdraw-arrow small muted" }, "↑"),
+              ],
+            );
+          }),
+        ),
+    depositable.length > 0
+      ? el("div", { class: "chest-deposit-row" }, [
+          el("span", { class: "small muted" }, "Deposit:"),
+          ...depositable.map(([id, qty]) => {
+            const it = ITEMS[id]!;
+            return el(
+              "button",
+              {
+                class: "deposit-btn small",
+                title: `Deposit ${qty}× ${it.name}`,
+                onclick: (ev: Event) => {
+                  ev.stopPropagation();
+                  if (depositToChest(roomId, chest.id, id)) save();
+                },
+              },
+              [
+                el("span", { class: "icon" }, it.icon),
+                ` ${qty}`,
+              ],
+            );
+          }),
+        ])
+      : null,
   ]);
 }
