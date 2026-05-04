@@ -233,6 +233,9 @@ function dropChip(d: DropEntry): HTMLElement {
   const tool = d.requiresTool
     ? ` · needs ${d.requiresTool.type} ≥ ${d.requiresTool.minTier}`
     : "";
+  const machine = d.requiresMachineEverBuilt
+    ? ` · after building ${MACHINES[d.requiresMachineEverBuilt]?.name ?? d.requiresMachineEverBuilt}`
+    : "";
   return el(
     "button",
     {
@@ -242,7 +245,7 @@ function dropChip(d: DropEntry): HTMLElement {
     },
     [
       el("span", { class: "icon" }, it.icon),
-      el("span", {}, ` ${qty} ${it.name} (${pct}${tool})`),
+      el("span", {}, ` ${qty} ${it.name} (${pct}${tool}${machine})`),
     ],
   );
 }
