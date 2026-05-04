@@ -14,14 +14,19 @@ There is no single optimal path. Sometimes the best solution is a clean automate
 
 ## Gather, Craft, Expand
 
-Your first actions are simple:
+Your first action is simple:
+
+- **Explore Forest** — wander the woods until you turn up something to work with: stands of trees, fiber thickets, brushy forage patches, soft soil, or rocky outcrops. Each find is a finite resource node you can come back to harvest until its charges run out.
+
+Once a node is on the board, the work begins:
 
 - **Chop Tree** — gain logs, with a chance of resin
 - **Gather Plant Fiber** — strip undergrowth for fiber
+- **Forage** — sticks, the odd handful of fiber, sometimes a length of log
 - **Turn Soil** — gain loam and clay, with a chance of seeds
 - **Quarry Outcrop** — gain rubble, fieldstone, and flint, with chances for copper, tin, iron, and coal as your picks improve
 
-From there, every small unlock opens new choices.
+When the charges run out, explore again. From there, every small unlock opens new choices.
 
 Knap a flint hatchet to split better boards. Knap a flint pick to pry copper and tin out of the rock. Build a charcoal pit to fuel your first kiln. Smelt copper, alloy bronze, raise a bloomery, find iron. Each tier of pick reveals ores the last tier couldn't reach.
 

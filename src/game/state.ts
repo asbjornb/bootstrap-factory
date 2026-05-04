@@ -490,6 +490,7 @@ function finishActionJob(state: GameState, job: ActionJob): void {
       const qty = randInt(c.qty[0], c.qty[1]);
       state.nodeCharges[c.node] = (state.nodeCharges[c.node] ?? 0) + qty;
     }
+    if (outcome.drops) applyDrops(state, outcome.drops);
   }
 }
 
