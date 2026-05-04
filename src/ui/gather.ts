@@ -9,10 +9,13 @@ import {
   gather,
   gatherDuration,
   harvestNode,
+  hasUndiscoveredBiomes,
   nodeHarvestDuration,
   onTick,
   store,
+  wander,
 } from "../game/state";
+import { WANDER_DURATION_MS } from "../data/wander";
 import type { Biome, GatherAction, ResourceNode } from "../data/types";
 import { clear, el } from "./dom";
 
@@ -25,13 +28,14 @@ export function mountGather(root: HTMLElement): void {
 
     const cards: (HTMLElement | null)[] = [];
 
-    // Always-on gather actions (Forage, Turn Soil, Quarry).
+    // Always-on gather actions (currently empty by design).
     for (const a of ALL_GATHER_ACTIONS) {
       cards.push(renderGatherCard(a, s, busy, job));
     }
 
-    // Biome explore + currently-charged node cards.
+    // Biome explore + currently-charged node cards (only for discovered biomes).
     for (const biome of ALL_BIOMES) {
+      if (!s.discoveredBiomes[biome.id]) continue;
       cards.push(renderExploreCard(biome, s, busy, job));
       for (const node of ALL_NODES) {
         if (node.biome !== biome.id) continue;
@@ -39,6 +43,11 @@ export function mountGather(root: HTMLElement): void {
         if (charges <= 0) continue;
         cards.push(renderNodeCard(node, charges, s, busy, job));
       }
+    }
+
+    // Wander to discover new biomes — hidden once everything is found.
+    if (hasUndiscoveredBiomes(s)) {
+      cards.push(renderWanderCard(busy, job));
     }
 
     root.appendChild(
@@ -148,6 +157,37 @@ function renderExploreCard(
       ? renderProgressBar(job!.startedAt, job!.endsAt)
       : el("p", { class: "muted small" }, `⏱ ${formatDuration(dur)}`),
     el("p", { class: "muted small" }, biome.description ?? ""),
+  ]);
+}
+
+function renderWanderCard(
+  busy: boolean,
+  job: ReturnType<typeof store.get>["actionJob"],
+): HTMLElement {
+  const dur = WANDER_DURATION_MS;
+  const isThisActive = job?.kind === "wander";
+  return el("div", { class: "gather-card explore-card" }, [
+    el(
+      "button",
+      {
+        class: "gather-btn",
+        disabled: busy,
+        title:
+          busy && !isThisActive
+            ? "Another action is in progress"
+            : `Takes ${formatDuration(dur)}`,
+        onclick: (ev: Event) => flashThen(ev, () => wander()),
+      },
+      [el("span", { class: "icon big" }, "🧭"), el("span", {}, "Wander Further")],
+    ),
+    isThisActive
+      ? renderProgressBar(job!.startedAt, job!.endsAt)
+      : el("p", { class: "muted small" }, `⏱ ${formatDuration(dur)}`),
+    el(
+      "p",
+      { class: "muted small" },
+      "Strike out beyond the familiar woods. There must be other places worth knowing.",
+    ),
   ]);
 }
 

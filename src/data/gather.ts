@@ -1,70 +1,9 @@
 import type { GatherAction, GatherId, ItemId } from "./types";
 
-const list: GatherAction[] = [
-  {
-    id: "forage",
-    name: "Forage",
-    icon: "🍂",
-    description:
-      "Pick over the brush at the workshop's edge — sticks, the odd handful of fiber, sometimes a length of deadfall.",
-    baseDurationMs: 3000,
-    drops: [
-      { item: "stick", qty: [1, 2], chance: 0.8 },
-      { item: "plant_fiber", qty: [1, 1], chance: 0.5 },
-      { item: "log", qty: [1, 1], chance: 0.15 },
-    ],
-  },
-  {
-    id: "turn_soil",
-    name: "Turn Soil",
-    icon: "🟤",
-    description:
-      "Break ground for loam and clay. A shovel works the deeper layers and brings up more clay.",
-    baseDurationMs: 5000,
-    speedups: [
-      { type: "shovel", minTier: 1, durationMs: 3200 },
-      { type: "shovel", minTier: 2, durationMs: 2200 },
-    ],
-    drops: [
-      { item: "loam", qty: [1, 1], chance: 1 },
-      { item: "loam", qty: [1, 2], chance: 0.5, requiresTool: { type: "shovel", minTier: 1 } },
-      { item: "clay_lump", qty: [1, 1], chance: 0.2 },
-      { item: "clay_lump", qty: [1, 2], chance: 0.25, requiresTool: { type: "shovel", minTier: 2 } },
-      { item: "wheat_seed", qty: [1, 1], chance: 0.15 },
-      { item: "sunflower_seed", qty: [1, 1], chance: 0.05 },
-    ],
-  },
-  {
-    id: "quarry_outcrop",
-    name: "Quarry Outcrop",
-    icon: "⛰️",
-    description:
-      "Pry stone loose from a rocky face. You only pocket what you know what to do with — rubble and flint at first, ores once you have somewhere to smelt them. Better picks chip stone faster and pull more from each swing.",
-    baseDurationMs: 6000,
-    speedups: [
-      { type: "pickaxe", minTier: 1, durationMs: 4000 },
-      { type: "pickaxe", minTier: 2, durationMs: 3000 },
-      { type: "pickaxe", minTier: 3, durationMs: 2200 },
-      { type: "pickaxe", minTier: 4, durationMs: 1600 },
-    ],
-    drops: [
-      { item: "rubble", qty: [1, 1], chance: 1 },
-      { item: "fieldstone", qty: [1, 1], chance: 0.3 },
-      { item: "flint", qty: [1, 1], chance: 0.18 },
-      // copper & tin: only worth picking up once you can smelt them in a kiln.
-      { item: "copper_ore", qty: [1, 1], chance: 0.12, requiresMachineEverBuilt: "clay_kiln" },
-      { item: "tin_ore", qty: [1, 1], chance: 0.1, requiresMachineEverBuilt: "clay_kiln" },
-      // iron & coal: pointless until you have a bloomery hot enough to use them.
-      { item: "iron_ore", qty: [1, 1], chance: 0.1, requiresMachineEverBuilt: "bloomery" },
-      { item: "coal", qty: [1, 1], chance: 0.15, requiresMachineEverBuilt: "bloomery" },
-      // Better picks bite richer pieces out of the same rock.
-      { item: "copper_ore", qty: [1, 2], chance: 0.18, requiresMachineEverBuilt: "clay_kiln", requiresTool: { type: "pickaxe", minTier: 3 } },
-      { item: "tin_ore", qty: [1, 2], chance: 0.15, requiresMachineEverBuilt: "clay_kiln", requiresTool: { type: "pickaxe", minTier: 3 } },
-      { item: "iron_ore", qty: [1, 2], chance: 0.2, requiresMachineEverBuilt: "bloomery", requiresTool: { type: "pickaxe", minTier: 4 } },
-      { item: "coal", qty: [1, 2], chance: 0.15, requiresMachineEverBuilt: "bloomery", requiresTool: { type: "pickaxe", minTier: 4 } },
-    ],
-  },
-];
+// All gathering happens via finite ResourceNodes discovered through exploration.
+// This list is intentionally empty — the system is kept available for future
+// always-on actions that aren't really "gathering" (e.g. tinkering, resting).
+const list: GatherAction[] = [];
 
 export const GATHER_ACTIONS: Record<GatherId, GatherAction> = Object.fromEntries(
   list.map((g) => [g.id, g]),

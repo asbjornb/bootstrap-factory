@@ -5,6 +5,7 @@ import { MACHINES } from "../data/machines";
 import { NODES } from "../data/nodes";
 import { ALL_QUESTS } from "../data/quests";
 import { RECIPES } from "../data/recipes";
+import { WANDER_DURATION_MS, WANDER_OUTCOMES, type WanderOutcome } from "../data/wander";
 import type {
   Biome,
   BiomeId,
@@ -36,7 +37,8 @@ export interface MachineJob {
 export type ActionJob =
   | { kind: "gather"; gatherId: GatherId; startedAt: number; endsAt: number }
   | { kind: "harvest"; nodeId: NodeId; startedAt: number; endsAt: number }
-  | { kind: "explore"; biomeId: BiomeId; startedAt: number; endsAt: number };
+  | { kind: "explore"; biomeId: BiomeId; startedAt: number; endsAt: number }
+  | { kind: "wander"; startedAt: number; endsAt: number };
 
 export interface GameState {
   schemaVersion: number;
@@ -48,6 +50,8 @@ export interface GameState {
   actionJob: ActionJob | null;
   /** Charges remaining on each discovered resource node. Hidden when 0. */
   nodeCharges: Record<NodeId, number>;
+  /** Biomes the player has discovered (and can therefore explore). */
+  discoveredBiomes: Record<BiomeId, boolean>;
   /** Last exploration outcome message — surfaced in the UI for one explore. */
   lastExploreMessage: string | null;
   rooms: Room[];
@@ -57,7 +61,7 @@ export interface GameState {
   pinnedRecipes: RecipeId[];
 }
 
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
 
 /** Slots in the player's bare-hands inventory before any carry-gear bonus. */
 export const BASE_CARRY_SLOTS = 8;
@@ -79,6 +83,7 @@ export function emptyState(): GameState {
     jobs: [],
     actionJob: null,
     nodeCharges: {},
+    discoveredBiomes: { forest: true },
     lastExploreMessage: null,
     rooms: [{ id: "room-starter", name: "Workshop", machines: {}, chests: [] }],
     everBuilt: {},
@@ -110,6 +115,7 @@ class Store {
       jobs: [...this.state.jobs],
       actionJob: this.state.actionJob ? { ...this.state.actionJob } : null,
       nodeCharges: { ...this.state.nodeCharges },
+      discoveredBiomes: { ...this.state.discoveredBiomes },
       rooms: this.state.rooms.map((r) => ({
         ...r,
         machines: { ...r.machines },
@@ -480,7 +486,7 @@ function finishActionJob(state: GameState, job: ActionJob): void {
     if (!node) return;
     // Charges already debited at start of harvest; just apply drops.
     applyDrops(state, node.drops);
-  } else {
+  } else if (job.kind === "explore") {
     const biome = BIOMES[job.biomeId];
     if (!biome) return;
     const outcome = pickOutcome(biome);
@@ -489,6 +495,14 @@ function finishActionJob(state: GameState, job: ActionJob): void {
     for (const c of outcome.charges) {
       const qty = randInt(c.qty[0], c.qty[1]);
       state.nodeCharges[c.node] = (state.nodeCharges[c.node] ?? 0) + qty;
+    }
+    if (outcome.drops) applyDrops(state, outcome.drops);
+  } else {
+    const outcome = pickWanderOutcome(state);
+    if (!outcome) return;
+    state.lastExploreMessage = outcome.message;
+    if (outcome.discoverBiome) {
+      state.discoveredBiomes[outcome.discoverBiome] = true;
     }
   }
 }
@@ -502,6 +516,32 @@ function pickOutcome(biome: Biome): Biome["outcomes"][number] | null {
     if (roll <= 0) return o;
   }
   return biome.outcomes[biome.outcomes.length - 1] ?? null;
+}
+
+/** Wander outcomes that can still fire — discovery outcomes drop out once their biome is known. */
+function eligibleWanderOutcomes(state: GameState): WanderOutcome[] {
+  return WANDER_OUTCOMES.filter(
+    (o) => !o.discoverBiome || !state.discoveredBiomes[o.discoverBiome],
+  );
+}
+
+function pickWanderOutcome(state: GameState): WanderOutcome | null {
+  const eligible = eligibleWanderOutcomes(state);
+  const total = eligible.reduce((n, o) => n + o.weight, 0);
+  if (total <= 0) return null;
+  let roll = Math.random() * total;
+  for (const o of eligible) {
+    roll -= o.weight;
+    if (roll <= 0) return o;
+  }
+  return eligible[eligible.length - 1] ?? null;
+}
+
+/** True while there's at least one undiscovered biome that wandering could turn up. */
+export function hasUndiscoveredBiomes(state: GameState): boolean {
+  return WANDER_OUTCOMES.some(
+    (o) => o.discoverBiome && !state.discoveredBiomes[o.discoverBiome],
+  );
 }
 
 export interface ActionResult {
@@ -570,6 +610,10 @@ export function exploreBiome(biomeId: BiomeId): ActionResult {
       result = { ok: false, reason: "busy" };
       return;
     }
+    if (!s.discoveredBiomes[biomeId]) {
+      result = { ok: false, reason: "unknown" };
+      return;
+    }
     s.lastExploreMessage = null;
     const dur = biome.exploreDurationMs;
     if (dur <= 0) {
@@ -578,6 +622,21 @@ export function exploreBiome(biomeId: BiomeId): ActionResult {
       const now = Date.now();
       s.actionJob = { kind: "explore", biomeId, startedAt: now, endsAt: now + dur };
     }
+    result = { ok: true };
+  });
+  return result;
+}
+
+export function wander(): ActionResult {
+  let result: ActionResult = { ok: false };
+  store.update((s) => {
+    if (s.actionJob) {
+      result = { ok: false, reason: "busy" };
+      return;
+    }
+    s.lastExploreMessage = null;
+    const now = Date.now();
+    s.actionJob = { kind: "wander", startedAt: now, endsAt: now + WANDER_DURATION_MS };
     result = { ok: true };
   });
   return result;
@@ -904,6 +963,9 @@ export function load(): void {
     if (!Array.isArray(parsed.pinnedRecipes)) parsed.pinnedRecipes = [];
     if (parsed.actionJob === undefined) parsed.actionJob = null;
     if (!parsed.nodeCharges || typeof parsed.nodeCharges !== "object") parsed.nodeCharges = {};
+    if (!parsed.discoveredBiomes || typeof parsed.discoveredBiomes !== "object") {
+      parsed.discoveredBiomes = { forest: true };
+    }
     if (parsed.lastExploreMessage === undefined) parsed.lastExploreMessage = null;
     if (!parsed.everBuilt || typeof parsed.everBuilt !== "object") parsed.everBuilt = {};
     for (const r of parsed.rooms) {

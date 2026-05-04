@@ -116,6 +116,8 @@ export interface BiomeOutcome {
   message: string;
   /** Charges added to nodes when this outcome fires. */
   charges: { node: NodeId; qty: [number, number] }[];
+  /** Items picked up incidentally while exploring (small consolation drops). */
+  drops?: DropEntry[];
 }
 
 export interface Biome {
