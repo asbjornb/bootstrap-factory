@@ -1,4 +1,4 @@
-import { load, reset, save, store } from "./game/state";
+import { load, reset, save, startTickLoop, store } from "./game/state";
 import { el } from "./ui/dom";
 import { mountCraft } from "./ui/craft";
 import { mountGather } from "./ui/gather";
@@ -55,6 +55,7 @@ function start(): void {
   // Best-effort: persist on every state change.
   store.subscribe(() => save());
   window.addEventListener("beforeunload", save);
+  startTickLoop();
 }
 
 start();
