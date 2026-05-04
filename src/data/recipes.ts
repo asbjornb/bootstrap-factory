@@ -2,7 +2,7 @@ import { ITEMS } from "./items";
 import type { ItemId, Recipe, RecipeId } from "./types";
 
 const list: Recipe[] = [
-  // hand
+  // hand — instant
   {
     id: "planks_from_wood",
     machine: "hand",
@@ -31,6 +31,7 @@ const list: Recipe[] = [
       { item: "stick", qty: 2 },
     ],
     outputs: [{ item: "wooden_axe", qty: 1 }],
+    durationMs: 1500,
   },
   {
     id: "wooden_pickaxe",
@@ -40,6 +41,7 @@ const list: Recipe[] = [
       { item: "stick", qty: 2 },
     ],
     outputs: [{ item: "wooden_pickaxe", qty: 1 }],
+    durationMs: 1500,
   },
   {
     id: "wooden_shovel",
@@ -49,6 +51,7 @@ const list: Recipe[] = [
       { item: "stick", qty: 2 },
     ],
     outputs: [{ item: "wooden_shovel", qty: 1 }],
+    durationMs: 1200,
   },
 
   // workshop blocks
@@ -58,12 +61,14 @@ const list: Recipe[] = [
     inputs: [{ item: "wood", qty: 8 }],
     outputs: [{ item: "chest", qty: 1 }],
     tool: { type: "axe", minTier: 1 },
+    durationMs: 2500,
   },
   {
     id: "furnace",
     machine: "crafting_table",
     inputs: [{ item: "stone", qty: 8 }],
     outputs: [{ item: "furnace", qty: 1 }],
+    durationMs: 3000,
   },
 
   // stone tier
@@ -75,6 +80,7 @@ const list: Recipe[] = [
       { item: "stick", qty: 2 },
     ],
     outputs: [{ item: "stone_pickaxe", qty: 1 }],
+    durationMs: 2000,
   },
   {
     id: "stone_axe",
@@ -84,6 +90,7 @@ const list: Recipe[] = [
       { item: "stick", qty: 2 },
     ],
     outputs: [{ item: "stone_axe", qty: 1 }],
+    durationMs: 2000,
   },
 
   // furnace
@@ -92,6 +99,7 @@ const list: Recipe[] = [
     machine: "furnace",
     inputs: [{ item: "coal_ore", qty: 1 }],
     outputs: [{ item: "coal", qty: 1 }],
+    durationMs: 3000,
   },
   {
     id: "smelt_tin",
@@ -101,6 +109,7 @@ const list: Recipe[] = [
       { item: "coal", qty: 1 },
     ],
     outputs: [{ item: "tin_ingot", qty: 1 }],
+    durationMs: 4000,
   },
   {
     id: "smelt_copper",
@@ -110,6 +119,7 @@ const list: Recipe[] = [
       { item: "coal", qty: 1 },
     ],
     outputs: [{ item: "copper_ingot", qty: 1 }],
+    durationMs: 4000,
   },
   {
     id: "smelt_iron",
@@ -119,6 +129,7 @@ const list: Recipe[] = [
       { item: "coal", qty: 1 },
     ],
     outputs: [{ item: "iron_ingot", qty: 1 }],
+    durationMs: 5000,
   },
   {
     id: "alloy_bronze",
@@ -129,6 +140,7 @@ const list: Recipe[] = [
       { item: "coal", qty: 1 },
     ],
     outputs: [{ item: "bronze_ingot", qty: 4 }],
+    durationMs: 6000,
   },
 
   // bronze tools
@@ -140,6 +152,7 @@ const list: Recipe[] = [
       { item: "stick", qty: 2 },
     ],
     outputs: [{ item: "bronze_pickaxe", qty: 1 }],
+    durationMs: 3000,
   },
   {
     id: "bronze_axe",
@@ -149,6 +162,7 @@ const list: Recipe[] = [
       { item: "stick", qty: 2 },
     ],
     outputs: [{ item: "bronze_axe", qty: 1 }],
+    durationMs: 3000,
   },
 
   // iron tools
@@ -160,6 +174,7 @@ const list: Recipe[] = [
       { item: "stick", qty: 2 },
     ],
     outputs: [{ item: "iron_pickaxe", qty: 1 }],
+    durationMs: 3500,
   },
 
   // misc
@@ -181,6 +196,7 @@ const list: Recipe[] = [
     ],
     outputs: [{ item: "bronze_chest", qty: 1 }],
     tool: { type: "axe", minTier: 3 },
+    durationMs: 4000,
   },
 ];
 

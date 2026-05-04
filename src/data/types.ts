@@ -31,6 +31,8 @@ export interface Recipe {
   outputs: Stack[];
   /** Tool that must be held (not consumed) to perform the recipe. */
   tool?: ToolRequirement;
+  /** How long the machine is busy producing this recipe. 0/undefined = instant. */
+  durationMs?: number;
 }
 
 export interface Machine {

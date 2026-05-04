@@ -249,8 +249,59 @@ body {
   border: 1px dashed var(--border);
   color: var(--muted);
 }
+.duration {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: var(--panel);
+}
 .recipe-foot {
   text-align: right;
+}
+.machine-slots {
+  margin-left: 6px;
+  font-weight: normal;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* machine jobs */
+.job-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.job-row {
+  display: grid;
+  grid-template-columns: 22px minmax(80px, 1fr) minmax(80px, 2fr);
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.job-label {
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.job-progress {
+  height: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.job-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  width: 0%;
+  transition: width 200ms linear;
 }
 
 /* recipe index */
