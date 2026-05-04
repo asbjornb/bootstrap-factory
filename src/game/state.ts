@@ -8,6 +8,7 @@ import { RECIPES } from "../data/recipes";
 import { WANDER_ACTIVE_TIME, WANDER_DURATION_MS, WANDER_OUTCOMES, type WanderOutcome } from "../data/wander";
 import { DURATION_SCALE } from "./dev";
 import { migrate } from "./migrations";
+import { realMsToGameMinutes } from "./time";
 import type {
   Biome,
   BiomeId,
@@ -709,19 +710,19 @@ export function nodeHarvestDuration(state: GameState, node: ResourceNode): numbe
   return speedupDuration(state, node.baseDurationMs, node.speedups);
 }
 
-/** In-world minutes a gather action takes. Falls back to baseDurationMs/1000. */
+/** In-world minutes a gather action takes. Derived from baseDurationMs at the global time scale unless overridden. */
 export function gatherActiveTime(action: GatherAction): number {
-  return action.activeTime ?? Math.max(1, Math.round(action.baseDurationMs / 1000));
+  return action.activeTime ?? realMsToGameMinutes(action.baseDurationMs);
 }
 
 /** In-world minutes a harvest takes. */
 export function nodeActiveTime(node: ResourceNode): number {
-  return node.activeTime ?? Math.max(1, Math.round(node.baseDurationMs / 1000));
+  return node.activeTime ?? realMsToGameMinutes(node.baseDurationMs);
 }
 
 /** In-world minutes spent exploring a biome. */
 export function biomeActiveTime(biome: Biome): number {
-  return biome.activeTime ?? Math.max(1, Math.round(biome.exploreDurationMs / 1000));
+  return biome.activeTime ?? realMsToGameMinutes(biome.exploreDurationMs);
 }
 
 /** In-world minutes spent on a wander. */
