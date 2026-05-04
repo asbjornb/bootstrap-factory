@@ -17,6 +17,10 @@ export interface Item {
   description?: string;
   /** If set, this item can be used as a tool of the given type. */
   tool?: { type: ToolType; tier: number };
+  /** Max units in one inventory slot. Default 64. Tools/machines/chests use 1. */
+  stackSize?: number;
+  /** Owning this item adds to the player's carry capacity. Highest single bonus applies (does not stack). */
+  carryBonus?: number;
 }
 
 export interface Stack {
@@ -54,11 +58,21 @@ export interface DropEntry {
   requiresMachineEverBuilt?: MachineId;
 }
 
+export interface Chest {
+  id: string;
+  /** Item id of the chest type (e.g. "chest", "bronze_chest"). */
+  type: ItemId;
+  /** Stored contents. */
+  contents: Record<ItemId, number>;
+}
+
 export interface Room {
   id: string;
   name: string;
   /** Count of each machine placed in this room. */
   machines: Record<MachineId, number>;
+  /** Storage chests placed in this room. */
+  chests: Chest[];
 }
 
 export interface GatherSpeedup {
@@ -78,4 +92,21 @@ export interface GatherAction {
   baseDurationMs: number;
   /** Tool tiers that shorten the action. Lowest matching duration wins. */
   speedups?: GatherSpeedup[];
+}
+
+export type QuestId = string;
+
+export interface QuestContext {
+  has: (item: ItemId, qty?: number) => boolean;
+  completed: (questId: QuestId) => boolean;
+}
+
+export interface Quest {
+  id: QuestId;
+  title: string;
+  description: string;
+  /** Quest is shown (as active) when this returns true and it isn't completed yet. */
+  visible: (ctx: QuestContext) => boolean;
+  /** Quest is checked off when this returns true. */
+  done: (ctx: QuestContext) => boolean;
 }
