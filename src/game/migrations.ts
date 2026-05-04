@@ -12,8 +12,9 @@ import type { GameState } from "./state";
 type Migration = (s: any) => void;
 
 const MIGRATIONS: Record<number, Migration> = {
-  // Example for future use:
-  // 9: (s) => { s.newField = []; },
+  // v9 → v10: introduce time-budget / day-clock fields. Defaults filled in
+  // by load() are sufficient; this entry just acknowledges the bump.
+  9: (_s) => {},
 };
 
 export interface MigrationResult {

@@ -212,6 +212,133 @@ body {
   font-size: 36px;
 }
 
+/* timebar */
+.timebar-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.timebar-head h2 {
+  margin: 0;
+}
+.sleep-btn {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: transform 60ms ease, background-color 60ms ease, border-color 60ms ease, color 60ms ease;
+}
+.sleep-btn:not(:disabled):hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.sleep-btn:not(:disabled):active {
+  background: var(--accent);
+  color: var(--bg);
+  transform: translateY(1px);
+}
+.sleep-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.meter-row {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+.meter-label {
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 11px;
+}
+.meter {
+  height: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.meter-fill {
+  height: 100%;
+  width: 0%;
+  transition: width 200ms linear;
+}
+.energy-fill {
+  background: var(--good);
+}
+.day-fill {
+  background: var(--accent);
+}
+.meter-value {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  min-width: 56px;
+  text-align: right;
+}
+
+/* pantry */
+.pantry {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+.pantry h3 {
+  margin: 0;
+  font-size: 13px;
+  color: var(--good);
+}
+.pantry-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.eat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: transform 60ms ease, background-color 60ms ease, border-color 60ms ease, color 60ms ease;
+}
+.eat-btn:hover {
+  border-color: var(--good);
+  color: var(--good);
+}
+.eat-btn:active {
+  background: var(--good);
+  color: var(--bg);
+  border-color: var(--good);
+  transform: translateY(1px);
+}
+.eat-mins {
+  color: var(--good);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+.eat-btn:hover .eat-mins,
+.eat-btn:active .eat-mins {
+  color: inherit;
+}
+.eat-qty {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+
 /* gather */
 .gather-grid {
   display: grid;

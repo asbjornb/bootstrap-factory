@@ -8,8 +8,8 @@ const list: Item[] = [
   { id: "resin", name: "Resin", icon: "💧", description: "Sticky tree sap. Useful, eventually." },
 
   // forage food (perishable; spoilage lands in a later stage)
-  { id: "berries", name: "Wild Berries", icon: "🫐", description: "A handful of bramble berries. Eat soon — they don't keep." },
-  { id: "edible_root", name: "Edible Root", icon: "🥕", description: "A stubby tuber pulled from the soil. Earthy. Filling." },
+  { id: "berries", name: "Wild Berries", icon: "🫐", description: "A handful of bramble berries. Eat soon — they don't keep.", food: { satiatesMinutes: 30 } },
+  { id: "edible_root", name: "Edible Root", icon: "🥕", description: "A stubby tuber pulled from the soil. Earthy. Filling.", food: { satiatesMinutes: 60 } },
 
   // soil
   { id: "loam", name: "Loam", icon: "🟤", description: "Dark crumbly soil. Binds clay into daub." },

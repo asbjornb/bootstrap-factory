@@ -5,15 +5,22 @@ import { MACHINES } from "../data/machines";
 import { ALL_NODES } from "../data/nodes";
 import {
   bestToolTier,
+  biomeActiveTime,
+  canAfford,
   exploreBiome,
+  fitsInDay,
+  FLOOR_GATHER_ID,
   gather,
+  gatherActiveTime,
   gatherDuration,
   harvestNode,
   hasUndiscoveredBiomes,
+  nodeActiveTime,
   nodeHarvestDuration,
   onTick,
   store,
   wander,
+  wanderActiveTime,
 } from "../game/state";
 import { WANDER_DURATION_MS } from "../data/wander";
 import type { Biome, GatherAction, ResourceNode } from "../data/types";
@@ -47,7 +54,7 @@ export function mountGather(root: HTMLElement): void {
 
     // Wander to discover new biomes — hidden once everything is found.
     if (hasUndiscoveredBiomes(s)) {
-      cards.push(renderWanderCard(busy, job));
+      cards.push(renderWanderCard(s, busy, job));
     }
 
     root.appendChild(
@@ -93,23 +100,25 @@ function renderGatherCard(
   }
   const dur = gatherDuration(s, a);
   const isThisActive = job?.kind === "gather" && job.gatherId === a.id;
+  const at = gatherActiveTime(a);
+  const isFloor = a.id === FLOOR_GATHER_ID;
+  const dayOk = fitsInDay(s, at);
+  const budgetOk = canAfford(s, at, isFloor);
+  const gate = gateFor(at, dayOk, budgetOk, busy && !isThisActive, dur);
   return el("div", { class: "gather-card" }, [
     el(
       "button",
       {
         class: "gather-btn",
-        disabled: busy,
-        title:
-          busy && !isThisActive
-            ? "Another action is in progress"
-            : `Takes ${formatDuration(dur)}`,
+        disabled: busy || !dayOk || !budgetOk,
+        title: gate.title,
         onclick: (ev: Event) => flashThen(ev, () => gather(a.id)),
       },
       [el("span", { class: "icon big" }, a.icon), el("span", {}, a.name)],
     ),
     isThisActive
       ? renderProgressBar(job!.startedAt, job!.endsAt)
-      : el("p", { class: "muted small" }, `⏱ ${formatDuration(dur)}`),
+      : el("p", { class: "muted small" }, gate.subline),
     el("p", { class: "muted small" }, a.description ?? ""),
     ...Array.from(machineLocked.entries()).map(([machineId, items]) =>
       el(
@@ -130,22 +139,23 @@ function renderGatherCard(
 
 function renderExploreCard(
   biome: Biome,
-  _s: ReturnType<typeof store.get>,
+  s: ReturnType<typeof store.get>,
   busy: boolean,
   job: ReturnType<typeof store.get>["actionJob"],
 ): HTMLElement {
   const dur = biome.exploreDurationMs;
   const isThisActive = job?.kind === "explore" && job.biomeId === biome.id;
+  const at = biomeActiveTime(biome);
+  const dayOk = fitsInDay(s, at);
+  const budgetOk = canAfford(s, at, false);
+  const gate = gateFor(at, dayOk, budgetOk, busy && !isThisActive, dur);
   return el("div", { class: "gather-card explore-card" }, [
     el(
       "button",
       {
         class: "gather-btn",
-        disabled: busy,
-        title:
-          busy && !isThisActive
-            ? "Another action is in progress"
-            : `Takes ${formatDuration(dur)}`,
+        disabled: busy || !dayOk || !budgetOk,
+        title: gate.title,
         onclick: (ev: Event) => flashThen(ev, () => exploreBiome(biome.id)),
       },
       [
@@ -155,34 +165,36 @@ function renderExploreCard(
     ),
     isThisActive
       ? renderProgressBar(job!.startedAt, job!.endsAt)
-      : el("p", { class: "muted small" }, `⏱ ${formatDuration(dur)}`),
+      : el("p", { class: "muted small" }, gate.subline),
     el("p", { class: "muted small" }, biome.description ?? ""),
   ]);
 }
 
 function renderWanderCard(
+  s: ReturnType<typeof store.get>,
   busy: boolean,
   job: ReturnType<typeof store.get>["actionJob"],
 ): HTMLElement {
   const dur = WANDER_DURATION_MS;
   const isThisActive = job?.kind === "wander";
+  const at = wanderActiveTime();
+  const dayOk = fitsInDay(s, at);
+  const budgetOk = canAfford(s, at, false);
+  const gate = gateFor(at, dayOk, budgetOk, busy && !isThisActive, dur);
   return el("div", { class: "gather-card explore-card" }, [
     el(
       "button",
       {
         class: "gather-btn",
-        disabled: busy,
-        title:
-          busy && !isThisActive
-            ? "Another action is in progress"
-            : `Takes ${formatDuration(dur)}`,
+        disabled: busy || !dayOk || !budgetOk,
+        title: gate.title,
         onclick: (ev: Event) => flashThen(ev, () => wander()),
       },
       [el("span", { class: "icon big" }, "🧭"), el("span", {}, "Wander Further")],
     ),
     isThisActive
       ? renderProgressBar(job!.startedAt, job!.endsAt)
-      : el("p", { class: "muted small" }, `⏱ ${formatDuration(dur)}`),
+      : el("p", { class: "muted small" }, gate.subline),
     el(
       "p",
       { class: "muted small" },
@@ -201,12 +213,19 @@ function renderNodeCard(
   const dur = nodeHarvestDuration(s, node);
   const isThisActive = job?.kind === "harvest" && job.nodeId === node.id;
   const toolOk = !node.requiresTool || bestToolTier(s, node.requiresTool.type) >= node.requiresTool.minTier;
-  const disabled = busy || !toolOk;
+  const at = nodeActiveTime(node);
+  const dayOk = fitsInDay(s, at);
+  const budgetOk = canAfford(s, at, false);
+  const disabled = busy || !toolOk || !dayOk || !budgetOk;
   const title = !toolOk
     ? `Needs ${node.requiresTool!.type} (tier ≥ ${node.requiresTool!.minTier})`
-    : busy && !isThisActive
-      ? "Another action is in progress"
-      : `Takes ${formatDuration(dur)} · ${charges} charge${charges === 1 ? "" : "s"} left`;
+    : !dayOk
+      ? `Not enough day-time left — needs ${formatMinutes(at)}, sleep first`
+      : !budgetOk
+        ? `Not enough energy — needs ${formatMinutes(at)}, eat first`
+        : busy && !isThisActive
+          ? "Another action is in progress"
+          : `Takes ${formatDuration(dur)} (${formatMinutes(at)} in-world) · ${charges} charge${charges === 1 ? "" : "s"} left`;
 
   const toolLocked = new Set<string>();
   for (const d of node.drops) {
@@ -278,4 +297,38 @@ function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
   const s = ms / 1000;
   return s % 1 === 0 ? `${s}s` : `${s.toFixed(1)}s`;
+}
+
+function formatMinutes(min: number): string {
+  if (min < 60) return `${min} min`;
+  const h = min / 60;
+  return h % 1 === 0 ? `${h} h` : `${h.toFixed(1)} h`;
+}
+
+function gateFor(
+  activeTime: number,
+  dayOk: boolean,
+  budgetOk: boolean,
+  busyOther: boolean,
+  realDur: number,
+): { title: string; subline: string } {
+  if (busyOther) {
+    return { title: "Another action is in progress", subline: `⏱ ${formatDuration(realDur)}` };
+  }
+  if (!dayOk) {
+    return {
+      title: `Not enough day-time left — needs ${formatMinutes(activeTime)}, sleep first`,
+      subline: `⏱ ${formatDuration(realDur)} · needs ${formatMinutes(activeTime)} day-time`,
+    };
+  }
+  if (!budgetOk) {
+    return {
+      title: `Not enough energy — needs ${formatMinutes(activeTime)}, eat first`,
+      subline: `⏱ ${formatDuration(realDur)} · needs ${formatMinutes(activeTime)} energy`,
+    };
+  }
+  return {
+    title: `Takes ${formatDuration(realDur)} (${formatMinutes(activeTime)} in-world)`,
+    subline: `⏱ ${formatDuration(realDur)} · ${formatMinutes(activeTime)} in-world`,
+  };
 }

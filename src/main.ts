@@ -7,6 +7,7 @@ import { createModal } from "./ui/modal";
 import { mountQuestbook } from "./ui/questbook";
 import { mountRecipeIndex, selectItem } from "./ui/recipe-index";
 import { mountRooms } from "./ui/rooms";
+import { mountTimebar } from "./ui/timebar";
 import { startMachineCraftedToasts } from "./ui/toast";
 
 function buildShell(): void {
@@ -66,6 +67,8 @@ function buildShell(): void {
   const middle = el("section", { id: "middle", class: "col col-mid" });
 
   const inventory = el("div");
+  const timebar = el("div", { id: "timebar-mount" });
+  gather.appendChild(timebar);
   gather.appendChild(el("div", { id: "gather-mount" }));
   gather.appendChild(inventory);
 
@@ -78,6 +81,7 @@ function buildShell(): void {
   app.appendChild(header);
   app.appendChild(main);
 
+  mountTimebar(timebar);
   mountGather(gather.querySelector("#gather-mount") as HTMLElement);
   mountInventory(inventory);
   mountRooms(rooms);

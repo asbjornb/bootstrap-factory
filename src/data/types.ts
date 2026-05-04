@@ -23,6 +23,8 @@ export interface Item {
   stackSize?: number;
   /** Owning this item adds to the player's carry capacity. Highest single bonus applies (does not stack). */
   carryBonus?: number;
+  /** If set, this item can be eaten to refund time-budget minutes. */
+  food?: { satiatesMinutes: number };
 }
 
 export interface Stack {
@@ -105,6 +107,8 @@ export interface GatherAction {
   baseDurationMs: number;
   /** Tool tiers that shorten the action. Lowest matching duration wins. */
   speedups?: GatherSpeedup[];
+  /** In-world minutes spent doing this action. Defaults to baseDurationMs/1000. */
+  activeTime?: number;
 }
 
 /** A finite resource node found by exploring a biome. Charges deplete with each harvest. */
@@ -119,6 +123,8 @@ export interface ResourceNode {
   baseDurationMs: number;
   speedups?: GatherSpeedup[];
   drops: DropEntry[];
+  /** In-world minutes spent harvesting. Defaults to baseDurationMs/1000. */
+  activeTime?: number;
 }
 
 /** One possible exploration result. The biome rolls a weighted pick from these. */
@@ -138,6 +144,8 @@ export interface Biome {
   description?: string;
   exploreDurationMs: number;
   outcomes: BiomeOutcome[];
+  /** In-world minutes spent exploring. Defaults to exploreDurationMs/1000. */
+  activeTime?: number;
 }
 
 export type QuestId = string;

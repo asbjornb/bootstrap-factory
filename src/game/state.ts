@@ -5,7 +5,7 @@ import { MACHINES } from "../data/machines";
 import { NODES } from "../data/nodes";
 import { ALL_QUESTS } from "../data/quests";
 import { RECIPES } from "../data/recipes";
-import { WANDER_DURATION_MS, WANDER_OUTCOMES, type WanderOutcome } from "../data/wander";
+import { WANDER_ACTIVE_TIME, WANDER_DURATION_MS, WANDER_OUTCOMES, type WanderOutcome } from "../data/wander";
 import { DURATION_SCALE } from "./dev";
 import { migrate } from "./migrations";
 import type {
@@ -15,6 +15,7 @@ import type {
   GatherAction,
   GatherId,
   GatherSpeedup,
+  Item,
   ItemId,
   MachineId,
   NodeId,
@@ -64,9 +65,24 @@ export interface GameState {
   everBuilt: Record<MachineId, boolean>;
   completedQuests: QuestId[];
   pinnedRecipes: RecipeId[];
+  /** Length of an in-world day, in minutes. */
+  dayLength: number;
+  /** Player's remaining "minutes of work" today. Capped at dayLength. Refilled by eating. */
+  timeBudget: number;
+  /** Minutes elapsed since the start of the current day. 0..dayLength. */
+  worldClock: number;
+  /** Day count, starting at 1. Bumps on Sleep. */
+  dayNumber: number;
 }
 
-const SCHEMA_VERSION = 9;
+const SCHEMA_VERSION = 10;
+
+/** Default in-world day length, in minutes. 16 active hours. */
+export const DEFAULT_DAY_LENGTH = 16 * 60;
+/** Starting time-budget on a fresh save. ~6 hours of work. */
+export const DEFAULT_STARTING_BUDGET = 6 * 60;
+/** Always-allowed fallback action: never blocked by an empty time budget. */
+export const FLOOR_GATHER_ID: GatherId = "forage_nearby";
 
 /** Slots in the player's bare-hands inventory before any carry-gear bonus. */
 export const BASE_CARRY_SLOTS = 8;
@@ -94,6 +110,10 @@ export function emptyState(): GameState {
     everBuilt: {},
     completedQuests: [],
     pinnedRecipes: [],
+    dayLength: DEFAULT_DAY_LENGTH,
+    timeBudget: DEFAULT_STARTING_BUDGET,
+    worldClock: 0,
+    dayNumber: 1,
   };
 }
 
@@ -634,6 +654,43 @@ export function nodeHarvestDuration(state: GameState, node: ResourceNode): numbe
   return speedupDuration(state, node.baseDurationMs, node.speedups);
 }
 
+/** In-world minutes a gather action takes. Falls back to baseDurationMs/1000. */
+export function gatherActiveTime(action: GatherAction): number {
+  return action.activeTime ?? Math.max(1, Math.round(action.baseDurationMs / 1000));
+}
+
+/** In-world minutes a harvest takes. */
+export function nodeActiveTime(node: ResourceNode): number {
+  return node.activeTime ?? Math.max(1, Math.round(node.baseDurationMs / 1000));
+}
+
+/** In-world minutes spent exploring a biome. */
+export function biomeActiveTime(biome: Biome): number {
+  return biome.activeTime ?? Math.max(1, Math.round(biome.exploreDurationMs / 1000));
+}
+
+/** In-world minutes spent on a wander. */
+export function wanderActiveTime(): number {
+  return WANDER_ACTIVE_TIME;
+}
+
+/**
+ * Whether the player has time-of-day to start an action of the given length.
+ * Day-length cap is hard: even Forage Nearby can't push past dayLength.
+ */
+export function fitsInDay(state: GameState, activeTime: number): boolean {
+  return state.worldClock + activeTime <= state.dayLength;
+}
+
+/**
+ * Whether the player has food-budget to pay for an action of the given length.
+ * Forage Nearby is always allowed (treated as free if budget would block).
+ */
+export function canAfford(state: GameState, activeTime: number, isFloor: boolean): boolean {
+  if (isFloor) return true;
+  return state.timeBudget >= activeTime;
+}
+
 function rollDrops(state: GameState, drops: DropEntry[]): Record<ItemId, number> {
   const got: Record<ItemId, number> = {};
   for (const drop of drops) {
@@ -720,7 +777,14 @@ export function hasUndiscoveredBiomes(state: GameState): boolean {
 
 export interface ActionResult {
   ok: boolean;
-  reason?: "busy" | "unknown" | "no_charges" | "missing_tool";
+  reason?: "busy" | "unknown" | "no_charges" | "missing_tool" | "no_budget" | "no_daytime";
+}
+
+/** Spend the action's active time: drain budget (unless free) and advance the world clock. */
+function spendActiveTime(state: GameState, activeTime: number, isFloor: boolean): void {
+  const cost = isFloor ? Math.min(activeTime, state.timeBudget) : activeTime;
+  state.timeBudget = Math.max(0, state.timeBudget - cost);
+  state.worldClock = Math.min(state.dayLength, state.worldClock + activeTime);
 }
 
 export function gather(actionId: GatherId): ActionResult {
@@ -732,6 +796,17 @@ export function gather(actionId: GatherId): ActionResult {
       result = { ok: false, reason: "busy" };
       return;
     }
+    const at = gatherActiveTime(action);
+    const isFloor = action.id === FLOOR_GATHER_ID;
+    if (!fitsInDay(s, at)) {
+      result = { ok: false, reason: "no_daytime" };
+      return;
+    }
+    if (!canAfford(s, at, isFloor)) {
+      result = { ok: false, reason: "no_budget" };
+      return;
+    }
+    spendActiveTime(s, at, isFloor);
     const dur = gatherDuration(s, action);
     if (dur <= 0) {
       applyDrops(s, action.drops);
@@ -761,8 +836,18 @@ export function harvestNode(nodeId: NodeId): ActionResult {
       result = { ok: false, reason: "missing_tool" };
       return;
     }
+    const at = nodeActiveTime(node);
+    if (!fitsInDay(s, at)) {
+      result = { ok: false, reason: "no_daytime" };
+      return;
+    }
+    if (!canAfford(s, at, false)) {
+      result = { ok: false, reason: "no_budget" };
+      return;
+    }
     s.nodeCharges[nodeId] = (s.nodeCharges[nodeId] ?? 0) - 1;
     if (s.nodeCharges[nodeId]! <= 0) delete s.nodeCharges[nodeId];
+    spendActiveTime(s, at, false);
     const dur = nodeHarvestDuration(s, node);
     if (dur <= 0) {
       applyDrops(s, node.drops);
@@ -788,6 +873,16 @@ export function exploreBiome(biomeId: BiomeId): ActionResult {
       result = { ok: false, reason: "unknown" };
       return;
     }
+    const at = biomeActiveTime(biome);
+    if (!fitsInDay(s, at)) {
+      result = { ok: false, reason: "no_daytime" };
+      return;
+    }
+    if (!canAfford(s, at, false)) {
+      result = { ok: false, reason: "no_budget" };
+      return;
+    }
+    spendActiveTime(s, at, false);
     s.lastExploreMessage = null;
     const dur = biome.exploreDurationMs;
     if (dur <= 0) {
@@ -808,12 +903,72 @@ export function wander(): ActionResult {
       result = { ok: false, reason: "busy" };
       return;
     }
+    const at = wanderActiveTime();
+    if (!fitsInDay(s, at)) {
+      result = { ok: false, reason: "no_daytime" };
+      return;
+    }
+    if (!canAfford(s, at, false)) {
+      result = { ok: false, reason: "no_budget" };
+      return;
+    }
+    spendActiveTime(s, at, false);
     s.lastExploreMessage = null;
     const now = Date.now();
     s.actionJob = { kind: "wander", startedAt: now, endsAt: now + WANDER_DURATION_MS * DURATION_SCALE };
     result = { ok: true };
   });
   return result;
+}
+
+// ---- food / sleep ----
+
+/** Eat one unit of a food item from inventory. Refunds time-budget, capped at dayLength. */
+export function eat(itemId: ItemId): boolean {
+  const item: Item | undefined = ITEMS[itemId];
+  if (!item?.food) return false;
+  let ok = false;
+  store.update((s) => {
+    if ((s.inventory[itemId] ?? 0) <= 0) return;
+    s.inventory[itemId] = s.inventory[itemId]! - 1;
+    if (s.inventory[itemId]! <= 0) delete s.inventory[itemId];
+    s.timeBudget = Math.min(s.dayLength, s.timeBudget + item.food!.satiatesMinutes);
+    ok = true;
+  });
+  return ok;
+}
+
+/**
+ * Sleep until dawn. Resets the world clock, bumps the day, and fast-forwards
+ * any in-flight machine jobs by the slept real-time gap so they look like
+ * they ran while the player rested. Sleep itself costs no food.
+ */
+export function sleep(): boolean {
+  let ok = false;
+  store.update((s) => {
+    if (s.actionJob) return;
+    const sleptMinutes = s.dayLength - s.worldClock;
+    if (sleptMinutes <= 0 && s.dayNumber !== 0) {
+      // Already at end of day — still allow sleeping (rolls to next morning).
+    }
+    // Fast-forward machine job timestamps so they continue from the new dawn.
+    // 1 in-world minute == 1 real second of action time, but background
+    // machines are wall-clock based, so we just shift their endsAt back by
+    // however much real time the slept duration represents at the same scale.
+    const realMsPerMinute = 1000 * DURATION_SCALE;
+    const shiftMs = Math.max(0, sleptMinutes) * realMsPerMinute;
+    if (shiftMs > 0) {
+      for (const j of s.jobs) {
+        j.startedAt -= shiftMs;
+        j.endsAt -= shiftMs;
+      }
+    }
+    s.worldClock = 0;
+    s.dayNumber += 1;
+    ok = true;
+  });
+  if (ok) tickJobs();
+  return ok;
 }
 
 function randInt(lo: number, hi: number): number {
@@ -1168,6 +1323,12 @@ export function load(): void {
     }
     if (parsed.lastExploreMessage === undefined) parsed.lastExploreMessage = null;
     if (!parsed.everBuilt || typeof parsed.everBuilt !== "object") parsed.everBuilt = {};
+    if (typeof parsed.dayLength !== "number" || parsed.dayLength <= 0) parsed.dayLength = DEFAULT_DAY_LENGTH;
+    if (typeof parsed.timeBudget !== "number" || parsed.timeBudget < 0) parsed.timeBudget = DEFAULT_STARTING_BUDGET;
+    if (typeof parsed.worldClock !== "number" || parsed.worldClock < 0) parsed.worldClock = 0;
+    if (typeof parsed.dayNumber !== "number" || parsed.dayNumber < 1) parsed.dayNumber = 1;
+    parsed.timeBudget = Math.min(parsed.timeBudget, parsed.dayLength);
+    parsed.worldClock = Math.min(parsed.worldClock, parsed.dayLength);
     for (const r of parsed.rooms) {
       if (!Array.isArray(r.cells)) r.cells = [];
     }
