@@ -6,6 +6,7 @@ import { NODES } from "../data/nodes";
 import { ALL_QUESTS } from "../data/quests";
 import { RECIPES } from "../data/recipes";
 import { WANDER_DURATION_MS, WANDER_OUTCOMES, type WanderOutcome } from "../data/wander";
+import { DURATION_SCALE } from "./dev";
 import { migrate } from "./migrations";
 import type {
   Biome,
@@ -483,7 +484,7 @@ export function craft(recipeId: RecipeId): CraftResult {
         instanceId: null,
         recipeId: recipe.id,
         startedAt: now,
-        endsAt: now + dur,
+        endsAt: now + dur * DURATION_SCALE,
       });
     }
     result = { ok: true };
@@ -536,7 +537,7 @@ export function craftAt(instanceId: string, recipeId: RecipeId): CraftResult {
         instanceId: found.cell.instanceId,
         recipeId: recipe.id,
         startedAt: now,
-        endsAt: now + dur,
+        endsAt: now + dur * DURATION_SCALE,
       });
     }
     result = { ok: true };
@@ -736,7 +737,7 @@ export function gather(actionId: GatherId): ActionResult {
       applyDrops(s, action.drops);
     } else {
       const now = Date.now();
-      s.actionJob = { kind: "gather", gatherId: action.id, startedAt: now, endsAt: now + dur };
+      s.actionJob = { kind: "gather", gatherId: action.id, startedAt: now, endsAt: now + dur * DURATION_SCALE };
     }
     result = { ok: true };
   });
@@ -767,7 +768,7 @@ export function harvestNode(nodeId: NodeId): ActionResult {
       applyDrops(s, node.drops);
     } else {
       const now = Date.now();
-      s.actionJob = { kind: "harvest", nodeId, startedAt: now, endsAt: now + dur };
+      s.actionJob = { kind: "harvest", nodeId, startedAt: now, endsAt: now + dur * DURATION_SCALE };
     }
     result = { ok: true };
   });
@@ -793,7 +794,7 @@ export function exploreBiome(biomeId: BiomeId): ActionResult {
       finishActionJob(s, { kind: "explore", biomeId, startedAt: 0, endsAt: 0 });
     } else {
       const now = Date.now();
-      s.actionJob = { kind: "explore", biomeId, startedAt: now, endsAt: now + dur };
+      s.actionJob = { kind: "explore", biomeId, startedAt: now, endsAt: now + dur * DURATION_SCALE };
     }
     result = { ok: true };
   });
@@ -809,7 +810,7 @@ export function wander(): ActionResult {
     }
     s.lastExploreMessage = null;
     const now = Date.now();
-    s.actionJob = { kind: "wander", startedAt: now, endsAt: now + WANDER_DURATION_MS };
+    s.actionJob = { kind: "wander", startedAt: now, endsAt: now + WANDER_DURATION_MS * DURATION_SCALE };
     result = { ok: true };
   });
   return result;

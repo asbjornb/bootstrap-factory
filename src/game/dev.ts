@@ -1,61 +1,25 @@
-import type { ItemId } from "../data/types";
-import { load, reset, save, store } from "./state";
-
-interface DevApi {
-  give(item: ItemId, qty?: number): void;
-  setInventory(items: Partial<Record<ItemId, number>>): void;
-  dump(): unknown;
-  copy(): void;
-  reset(): void;
-  save(): void;
-  load(): void;
-  wipe(): void;
+/**
+ * Speeds up every in-game duration when the page is opened with ?dev.
+ * Use ?dev for a sensible default (50x), or ?dev=N to set the multiplier
+ * directly (e.g. ?dev=0.01 for 100x, ?dev=1 for normal speed).
+ *
+ * Apply by multiplying any `durationMs` by `DURATION_SCALE` at the point
+ * we compute an `endsAt`, so the saved state never bakes in dev timings.
+ */
+function readScale(): number {
+  if (typeof window === "undefined") return 1;
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has("dev")) return 1;
+  const raw = params.get("dev");
+  if (raw === null || raw === "") return 0.02;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return 0.02;
+  return n;
 }
 
-declare global {
-  interface Window {
-    dev?: DevApi;
-  }
-}
+export const DURATION_SCALE = readScale();
+export const DEV_MODE = DURATION_SCALE !== 1;
 
-export function installDevApi(): void {
-  if (typeof window === "undefined") return;
-  if (!new URLSearchParams(window.location.search).has("dev")) return;
-
-  const api: DevApi = {
-    give(item, qty = 1) {
-      store.update((s) => {
-        s.inventory[item] = (s.inventory[item] ?? 0) + qty;
-      });
-    },
-    setInventory(items) {
-      store.update((s) => {
-        for (const [id, qty] of Object.entries(items)) {
-          if (typeof qty === "number") s.inventory[id as ItemId] = qty;
-        }
-      });
-    },
-    dump() {
-      const snap = store.get();
-      console.log(snap);
-      return snap;
-    },
-    copy() {
-      const json = JSON.stringify(store.get(), null, 2);
-      void navigator.clipboard?.writeText(json);
-      console.info(`[dev] copied save to clipboard (${json.length} chars)`);
-    },
-    reset,
-    save,
-    load,
-    wipe() {
-      localStorage.removeItem("bootstrap-factory:save:v1");
-      console.info("[dev] cleared save key. Reload to start fresh.");
-    },
-  };
-
-  window.dev = api;
-  console.info(
-    "[dev] window.dev ready: give(id, qty), setInventory({id: qty}), dump(), copy(), reset(), save(), load(), wipe()",
-  );
+if (DEV_MODE && typeof console !== "undefined") {
+  console.info(`[dev] duration scale = ${DURATION_SCALE} (durations ${(1 / DURATION_SCALE).toFixed(1)}x faster)`);
 }
