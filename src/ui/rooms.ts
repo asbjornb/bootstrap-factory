@@ -23,7 +23,7 @@ import {
 } from "../game/state";
 import type { Chest, ItemId, Room } from "../data/types";
 import { clear, el } from "./dom";
-import { makeDraggable } from "./trash-drag";
+import { applyTrash, isTrashMode, makeDraggable, subscribeTrashMode } from "./trash-drag";
 
 const CHEST_TYPES = Object.keys(CHEST_SLOT_CAP);
 
@@ -90,6 +90,7 @@ export function mountRooms(root: HTMLElement): void {
   };
   render();
   store.subscribe(render);
+  subscribeTrashMode(render);
 }
 
 function renderRoom(
@@ -248,12 +249,27 @@ function renderChest(roomId: string, chest: Chest): HTMLElement {
           { class: "chest-contents" },
           stored.map(([id, qty]) => {
             const it = ITEMS[id]!;
+            const armed = isTrashMode();
             const row = el(
               "li",
               {
                 class: "chest-row",
-                title: `Click to withdraw ${qty}× ${it.name}, or drag to trash`,
+                title: armed
+                  ? `Tap to discard ${qty}× ${it.name}`
+                  : `Click to withdraw ${qty}× ${it.name}, or drag to trash`,
                 onclick: () => {
+                  if (isTrashMode()) {
+                    if (
+                      applyTrash({
+                        source: "chest",
+                        itemId: id,
+                        roomId,
+                        chestId: chest.id,
+                      })
+                    )
+                      save();
+                    return;
+                  }
                   if (withdrawFromChest(roomId, chest.id, id)) save();
                 },
               },

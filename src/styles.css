@@ -296,7 +296,7 @@ body {
   border-radius: 4px;
   color: var(--muted);
   background: var(--panel-2);
-  cursor: default;
+  cursor: pointer;
   user-select: none;
   transition: border-color 80ms ease, color 80ms ease, background-color 80ms ease, transform 80ms ease;
 }
@@ -304,12 +304,24 @@ body.trash-dragging .trash-zone {
   border-color: var(--bad);
   color: var(--bad);
 }
-.trash-zone.trash-over {
+.trash-zone.trash-over,
+.trash-zone.armed {
   border-style: solid;
   border-color: var(--bad);
   color: var(--bg);
   background: var(--bad);
+}
+.trash-zone.trash-over {
   transform: scale(1.05);
+}
+body.trash-armed .inv-row,
+body.trash-armed .chest-row {
+  outline: 1px dashed var(--bad);
+  outline-offset: -1px;
+}
+body.trash-armed .inv-row:hover,
+body.trash-armed .chest-row:hover {
+  background: rgba(201, 122, 108, 0.15);
 }
 [draggable="true"] {
   cursor: grab;
