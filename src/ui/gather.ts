@@ -1,5 +1,6 @@
 import { ALL_GATHER_ACTIONS } from "../data/gather";
 import { ITEMS } from "../data/items";
+import { MACHINES } from "../data/machines";
 import { bestToolTier, gather, gatherDuration, onTick, store } from "../game/state";
 import { clear, el } from "./dom";
 
@@ -15,9 +16,19 @@ export function mountGather(root: HTMLElement): void {
           "div",
           { class: "gather-grid" },
           ALL_GATHER_ACTIONS.map((a) => {
-            const lockedDrops = a.drops.filter(
-              (d) => d.requiresTool && bestToolTier(s, d.requiresTool.type) < d.requiresTool.minTier,
-            );
+            const toolLocked = new Set<string>();
+            const machineLocked = new Map<string, Set<string>>();
+            for (const d of a.drops) {
+              const itemName = ITEMS[d.item]!.name;
+              if (d.requiresTool && bestToolTier(s, d.requiresTool.type) < d.requiresTool.minTier) {
+                toolLocked.add(itemName);
+              }
+              const gate = d.requiresMachineEverBuilt;
+              if (gate && !s.everBuilt[gate]) {
+                if (!machineLocked.has(gate)) machineLocked.set(gate, new Set());
+                machineLocked.get(gate)!.add(itemName);
+              }
+            }
             const dur = gatherDuration(s, a);
             const isThisActive = active?.gatherId === a.id;
             const otherBusy = active !== null && !isThisActive;
@@ -51,14 +62,18 @@ export function mountGather(root: HTMLElement): void {
                   ])
                 : el("p", { class: "muted small" }, `⏱ ${formatDuration(dur)}`),
               el("p", { class: "muted small" }, a.description ?? ""),
-              lockedDrops.length > 0
+              ...Array.from(machineLocked.entries()).map(([machineId, items]) =>
+                el(
+                  "p",
+                  { class: "small" },
+                  `Build a ${MACHINES[machineId]?.name ?? machineId} and you'll start collecting: ${Array.from(items).join(", ")}.`,
+                ),
+              ),
+              toolLocked.size > 0
                 ? el(
                     "p",
                     { class: "small" },
-                    `Better tools could yield: ${lockedDrops
-                      .map((d) => ITEMS[d.item]!.name)
-                      .filter((v, i, arr) => arr.indexOf(v) === i)
-                      .join(", ")}.`,
+                    `Better tools could yield more: ${Array.from(toolLocked).join(", ")}.`,
                   )
                 : null,
             ]);

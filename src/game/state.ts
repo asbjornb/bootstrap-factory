@@ -1,5 +1,6 @@
 import { GATHER_ACTIONS } from "../data/gather";
 import { ITEMS } from "../data/items";
+import { MACHINES } from "../data/machines";
 import { RECIPES } from "../data/recipes";
 import type {
   GatherAction,
@@ -33,9 +34,11 @@ export interface GameState {
   jobs: MachineJob[];
   gatherJob: GatherJob | null;
   rooms: Room[];
+  /** Machines the player has ever finished crafting. Gates "you know what this rock is for". */
+  everBuilt: Record<MachineId, boolean>;
 }
 
-const SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = 6;
 
 export const ROOM_BUILD_COST: Stack[] = [{ item: "board", qty: 25 }];
 export const ROOM_BUILD_TOOL: ToolRequirement = { type: "shovel", minTier: 1 };
@@ -47,6 +50,7 @@ export function emptyState(): GameState {
     jobs: [],
     gatherJob: null,
     rooms: [{ id: "room-starter", name: "Workshop", machines: {} }],
+    everBuilt: {},
   };
 }
 
@@ -72,6 +76,7 @@ class Store {
       jobs: [...this.state.jobs],
       gatherJob: this.state.gatherJob ? { ...this.state.gatherJob } : null,
       rooms: this.state.rooms.map((r) => ({ ...r, machines: { ...r.machines } })),
+      everBuilt: { ...this.state.everBuilt },
     };
     fn(draft);
     this.set(draft);
@@ -102,6 +107,14 @@ export function count(state: GameState, id: ItemId): number {
 export function add(state: GameState, id: ItemId, qty: number): void {
   if (qty <= 0) return;
   state.inventory[id] = (state.inventory[id] ?? 0) + qty;
+}
+
+/** Apply a recipe's outputs and remember any machine that was just built for the first time. */
+function applyRecipeOutputs(state: GameState, recipe: Recipe): void {
+  for (const o of recipe.outputs) {
+    add(state, o.item, o.qty);
+    if (MACHINES[o.item]) state.everBuilt[o.item] = true;
+  }
 }
 
 export function tryConsume(state: GameState, stacks: Stack[]): boolean {
@@ -204,7 +217,7 @@ export function craft(recipeId: RecipeId): CraftResult {
     }
     const dur = recipe.durationMs ?? 0;
     if (dur <= 0) {
-      for (const o of recipe.outputs) add(s, o.item, o.qty);
+      applyRecipeOutputs(s, recipe);
     } else {
       const now = Date.now();
       s.jobs.push({
@@ -231,7 +244,7 @@ export function tickJobs(now: number = Date.now()): boolean {
     for (const j of draft.jobs) {
       if (j.endsAt <= now) {
         const r = RECIPES[j.recipeId];
-        if (r) for (const o of r.outputs) add(draft, o.item, o.qty);
+        if (r) applyRecipeOutputs(draft, r);
       } else {
         remaining.push(j);
       }
@@ -269,6 +282,7 @@ function applyGatherDrops(state: GameState, action: GatherAction): void {
   const got: Record<ItemId, number> = {};
   for (const drop of action.drops) {
     if (!meetsToolReq(state, drop.requiresTool)) continue;
+    if (drop.requiresMachineEverBuilt && !state.everBuilt[drop.requiresMachineEverBuilt]) continue;
     if (Math.random() > drop.chance) continue;
     const qty = randInt(drop.qty[0], drop.qty[1]);
     got[drop.item] = (got[drop.item] ?? 0) + qty;
@@ -418,6 +432,7 @@ export function load(): void {
     if (!Array.isArray(parsed.jobs)) parsed.jobs = [];
     if (!Array.isArray(parsed.rooms)) parsed.rooms = [];
     if (parsed.gatherJob === undefined) parsed.gatherJob = null;
+    if (!parsed.everBuilt || typeof parsed.everBuilt !== "object") parsed.everBuilt = {};
     store.set(parsed);
     // Resolve any jobs that finished while the tab was closed.
     tickJobs();

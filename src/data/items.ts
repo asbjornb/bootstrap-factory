@@ -38,15 +38,15 @@ const list: Item[] = [
 
   // tools (tier 1 = flint, 2 = copper, 3 = bronze, 4 = iron)
   { id: "flint_hatchet", name: "Flint Hatchet", icon: "🪓", description: "A knapped flint head lashed to a haft. Cuts wood, just barely.", tool: { type: "axe", tier: 1 } },
-  { id: "flint_pick", name: "Flint Pick", icon: "⛏️", description: "Sharp enough to pry copper and tin out of softer rock.", tool: { type: "pickaxe", tier: 1 } },
+  { id: "flint_pick", name: "Flint Pick", icon: "⛏️", description: "A knapped point lashed to a haft. Works rock without ruining your knuckles.", tool: { type: "pickaxe", tier: 1 } },
   { id: "flint_shovel", name: "Flint Shovel", icon: "🥄", description: "A flake of flint on a haft. Better than digging with hands.", tool: { type: "shovel", tier: 1 } },
   { id: "copper_axe", name: "Copper Axe", icon: "🪓", description: "Cold-hammered copper. Bites cleaner than flint.", tool: { type: "axe", tier: 2 } },
-  { id: "copper_pick", name: "Copper Pick", icon: "⛏️", description: "Strong enough for iron ore and the deeper coal seams.", tool: { type: "pickaxe", tier: 2 } },
+  { id: "copper_pick", name: "Copper Pick", icon: "⛏️", description: "Bites rock noticeably faster than flint.", tool: { type: "pickaxe", tier: 2 } },
   { id: "copper_shovel", name: "Copper Shovel", icon: "🥄", description: "Turns soil faster and finds more clay.", tool: { type: "shovel", tier: 2 } },
   { id: "bronze_axe", name: "Bronze Axe", icon: "🪓", description: "A real axe.", tool: { type: "axe", tier: 3 } },
-  { id: "bronze_pick", name: "Bronze Pick", icon: "⛏️", description: "Reveals richer copper and tin veins.", tool: { type: "pickaxe", tier: 3 } },
+  { id: "bronze_pick", name: "Bronze Pick", icon: "⛏️", description: "Heavier swing, bigger chips. Pulls richer copper and tin from the same outcrop.", tool: { type: "pickaxe", tier: 3 } },
   { id: "iron_axe", name: "Iron Axe", icon: "🪓", description: "Heavy. Splits a log in two strokes.", tool: { type: "axe", tier: 4 } },
-  { id: "iron_pick", name: "Iron Pick", icon: "⛏️", description: "Pulls deeper iron from the rock and exposes ores a bronze pick can't reach.", tool: { type: "pickaxe", tier: 4 } },
+  { id: "iron_pick", name: "Iron Pick", icon: "⛏️", description: "Cleaves stone in fewer strokes and turns up more iron and coal per swing.", tool: { type: "pickaxe", tier: 4 } },
 
   // workshop blocks (also act as machine "slots" via inventory count)
   { id: "workbench", name: "Workbench", icon: "🧰", description: "A bench for non-trivial hand assembly." },

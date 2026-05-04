@@ -116,7 +116,6 @@ const list: Recipe[] = [
       { item: "cordage", qty: 4 },
     ],
     outputs: [{ item: "bloomery", qty: 1 }],
-    tool: { type: "pickaxe", minTier: 2 },
     durationMs: 6000,
   },
 

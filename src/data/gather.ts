@@ -46,7 +46,7 @@ const list: GatherAction[] = [
     name: "Quarry Outcrop",
     icon: "⛰️",
     description:
-      "Pry stone loose from a rocky face. Bare hands turn up rubble, fieldstone, and the occasional flint nodule. Better picks reveal deeper ores: copper and tin under a flint pick, iron and coal under copper, richer veins under bronze and iron.",
+      "Pry stone loose from a rocky face. You only pocket what you know what to do with — rubble and flint at first, ores once you have somewhere to smelt them. Better picks chip stone faster and pull more from each swing.",
     baseDurationMs: 6000,
     speedups: [
       { type: "pickaxe", minTier: 1, durationMs: 4000 },
@@ -58,18 +58,17 @@ const list: GatherAction[] = [
       { item: "rubble", qty: [1, 1], chance: 1 },
       { item: "fieldstone", qty: [1, 1], chance: 0.3 },
       { item: "flint", qty: [1, 1], chance: 0.18 },
-      // flint pick unlocks copper & tin
-      { item: "copper_ore", qty: [1, 1], chance: 0.12, requiresTool: { type: "pickaxe", minTier: 1 } },
-      { item: "tin_ore", qty: [1, 1], chance: 0.1, requiresTool: { type: "pickaxe", minTier: 1 } },
-      // copper pick unlocks iron & coal
-      { item: "iron_ore", qty: [1, 1], chance: 0.1, requiresTool: { type: "pickaxe", minTier: 2 } },
-      { item: "coal", qty: [1, 1], chance: 0.15, requiresTool: { type: "pickaxe", minTier: 2 } },
-      // bronze pick: richer copper & tin
-      { item: "copper_ore", qty: [1, 2], chance: 0.18, requiresTool: { type: "pickaxe", minTier: 3 } },
-      { item: "tin_ore", qty: [1, 2], chance: 0.15, requiresTool: { type: "pickaxe", minTier: 3 } },
-      // iron pick: richer iron & coal
-      { item: "iron_ore", qty: [1, 2], chance: 0.2, requiresTool: { type: "pickaxe", minTier: 4 } },
-      { item: "coal", qty: [1, 2], chance: 0.15, requiresTool: { type: "pickaxe", minTier: 4 } },
+      // copper & tin: only worth picking up once you can smelt them in a kiln.
+      { item: "copper_ore", qty: [1, 1], chance: 0.12, requiresMachineEverBuilt: "clay_kiln" },
+      { item: "tin_ore", qty: [1, 1], chance: 0.1, requiresMachineEverBuilt: "clay_kiln" },
+      // iron & coal: pointless until you have a bloomery hot enough to use them.
+      { item: "iron_ore", qty: [1, 1], chance: 0.1, requiresMachineEverBuilt: "bloomery" },
+      { item: "coal", qty: [1, 1], chance: 0.15, requiresMachineEverBuilt: "bloomery" },
+      // Better picks bite richer pieces out of the same rock.
+      { item: "copper_ore", qty: [1, 2], chance: 0.18, requiresMachineEverBuilt: "clay_kiln", requiresTool: { type: "pickaxe", minTier: 3 } },
+      { item: "tin_ore", qty: [1, 2], chance: 0.15, requiresMachineEverBuilt: "clay_kiln", requiresTool: { type: "pickaxe", minTier: 3 } },
+      { item: "iron_ore", qty: [1, 2], chance: 0.2, requiresMachineEverBuilt: "bloomery", requiresTool: { type: "pickaxe", minTier: 4 } },
+      { item: "coal", qty: [1, 2], chance: 0.15, requiresMachineEverBuilt: "bloomery", requiresTool: { type: "pickaxe", minTier: 4 } },
     ],
   },
 ];

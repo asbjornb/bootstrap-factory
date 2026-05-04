@@ -50,6 +50,8 @@ export interface DropEntry {
   chance: number;
   /** If set, the player must hold a tool of this type at >= minTier for this drop to roll. */
   requiresTool?: ToolRequirement;
+  /** If set, the drop only rolls once the player has ever crafted this machine. */
+  requiresMachineEverBuilt?: MachineId;
 }
 
 export interface Room {
