@@ -45,25 +45,27 @@ function setQuery(q: string): void {
 }
 
 export function mountRecipeIndex(root: HTMLElement): void {
-  const render = () => {
-    clear(root);
-    root.appendChild(
-      el("div", { class: "recipe-index" }, [
-        el("input", {
-          class: "search",
-          type: "search",
-          placeholder: "Search items…",
-          value: state.query,
-          oninput: (ev: Event) => setQuery((ev.target as HTMLInputElement).value),
-        }),
-        el("div", { class: "ri-body" }, [renderItemList(), renderDetail()]),
-      ]),
-    );
+  clear(root);
+  const search = el("input", {
+    class: "search",
+    type: "search",
+    placeholder: "Search items…",
+    value: state.query,
+    oninput: (ev: Event) => setQuery((ev.target as HTMLInputElement).value),
+  }) as HTMLInputElement;
+  const body = el("div", { class: "ri-body" });
+  root.appendChild(el("div", { class: "recipe-index" }, [search, body]));
+
+  const renderBody = () => {
+    if (search.value !== state.query) search.value = state.query;
+    clear(body);
+    body.appendChild(renderItemList());
+    body.appendChild(renderDetail());
   };
-  render();
-  listeners.add(render);
+  renderBody();
+  listeners.add(renderBody);
   // Re-render on inventory changes too — affects the "you have N" indicator.
-  store.subscribe(render);
+  store.subscribe(renderBody);
 }
 
 function renderItemList(): HTMLElement {
