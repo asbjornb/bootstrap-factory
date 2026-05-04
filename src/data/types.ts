@@ -78,6 +78,16 @@ export interface PlacedMachine {
   jobId: string | null;
 }
 
+/**
+ * One slice of a perishable stack: a quantity that all spoils at the same
+ * absolute game-minute. Used both in the player's inventory/floor and inside
+ * chests, so freshness travels with the items wherever they're stored.
+ */
+export interface PerishableBatch {
+  qty: number;
+  expiresAt: number;
+}
+
 export interface PlacedChest {
   kind: "chest";
   instanceId: string;
@@ -85,6 +95,12 @@ export interface PlacedChest {
   type: ItemId;
   /** Stored contents. */
   contents: Record<ItemId, number>;
+  /**
+   * Perishable batches for the chest's contents, keyed by item id. Sorted
+   * oldest-first per item; the total qty across batches equals contents[id].
+   * Items without `spoilsAfter` never appear here.
+   */
+  perishables: Record<ItemId, PerishableBatch[]>;
 }
 
 export type RoomCell = PlacedMachine | PlacedChest;

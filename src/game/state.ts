@@ -19,6 +19,7 @@ import type {
   ItemId,
   MachineId,
   NodeId,
+  PerishableBatch,
   PlacedChest,
   PlacedMachine,
   QuestId,
@@ -30,15 +31,7 @@ import type {
   ToolRequirement,
 } from "../data/types";
 
-/**
- * One slice of a perishable stack: a quantity that all spoils at the same
- * absolute game-minute. Stacks are FIFO — older batches expire (and are
- * eaten / consumed) first.
- */
-export interface PerishableBatch {
-  qty: number;
-  expiresAt: number;
-}
+export type { PerishableBatch } from "../data/types";
 
 export interface MachineJob {
   id: string;
@@ -93,7 +86,7 @@ export interface GameState {
   seasonIndex: number;
 }
 
-const SCHEMA_VERSION = 12;
+const SCHEMA_VERSION = 13;
 
 /** Number of in-world days per season. 4 seasons make a year. */
 export const DAYS_PER_SEASON = 8;
@@ -180,7 +173,16 @@ class Store {
         cells: r.cells.map((c) =>
           c.kind === "machine"
             ? { ...c, output: { ...c.output } }
-            : { ...c, contents: { ...c.contents } },
+            : {
+                ...c,
+                contents: { ...c.contents },
+                perishables: Object.fromEntries(
+                  Object.entries(c.perishables).map(([k, v]) => [
+                    k,
+                    v.map((b) => ({ ...b })),
+                  ]),
+                ),
+              },
         ),
       })),
       everBuilt: { ...this.state.everBuilt },
@@ -279,24 +281,52 @@ export function add(state: GameState, id: ItemId, qty: number): void {
 /**
  * Drain `amount` units from the front of the FIFO batches for `id`. Used
  * whenever items leave inventory+floor for any reason (eating, crafting,
- * trashing, depositing into a chest). Older batches go first.
+ * trashing). Older batches go first. Returns the batches that were taken
+ * (with their original expiresAt) so callers that move items elsewhere
+ * (e.g. into a chest) can preserve freshness.
  */
-function consumePerishable(state: GameState, id: ItemId, amount: number): void {
-  if (amount <= 0) return;
-  const batches = state.perishables[id];
-  if (!batches || batches.length === 0) return;
+function consumeFromBatches(
+  map: Record<ItemId, PerishableBatch[]>,
+  id: ItemId,
+  amount: number,
+): PerishableBatch[] {
+  if (amount <= 0) return [];
+  const batches = map[id];
+  if (!batches || batches.length === 0) return [];
+  const taken: PerishableBatch[] = [];
   let remaining = amount;
   while (remaining > 0 && batches.length > 0) {
     const head = batches[0]!;
     if (head.qty <= remaining) {
       remaining -= head.qty;
-      batches.shift();
+      taken.push(batches.shift()!);
     } else {
+      taken.push({ qty: remaining, expiresAt: head.expiresAt });
       head.qty -= remaining;
       remaining = 0;
     }
   }
-  if (batches.length === 0) delete state.perishables[id];
+  if (batches.length === 0) delete map[id];
+  return taken;
+}
+
+function consumePerishable(
+  state: GameState,
+  id: ItemId,
+  amount: number,
+): PerishableBatch[] {
+  return consumeFromBatches(state.perishables, id, amount);
+}
+
+/** Insert `incoming` batches into `target` keeping the list sorted oldest-first. */
+function mergeBatches(
+  target: PerishableBatch[],
+  incoming: PerishableBatch[],
+): PerishableBatch[] {
+  if (incoming.length === 0) return target;
+  const merged = target.concat(incoming);
+  merged.sort((a, b) => a.expiresAt - b.expiresAt);
+  return merged;
 }
 
 /**
@@ -306,7 +336,8 @@ function consumePerishable(state: GameState, id: ItemId, amount: number): void {
  */
 export function tickSpoilage(state: GameState): ItemId[] {
   const now = gameMinutes(state);
-  const expired: ItemId[] = [];
+  const expired = new Set<ItemId>();
+  // Player's inventory + floor.
   for (const [id, batches] of Object.entries(state.perishables)) {
     let lost = 0;
     while (batches.length > 0 && batches[0]!.expiresAt <= now) {
@@ -314,7 +345,6 @@ export function tickSpoilage(state: GameState): ItemId[] {
     }
     if (batches.length === 0) delete state.perishables[id];
     if (lost <= 0) continue;
-    // Drain inventory first, then floor, by the amount that just spoiled.
     const fromInv = Math.min(state.inventory[id] ?? 0, lost);
     if (fromInv > 0) {
       state.inventory[id] = (state.inventory[id] ?? 0) - fromInv;
@@ -325,9 +355,26 @@ export function tickSpoilage(state: GameState): ItemId[] {
       state.floor[id] = (state.floor[id] ?? 0) - fromFloor;
       if (state.floor[id]! <= 0) delete state.floor[id];
     }
-    expired.push(id);
+    expired.add(id);
   }
-  return expired;
+  // Every placed chest spoils on the same clock — chests aren't fridges.
+  for (const room of state.rooms) {
+    for (const cell of room.cells) {
+      if (cell.kind !== "chest") continue;
+      for (const [id, batches] of Object.entries(cell.perishables)) {
+        let lost = 0;
+        while (batches.length > 0 && batches[0]!.expiresAt <= now) {
+          lost += batches.shift()!.qty;
+        }
+        if (batches.length === 0) delete cell.perishables[id];
+        if (lost <= 0) continue;
+        cell.contents[id] = (cell.contents[id] ?? 0) - lost;
+        if (cell.contents[id]! <= 0) delete cell.contents[id];
+        expired.add(id);
+      }
+    }
+  }
+  return [...expired];
 }
 
 /** Apply a recipe's outputs and remember any machine that was just built for the first time. */
@@ -389,6 +436,7 @@ function tryConsumeLenient(state: GameState, stacks: Stack[]): boolean {
         const take = Math.min(have, need);
         cell.contents[s.item] = have - take;
         if (cell.contents[s.item]! <= 0) delete cell.contents[s.item];
+        consumeFromBatches(cell.perishables, s.item, take);
         need -= take;
       }
       if (need <= 0) break;
@@ -1203,6 +1251,7 @@ export function trashFromChest(roomId: string, instanceId: string, id: ItemId): 
     if (!found || found.roomId !== roomId) return;
     if ((found.cell.contents[id] ?? 0) <= 0) return;
     delete found.cell.contents[id];
+    delete found.cell.perishables[id];
     ok = true;
   });
   return ok;
@@ -1389,6 +1438,7 @@ export function placeChest(roomId: string, chestType: ItemId): boolean {
       instanceId: newInstanceId("c"),
       type: chestType,
       contents: {},
+      perishables: {},
     });
     ok = true;
   });
@@ -1439,9 +1489,14 @@ export function depositToChest(
     chest.contents[itemId] = currentQty + move;
     s.inventory[itemId] = have - move;
     if (s.inventory[itemId]! <= 0) delete s.inventory[itemId];
-    // Items moved into a chest are no longer tracked for spoilage. (Withdrawal
-    // re-adds them as a fresh batch — a small pre-existing fridge quirk.)
-    consumePerishable(s, itemId, move);
+    // Carry the freshness batches with the items so chests aren't a fridge.
+    const taken = consumePerishable(s, itemId, move);
+    if (taken.length > 0) {
+      chest.perishables[itemId] = mergeBatches(
+        chest.perishables[itemId] ?? [],
+        taken,
+      );
+    }
     ok = true;
   });
   return ok;
@@ -1460,7 +1515,18 @@ export function withdrawFromChest(
     const have = found.cell.contents[itemId] ?? 0;
     if (have <= 0) return;
     delete found.cell.contents[itemId];
+    const chestBatches = found.cell.perishables[itemId];
+    delete found.cell.perishables[itemId];
+    // add() pushes a fresh batch — for perishable items we drop that and
+    // restore the original batches we just lifted out of the chest, so
+    // freshness is preserved across the round trip.
     add(s, itemId, have);
+    if (chestBatches && chestBatches.length > 0) {
+      const fresh = s.perishables[itemId];
+      if (fresh && fresh.length > 0) fresh.pop();
+      const remaining = s.perishables[itemId] ?? [];
+      s.perishables[itemId] = mergeBatches(remaining, chestBatches);
+    }
     ok = true;
   });
   return ok;
@@ -1517,6 +1583,16 @@ export function load(): void {
     parsed.worldClock = Math.min(parsed.worldClock, parsed.dayLength);
     for (const r of parsed.rooms) {
       if (!Array.isArray(r.cells)) r.cells = [];
+      for (const c of r.cells) {
+        if (c.kind !== "chest") continue;
+        if (!c.perishables || typeof c.perishables !== "object") {
+          c.perishables = {};
+        }
+        for (const id of Object.keys(c.perishables)) {
+          const v = c.perishables[id];
+          if (!Array.isArray(v) || v.length === 0) delete c.perishables[id];
+        }
+      }
     }
     evaluateQuests(parsed);
     store.set(parsed);

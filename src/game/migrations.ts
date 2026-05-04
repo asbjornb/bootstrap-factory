@@ -1,3 +1,4 @@
+import { ITEMS } from "../data/items";
 import type { GameState } from "./state";
 
 /**
@@ -36,6 +37,33 @@ const MIGRATIONS: Record<number, Migration> = {
       next[id] = [{ qty, expiresAt: t }];
     }
     s.perishables = next;
+  },
+  // v12 → v13: chests now track their own perishable batches. Old saves had
+  // no per-chest tracking (chests acted as fridges). Seed each chest's
+  // perishable contents with a single batch sized to the current count and
+  // a fresh expiry from now — a one-time grace so existing stockpiles
+  // don't all expire instantly the moment the player opens the new build.
+  12: (s) => {
+    const dayLength = typeof s.dayLength === "number" && s.dayLength > 0 ? s.dayLength : 16 * 60;
+    const dayNumber = typeof s.dayNumber === "number" && s.dayNumber >= 1 ? s.dayNumber : 1;
+    const worldClock = typeof s.worldClock === "number" && s.worldClock >= 0 ? s.worldClock : 0;
+    const now = (dayNumber - 1) * dayLength + worldClock;
+    if (!Array.isArray(s.rooms)) return;
+    for (const r of s.rooms) {
+      if (!r || !Array.isArray(r.cells)) continue;
+      for (const c of r.cells) {
+        if (!c || c.kind !== "chest") continue;
+        if (!c.perishables || typeof c.perishables !== "object") c.perishables = {};
+        const contents = c.contents ?? {};
+        for (const [id, qty] of Object.entries(contents)) {
+          if (typeof qty !== "number" || qty <= 0) continue;
+          const perish = ITEMS[id]?.spoilsAfter;
+          if (!perish) continue;
+          if (Array.isArray(c.perishables[id]) && c.perishables[id].length > 0) continue;
+          c.perishables[id] = [{ qty, expiresAt: now + perish }];
+        }
+      }
+    }
   },
 };
 
