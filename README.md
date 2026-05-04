@@ -25,11 +25,11 @@ Once a node is on the board, the work begins:
 - **Gather Plant Fiber** — strip undergrowth for fiber
 - **Forage** — sticks, the odd handful of fiber, sometimes a length of log
 - **Turn Soil** — gain loam and clay, with a chance of seeds
-- **Quarry Outcrop** — gain rubble, fieldstone, and flint, with chances for copper, tin, iron, and coal as your picks improve
+- **Quarry Outcrop** — gain rubble, fieldstone, and flint. Copper and tin start showing up once you can smelt them; iron and coal once you can work them.
 
 When the charges run out, explore again. From there, every small unlock opens new choices.
 
-Knap a flint hatchet to split better boards. Knap a flint pick to pry copper and tin out of the rock. Build a charcoal pit to fuel your first kiln. Smelt copper, alloy bronze, raise a bloomery, find iron. Each tier of pick reveals ores the last tier couldn't reach.
+Knap a flint hatchet to split better boards. Build a charcoal pit, then a clay kiln — only once you can smelt them does it become worth pocketing copper and tin from the rocks you're already quarrying. Alloy bronze, raise a bloomery, and iron and coal start joining the haul from the same outcrop. Better picks don't reveal new ores; they crack richer pieces out of every swing.
 
 ## Build Your Workshop
 
@@ -79,15 +79,15 @@ Examples:
 
 Exploration does not replace crafting — it feeds it. Each new biome expands the recipe web and gives you new ways to solve old problems.
 
-## Tools Change What You Can Find
+## Smelters Change What's Worth Picking Up
 
-Better tools do not just make numbers go up. They change what the world gives you.
+You quarry the same outcrop the whole game. What you bring home from it changes as you learn what to do with it.
 
-- Bare hands turn up rubble, fieldstone, and flint.
-- A flint pick pries copper and tin out of softer rock.
-- A copper pick reaches iron ore and the deeper coal seams.
-- A bronze pick reveals richer copper and tin veins.
-- An iron pick pulls richer iron and coal from the rock.
+- Bare hands and a flint pick already turn up rubble, fieldstone, and flint.
+- Build a clay kiln and copper and tin start coming out too — no point pocketing ore you can't smelt.
+- Raise a bloomery and iron and coal join the haul.
+
+Picks themselves don't unlock ores. They speed up every swing and, at higher tiers, crack richer 1–2 ore pieces out of the same rock — but only of ores your smelters already make worthwhile.
 
 Eventually, the question becomes: should you spend your precious metals on better manual gathering, or save them for automation?
 
