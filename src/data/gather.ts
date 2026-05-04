@@ -12,7 +12,7 @@ const list: GatherAction[] = [
     description:
       "Walk the edges of camp turning over leaves and stripping low brambles. Slow but always available.",
     baseDurationMs: 6000,
-    activeTime: 15,
+    activeTime: 48,
     drops: [
       { item: "berries", qty: [1, 2], chance: 0.7 },
       { item: "edible_root", qty: [1, 1], chance: 0.35 },
@@ -26,7 +26,7 @@ const list: GatherAction[] = [
     description:
       "Pack a ration and strike out for the further bramble-and-marsh country. A long day, but you come back with the basket full.",
     baseDurationMs: 14000,
-    activeTime: 4 * 60,
+    activeTime: 112,
     provisions: [{ item: "dried_berries", qty: 1 }],
     drops: [
       { item: "berries", qty: [3, 6], chance: 1 },

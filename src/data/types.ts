@@ -113,7 +113,7 @@ export interface GatherAction {
   baseDurationMs: number;
   /** Tool tiers that shorten the action. Lowest matching duration wins. */
   speedups?: GatherSpeedup[];
-  /** In-world minutes spent doing this action. Defaults to baseDurationMs/1000. */
+  /** In-world minutes spent doing this action. Derived from baseDurationMs at the global time scale unless set. */
   activeTime?: number;
   /** Items consumed up-front before the action starts (rations for the trip). */
   provisions?: Stack[];
@@ -131,7 +131,7 @@ export interface ResourceNode {
   baseDurationMs: number;
   speedups?: GatherSpeedup[];
   drops: DropEntry[];
-  /** In-world minutes spent harvesting. Defaults to baseDurationMs/1000. */
+  /** In-world minutes spent harvesting. Derived from baseDurationMs at the global time scale unless set. */
   activeTime?: number;
 }
 
@@ -157,7 +157,7 @@ export interface Biome {
   description?: string;
   exploreDurationMs: number;
   outcomes: BiomeOutcome[];
-  /** In-world minutes spent exploring. Defaults to exploreDurationMs/1000. */
+  /** In-world minutes spent exploring. Derived from exploreDurationMs at the global time scale unless set. */
   activeTime?: number;
   /** Items consumed up-front before the explore starts. */
   provisions?: Stack[];
