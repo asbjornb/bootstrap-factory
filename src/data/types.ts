@@ -25,6 +25,12 @@ export interface Item {
   carryBonus?: number;
   /** If set, this item can be eaten to refund time-budget minutes. */
   food?: { satiatesMinutes: number };
+  /**
+   * Perishable: any stack of this item rots after this many in-world minutes.
+   * The timer starts when the stack first appears in inventory (or restocks
+   * from zero). Mixing fresh into an old stack inherits the older timer.
+   */
+  spoilsAfter?: number;
 }
 
 export interface Stack {
@@ -109,6 +115,8 @@ export interface GatherAction {
   speedups?: GatherSpeedup[];
   /** In-world minutes spent doing this action. Defaults to baseDurationMs/1000. */
   activeTime?: number;
+  /** Items consumed up-front before the action starts (rations for the trip). */
+  provisions?: Stack[];
 }
 
 /** A finite resource node found by exploring a biome. Charges deplete with each harvest. */
@@ -135,6 +143,11 @@ export interface BiomeOutcome {
   charges: { node: NodeId; qty: [number, number] }[];
   /** Items picked up incidentally while exploring (small consolation drops). */
   drops?: DropEntry[];
+  /**
+   * If set, this outcome only rolls when the current season is in the list
+   * (0=Spring, 1=Summer, 2=Autumn, 3=Winter). Otherwise it's year-round.
+   */
+  seasons?: number[];
 }
 
 export interface Biome {
@@ -146,6 +159,8 @@ export interface Biome {
   outcomes: BiomeOutcome[];
   /** In-world minutes spent exploring. Defaults to exploreDurationMs/1000. */
   activeTime?: number;
+  /** Items consumed up-front before the explore starts. */
+  provisions?: Stack[];
 }
 
 export type QuestId = string;

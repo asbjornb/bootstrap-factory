@@ -39,6 +39,25 @@ const list: Biome[] = [
         ],
       },
       {
+        // Summer/autumn flush: brambles heavy with berries.
+        weight: 5,
+        seasons: [1, 2],
+        message: "The brambles are heavy with fruit — you fill the basket twice.",
+        charges: [{ node: "forage_patch", qty: [4, 8] }],
+        drops: [
+          { item: "berries", qty: [2, 4], chance: 1 },
+          { item: "plant_fiber", qty: [1, 2], chance: 0.6 },
+        ],
+      },
+      {
+        // Winter: bare wood, only deadfall.
+        weight: 4,
+        seasons: [3],
+        message: "The wood is bare and quiet. Only deadfall worth carrying back.",
+        charges: [{ node: "tree_node", qty: [1, 2] }],
+        drops: [{ item: "stick", qty: [1, 2], chance: 0.5 }],
+      },
+      {
         weight: 1,
         message: "You wander a while and turn up nothing useful.",
         charges: [],
@@ -67,6 +86,24 @@ const list: Biome[] = [
           { item: "wheat_seed", qty: [1, 1], chance: 0.4 },
           { item: "sunflower_seed", qty: [1, 1], chance: 0.15 },
         ],
+      },
+      {
+        // Spring tilth: soft soil and seed heads still on the stems.
+        weight: 4,
+        seasons: [0],
+        message: "Soft spring tilth — the soil turns easily and the air is full of seed.",
+        charges: [{ node: "soil_patch", qty: [4, 7] }],
+        drops: [
+          { item: "wheat_seed", qty: [1, 2], chance: 0.6 },
+          { item: "sunflower_seed", qty: [1, 1], chance: 0.3 },
+        ],
+      },
+      {
+        // Winter: hard ground, slim pickings.
+        weight: 2,
+        seasons: [3],
+        message: "The meadow is frozen hard. You scuff up barely a handful of loam.",
+        charges: [{ node: "soil_patch", qty: [1, 2] }],
       },
       {
         weight: 1,

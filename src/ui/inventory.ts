@@ -2,6 +2,7 @@ import { ITEMS, stackSize } from "../data/items";
 import {
   carryCap,
   eat,
+  gameMinutes,
   inventorySlotsUsed,
   pickUpAllFromFloor,
   pickUpFromFloor,
@@ -136,7 +137,7 @@ export function mountInventory(root: HTMLElement): void {
     }
     for (let i = fills.length; i < cap; i++) grid.appendChild(emptySlot());
 
-    const pantry = renderPantry(entries as [ItemId, number][]);
+    const pantry = renderPantry(entries as [ItemId, number][], s);
 
     root.appendChild(
       el("div", { class: "panel" }, [
@@ -188,9 +189,13 @@ export function mountInventory(root: HTMLElement): void {
   subscribeTrashMode(render);
 }
 
-function renderPantry(entries: [ItemId, number][]): HTMLElement | null {
+function renderPantry(
+  entries: [ItemId, number][],
+  state: ReturnType<typeof store.get>,
+): HTMLElement | null {
   const foods = entries.filter(([id]) => ITEMS[id]?.food);
   if (foods.length === 0) return null;
+  const now = gameMinutes(state);
   return el("div", { class: "pantry" }, [
     el("h3", {}, "Pantry"),
     el("p", { class: "muted small" }, "Eat to refill your time-budget."),
@@ -200,11 +205,17 @@ function renderPantry(entries: [ItemId, number][]): HTMLElement | null {
       foods.map(([id, qty]) => {
         const it = ITEMS[id]!;
         const mins = it.food!.satiatesMinutes;
+        const spoilsAt = state.perishables[id];
+        const fresh =
+          spoilsAt !== undefined ? formatFreshness(spoilsAt - now) : null;
+        const title = fresh
+          ? `Eat one ${it.name} (+${mins} min). You have ${qty}. Spoils in ${fresh}.`
+          : `Eat one ${it.name} (+${mins} min). You have ${qty}. Keeps indefinitely.`;
         return el(
           "button",
           {
             class: "eat-btn",
-            title: `Eat one ${it.name} (+${mins} min). You have ${qty}.`,
+            title,
             onclick: () => {
               if (eat(id)) save();
             },
@@ -214,11 +225,27 @@ function renderPantry(entries: [ItemId, number][]): HTMLElement | null {
             el("span", {}, `Eat ${it.name}`),
             el("span", { class: "eat-mins" }, `+${mins}m`),
             el("span", { class: "eat-qty" }, `×${qty}`),
+            fresh
+              ? el(
+                  "span",
+                  { class: "eat-fresh small", title: "Time until this stack spoils" },
+                  `🪰 ${fresh}`,
+                )
+              : null,
           ],
         );
       }),
     ),
   ]);
+}
+
+function formatFreshness(minsLeft: number): string {
+  if (minsLeft <= 0) return "now";
+  if (minsLeft < 60) return `${Math.round(minsLeft)} min`;
+  const h = minsLeft / 60;
+  if (h < 24) return h % 1 === 0 ? `${h} h` : `${h.toFixed(1)} h`;
+  const d = h / 16; // in-world days are 16 active hours.
+  return d < 2 ? `~1 day` : `~${Math.round(d)} days`;
 }
 
 function renderFloorGrid(

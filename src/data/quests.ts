@@ -24,6 +24,17 @@ export const ALL_QUESTS: Quest[] = [
     done: (ctx) => ctx.has("belt_pouch"),
   },
   {
+    id: "drying_rack",
+    title: "Raise a drying rack",
+    description:
+      "Berries spoil within a day; roots not much longer. Lash sticks and cordage into an open-air rack and turn raw forage into food that travels.",
+    kind: "utility",
+    benefit: "Unlocks dried berries and smoked roots — preserved food for long expeditions.",
+    requires: ["drying_rack"],
+    visible: () => true,
+    done: (ctx) => ctx.has("drying_rack"),
+  },
+  {
     id: "clay_kiln",
     title: "Build a clay kiln",
     description:

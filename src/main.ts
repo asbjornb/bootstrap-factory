@@ -1,4 +1,5 @@
-import { load, reset, save, startTickLoop, store } from "./game/state";
+import { ITEMS } from "./data/items";
+import { load, onSpoiled, reset, save, startTickLoop, store } from "./game/state";
 import { el } from "./ui/dom";
 import { mountCraft } from "./ui/craft";
 import { mountGather } from "./ui/gather";
@@ -8,7 +9,7 @@ import { mountQuestbook } from "./ui/questbook";
 import { mountRecipeIndex, selectItem } from "./ui/recipe-index";
 import { mountRooms } from "./ui/rooms";
 import { mountTimebar } from "./ui/timebar";
-import { startMachineCraftedToasts } from "./ui/toast";
+import { showToast, startMachineCraftedToasts } from "./ui/toast";
 
 function buildShell(): void {
   const app = document.getElementById("app")!;
@@ -108,6 +109,10 @@ function start(): void {
   load();
   buildShell();
   startMachineCraftedToasts();
+  onSpoiled((ids) => {
+    const names = ids.map((id) => ITEMS[id]?.name ?? id).join(", ");
+    showToast(`Spoiled: ${names}. Build a drying rack to preserve food.`, "🪰");
+  });
   // Best-effort: persist on every state change.
   store.subscribe(() => save());
   window.addEventListener("beforeunload", save);

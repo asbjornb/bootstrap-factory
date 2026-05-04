@@ -102,7 +102,7 @@ free so the loop is never bricked.
   we fast-forward `Date.now()`-equivalent for them. Verify
   `tickJobs(now)` handles a big jump cleanly.
 
-### Stage 5 — Spoilage + preservation
+### Stage 5 — Spoilage + preservation [done]
 
 - Add `spoilsAfter: minutes` to perishable food items. Track per-stack
   spoilage timer (probably as separate inventory entries keyed by
@@ -113,7 +113,7 @@ free so the loop is never bricked.
 - Sleep / world-clock advance ticks spoilage. Spoiled food is
   destroyed (or downgraded to compost) silently with a toast.
 
-### Stage 6 — `provisions` + long expeditions
+### Stage 6 — `provisions` + long expeditions [done]
 
 - Add `provisions: Stack[]` field to actions (and biome outcomes).
   Consumed up front before the action starts.
@@ -124,7 +124,7 @@ free so the loop is never bricked.
 - This is also where hunting tools (spear, bow), traps, and fishing
   rods slot in as new high-yield food sources.
 
-### Stage 7 — Seasons
+### Stage 7 — Seasons [done]
 
 - Slow cycle (e.g. every N sleeps = 1 season; 4 seasons = 1 year).
 - Modulate node spawn rates by season (berries summer/fall, fish runs

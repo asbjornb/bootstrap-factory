@@ -6,6 +6,7 @@ const list: Machine[] = [
   { id: "charcoal_pit", name: "Charcoal Pit", icon: "🔥", description: "Smolders logs into charcoal, slowly." },
   { id: "clay_kiln", name: "Clay Kiln", icon: "🏺", description: "Fires bricks and crucibles, smelts copper and tin, alloys bronze." },
   { id: "bloomery", name: "Bloomery", icon: "🏭", description: "A refractory stack hot enough for iron." },
+  { id: "drying_rack", name: "Drying Rack", icon: "🪵", description: "Open-air rack for preserving raw food into something that keeps." },
 ];
 
 export const MACHINES: Record<MachineId, Machine> = Object.fromEntries(list.map((m) => [m.id, m]));

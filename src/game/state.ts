@@ -73,9 +73,21 @@ export interface GameState {
   worldClock: number;
   /** Day count, starting at 1. Bumps on Sleep. */
   dayNumber: number;
+  /**
+   * For each perishable item id currently held: the absolute game-minute
+   * at which the entire stack spoils. Cleared when the stack hits zero.
+   */
+  perishables: Record<ItemId, number>;
+  /** Index 0..3 for spring/summer/autumn/winter. Advances every `daysPerSeason` sleeps. */
+  seasonIndex: number;
 }
 
-const SCHEMA_VERSION = 10;
+const SCHEMA_VERSION = 11;
+
+/** Number of in-world days per season. 4 seasons make a year. */
+export const DAYS_PER_SEASON = 8;
+export const SEASONS = ["Spring", "Summer", "Autumn", "Winter"] as const;
+export type Season = (typeof SEASONS)[number];
 
 /** Default in-world day length, in minutes. 16 active hours. */
 export const DEFAULT_DAY_LENGTH = 16 * 60;
@@ -114,7 +126,18 @@ export function emptyState(): GameState {
     timeBudget: DEFAULT_STARTING_BUDGET,
     worldClock: 0,
     dayNumber: 1,
+    perishables: {},
+    seasonIndex: 0,
   };
+}
+
+/** Cumulative in-world minutes since the dawn of day 1. Used for spoilage timers. */
+export function gameMinutes(state: GameState): number {
+  return (state.dayNumber - 1) * state.dayLength + state.worldClock;
+}
+
+export function currentSeason(state: GameState): Season {
+  return SEASONS[state.seasonIndex % SEASONS.length]!;
 }
 
 type Listener = (s: GameState) => void;
@@ -152,6 +175,7 @@ class Store {
       everBuilt: { ...this.state.everBuilt },
       completedQuests: [...this.state.completedQuests],
       pinnedRecipes: [...this.state.pinnedRecipes],
+      perishables: { ...this.state.perishables },
     };
     fn(draft);
     evaluateQuests(draft);
@@ -223,9 +247,40 @@ export function add(state: GameState, id: ItemId, qty: number): void {
   const availableSlots = cap - (used - currentSlots);
   const maxQty = Math.max(0, availableSlots * stack);
   const canAdd = Math.max(0, Math.min(qty, maxQty - currentQty));
+  const had = currentQty + (state.floor[id] ?? 0);
   if (canAdd > 0) state.inventory[id] = currentQty + canAdd;
   const overflow = qty - canAdd;
   if (overflow > 0) state.floor[id] = (state.floor[id] ?? 0) + overflow;
+  // Perishables: start a fresh spoilage timer when this item went from
+  // nothing to something. Restocks into an existing pile inherit the
+  // older timer (mixing fresh into stale doesn't refresh anything).
+  const perish = ITEMS[id]?.spoilsAfter;
+  if (perish && had <= 0) {
+    state.perishables[id] = gameMinutes(state) + perish;
+  }
+}
+
+/**
+ * Advance spoilage to the current game time. Any perishable whose timer has
+ * elapsed is destroyed (inventory + floor) and its name returned so the UI
+ * can surface a toast.
+ */
+export function tickSpoilage(state: GameState): ItemId[] {
+  const now = gameMinutes(state);
+  const expired: ItemId[] = [];
+  for (const [id, t] of Object.entries(state.perishables)) {
+    const total = (state.inventory[id] ?? 0) + (state.floor[id] ?? 0);
+    if (total <= 0) {
+      delete state.perishables[id];
+      continue;
+    }
+    if (t > now) continue;
+    expired.push(id);
+    delete state.perishables[id];
+    delete state.inventory[id];
+    delete state.floor[id];
+  }
+  return expired;
 }
 
 /** Apply a recipe's outputs and remember any machine that was just built for the first time. */
@@ -720,7 +775,7 @@ function finishActionJob(state: GameState, job: ActionJob): void {
   } else if (job.kind === "explore") {
     const biome = BIOMES[job.biomeId];
     if (!biome) return;
-    const outcome = pickOutcome(biome);
+    const outcome = pickOutcome(biome, state.seasonIndex);
     if (!outcome) return;
     state.lastExploreMessage = outcome.message;
     for (const c of outcome.charges) {
@@ -738,15 +793,18 @@ function finishActionJob(state: GameState, job: ActionJob): void {
   }
 }
 
-function pickOutcome(biome: Biome): Biome["outcomes"][number] | null {
-  const total = biome.outcomes.reduce((n, o) => n + o.weight, 0);
+function pickOutcome(biome: Biome, seasonIndex: number): Biome["outcomes"][number] | null {
+  const eligible = biome.outcomes.filter(
+    (o) => !o.seasons || o.seasons.includes(seasonIndex),
+  );
+  const total = eligible.reduce((n, o) => n + o.weight, 0);
   if (total <= 0) return null;
   let roll = Math.random() * total;
-  for (const o of biome.outcomes) {
+  for (const o of eligible) {
     roll -= o.weight;
     if (roll <= 0) return o;
   }
-  return biome.outcomes[biome.outcomes.length - 1] ?? null;
+  return eligible[eligible.length - 1] ?? null;
 }
 
 /** Wander outcomes that can still fire — discovery outcomes drop out once their biome is known. */
@@ -777,7 +835,23 @@ export function hasUndiscoveredBiomes(state: GameState): boolean {
 
 export interface ActionResult {
   ok: boolean;
-  reason?: "busy" | "unknown" | "no_charges" | "missing_tool" | "no_budget" | "no_daytime";
+  reason?:
+    | "busy"
+    | "unknown"
+    | "no_charges"
+    | "missing_tool"
+    | "no_budget"
+    | "no_daytime"
+    | "missing_provisions";
+}
+
+/** True iff every provision stack is available across inventory + chests. */
+export function hasProvisions(state: GameState, stacks: Stack[] | undefined): boolean {
+  if (!stacks || stacks.length === 0) return true;
+  for (const s of stacks) {
+    if (totalAvailable(state, s.item) < s.qty) return false;
+  }
+  return true;
 }
 
 /** Spend the action's active time: drain budget (unless free) and advance the world clock. */
@@ -785,6 +859,17 @@ function spendActiveTime(state: GameState, activeTime: number, isFloor: boolean)
   const cost = isFloor ? Math.min(activeTime, state.timeBudget) : activeTime;
   state.timeBudget = Math.max(0, state.timeBudget - cost);
   state.worldClock = Math.min(state.dayLength, state.worldClock + activeTime);
+  const expired = tickSpoilage(state);
+  if (expired.length > 0) reportSpoiled(expired);
+}
+
+const spoilListeners = new Set<(ids: ItemId[]) => void>();
+export function onSpoiled(fn: (ids: ItemId[]) => void): () => void {
+  spoilListeners.add(fn);
+  return () => spoilListeners.delete(fn);
+}
+function reportSpoiled(ids: ItemId[]): void {
+  for (const fn of spoilListeners) fn(ids);
 }
 
 export function gather(actionId: GatherId): ActionResult {
@@ -804,6 +889,14 @@ export function gather(actionId: GatherId): ActionResult {
     }
     if (!canAfford(s, at, isFloor)) {
       result = { ok: false, reason: "no_budget" };
+      return;
+    }
+    if (!hasProvisions(s, action.provisions)) {
+      result = { ok: false, reason: "missing_provisions" };
+      return;
+    }
+    if (action.provisions && !tryConsumeLenient(s, action.provisions)) {
+      result = { ok: false, reason: "missing_provisions" };
       return;
     }
     spendActiveTime(s, at, isFloor);
@@ -880,6 +973,14 @@ export function exploreBiome(biomeId: BiomeId): ActionResult {
     }
     if (!canAfford(s, at, false)) {
       result = { ok: false, reason: "no_budget" };
+      return;
+    }
+    if (!hasProvisions(s, biome.provisions)) {
+      result = { ok: false, reason: "missing_provisions" };
+      return;
+    }
+    if (biome.provisions && !tryConsumeLenient(s, biome.provisions)) {
+      result = { ok: false, reason: "missing_provisions" };
       return;
     }
     spendActiveTime(s, at, false);
@@ -965,6 +1066,9 @@ export function sleep(): boolean {
     }
     s.worldClock = 0;
     s.dayNumber += 1;
+    s.seasonIndex = Math.floor((s.dayNumber - 1) / DAYS_PER_SEASON) % SEASONS.length;
+    const expired = tickSpoilage(s);
+    if (expired.length > 0) reportSpoiled(expired);
     ok = true;
   });
   if (ok) tickJobs();
@@ -1327,6 +1431,10 @@ export function load(): void {
     if (typeof parsed.timeBudget !== "number" || parsed.timeBudget < 0) parsed.timeBudget = DEFAULT_STARTING_BUDGET;
     if (typeof parsed.worldClock !== "number" || parsed.worldClock < 0) parsed.worldClock = 0;
     if (typeof parsed.dayNumber !== "number" || parsed.dayNumber < 1) parsed.dayNumber = 1;
+    if (!parsed.perishables || typeof parsed.perishables !== "object") parsed.perishables = {};
+    if (typeof parsed.seasonIndex !== "number" || parsed.seasonIndex < 0) {
+      parsed.seasonIndex = Math.floor((parsed.dayNumber - 1) / DAYS_PER_SEASON) % SEASONS.length;
+    }
     parsed.timeBudget = Math.min(parsed.timeBudget, parsed.dayLength);
     parsed.worldClock = Math.min(parsed.worldClock, parsed.dayLength);
     for (const r of parsed.rooms) {
