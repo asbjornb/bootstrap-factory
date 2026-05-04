@@ -18,6 +18,25 @@ const MIGRATIONS: Record<number, Migration> = {
   // v10 → v11: introduce perishables map and season index. Defaults filled
   // in by load() are sufficient.
   10: (_s) => {},
+  // v11 → v12: perishables changed from a single timestamp per item to a
+  // FIFO list of {qty, expiresAt} batches. Old saves had one timer covering
+  // the whole stack — collapse that into a single batch holding the
+  // current inventory + floor total.
+  11: (s) => {
+    const old = s.perishables;
+    if (!old || typeof old !== "object") {
+      s.perishables = {};
+      return;
+    }
+    const next: Record<string, { qty: number; expiresAt: number }[]> = {};
+    for (const [id, t] of Object.entries(old)) {
+      if (typeof t !== "number") continue;
+      const qty = (s.inventory?.[id] ?? 0) + (s.floor?.[id] ?? 0);
+      if (qty <= 0) continue;
+      next[id] = [{ qty, expiresAt: t }];
+    }
+    s.perishables = next;
+  },
 };
 
 export interface MigrationResult {

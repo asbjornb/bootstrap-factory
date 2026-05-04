@@ -205,11 +205,13 @@ function renderPantry(
       foods.map(([id, qty]) => {
         const it = ITEMS[id]!;
         const mins = it.food!.satiatesMinutes;
-        const spoilsAt = state.perishables[id];
-        const fresh =
-          spoilsAt !== undefined ? formatFreshness(spoilsAt - now) : null;
+        const batches = state.perishables[id];
+        const oldest = batches && batches.length > 0 ? batches[0]! : null;
+        const fresh = oldest ? formatFreshness(oldest.expiresAt - now) : null;
+        const batchSuffix =
+          batches && batches.length > 1 ? ` (${batches.length} batches)` : "";
         const title = fresh
-          ? `Eat one ${it.name} (+${mins} min). You have ${qty}. Spoils in ${fresh}.`
+          ? `Eat one ${it.name} (+${mins} min). You have ${qty}. Oldest ${oldest!.qty} spoils in ${fresh}${batchSuffix}.`
           : `Eat one ${it.name} (+${mins} min). You have ${qty}. Keeps indefinitely.`;
         return el(
           "button",
@@ -228,8 +230,11 @@ function renderPantry(
             fresh
               ? el(
                   "span",
-                  { class: "eat-fresh small", title: "Time until this stack spoils" },
-                  `🪰 ${fresh}`,
+                  {
+                    class: "eat-fresh small",
+                    title: "Time until the oldest batch spoils",
+                  },
+                  `🪰 ${fresh}${batchSuffix}`,
                 )
               : null,
           ],
