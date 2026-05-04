@@ -59,10 +59,21 @@ export interface Room {
   machines: Record<MachineId, number>;
 }
 
+export interface GatherSpeedup {
+  type: ToolType;
+  /** Minimum tier of the matching tool. The best matching speedup wins. */
+  minTier: number;
+  durationMs: number;
+}
+
 export interface GatherAction {
   id: GatherId;
   name: string;
   icon: string;
   description?: string;
   drops: DropEntry[];
+  /** Time to complete with no qualifying tools. */
+  baseDurationMs: number;
+  /** Tool tiers that shorten the action. Lowest matching duration wins. */
+  speedups?: GatherSpeedup[];
 }
