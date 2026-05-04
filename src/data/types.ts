@@ -2,6 +2,8 @@ export type ItemId = string;
 export type RecipeId = string;
 export type MachineId = string;
 export type GatherId = string;
+export type BiomeId = string;
+export type NodeId = string;
 
 export type ToolType = "axe" | "pickaxe" | "shovel";
 
@@ -92,6 +94,37 @@ export interface GatherAction {
   baseDurationMs: number;
   /** Tool tiers that shorten the action. Lowest matching duration wins. */
   speedups?: GatherSpeedup[];
+}
+
+/** A finite resource node found by exploring a biome. Charges deplete with each harvest. */
+export interface ResourceNode {
+  id: NodeId;
+  name: string;
+  icon: string;
+  biome: BiomeId;
+  description?: string;
+  /** Tool gating the harvest action itself (not just specific drops). */
+  requiresTool?: ToolRequirement;
+  baseDurationMs: number;
+  speedups?: GatherSpeedup[];
+  drops: DropEntry[];
+}
+
+/** One possible exploration result. The biome rolls a weighted pick from these. */
+export interface BiomeOutcome {
+  weight: number;
+  message: string;
+  /** Charges added to nodes when this outcome fires. */
+  charges: { node: NodeId; qty: [number, number] }[];
+}
+
+export interface Biome {
+  id: BiomeId;
+  name: string;
+  icon: string;
+  description?: string;
+  exploreDurationMs: number;
+  outcomes: BiomeOutcome[];
 }
 
 export type QuestId = string;

@@ -25,6 +25,15 @@ const list: Recipe[] = [
     outputs: [{ item: "haft", qty: 2 }],
   },
   {
+    id: "lash_haft",
+    machine: "hand",
+    inputs: [
+      { item: "stick", qty: 2 },
+      { item: "cordage", qty: 1 },
+    ],
+    outputs: [{ item: "haft", qty: 1 }],
+  },
+  {
     id: "mix_daub",
     machine: "hand",
     inputs: [

@@ -2,37 +2,16 @@ import type { GatherAction, GatherId, ItemId } from "./types";
 
 const list: GatherAction[] = [
   {
-    id: "chop_tree",
-    name: "Chop Tree",
-    icon: "🌳",
+    id: "forage",
+    name: "Forage",
+    icon: "🍂",
     description:
-      "Work a tree down for logs. A hatchet fells it cleaner; a sharper edge finds resin.",
-    baseDurationMs: 5000,
-    speedups: [
-      { type: "axe", minTier: 1, durationMs: 3000 },
-      { type: "axe", minTier: 2, durationMs: 2000 },
-    ],
-    drops: [
-      { item: "log", qty: [1, 1], chance: 1 },
-      { item: "log", qty: [1, 2], chance: 0.5, requiresTool: { type: "axe", minTier: 1 } },
-      { item: "log", qty: [1, 2], chance: 0.5, requiresTool: { type: "axe", minTier: 2 } },
-      { item: "resin", qty: [1, 1], chance: 0.08, requiresTool: { type: "axe", minTier: 2 } },
-    ],
-  },
-  {
-    id: "gather_fiber",
-    name: "Gather Plant Fiber",
-    icon: "🌿",
-    description:
-      "Strip stems and bark from undergrowth for fiber. Quick work by hand.",
+      "Pick over the brush at the workshop's edge — sticks, the odd handful of fiber, sometimes a length of deadfall.",
     baseDurationMs: 3000,
-    speedups: [
-      { type: "axe", minTier: 1, durationMs: 2200 },
-      { type: "axe", minTier: 2, durationMs: 1600 },
-    ],
     drops: [
-      { item: "plant_fiber", qty: [1, 2], chance: 1 },
-      { item: "plant_fiber", qty: [1, 2], chance: 0.5, requiresTool: { type: "axe", minTier: 1 } },
+      { item: "stick", qty: [1, 2], chance: 0.8 },
+      { item: "plant_fiber", qty: [1, 1], chance: 0.5 },
+      { item: "log", qty: [1, 1], chance: 0.15 },
     ],
   },
   {

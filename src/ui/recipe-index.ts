@@ -1,13 +1,15 @@
+import { BIOMES } from "../data/biomes";
 import { gatherActionsProducing } from "../data/gather";
 import { ALL_ITEMS, ITEMS } from "../data/items";
 import { MACHINES } from "../data/machines";
+import { nodesProducing } from "../data/nodes";
 import {
   recipesConsuming,
   recipesProducing,
   recipesUsingAsTool,
 } from "../data/recipes";
 import { isPinned, store, togglePin } from "../game/state";
-import type { DropEntry, GatherAction, ItemId, Recipe } from "../data/types";
+import type { DropEntry, GatherAction, ItemId, Recipe, ResourceNode } from "../data/types";
 import { clear, el } from "./dom";
 
 interface IndexState {
@@ -110,6 +112,7 @@ function renderDetail(): HTMLElement {
   const consumed = recipesConsuming(id);
   const asTool = recipesUsingAsTool(id);
   const gatheredFrom = gatherActionsProducing(id);
+  const harvestedFrom = nodesProducing(id);
   const owned = store.get().inventory[id] ?? 0;
 
   return el("div", { class: "ri-detail" }, [
@@ -133,6 +136,9 @@ function renderDetail(): HTMLElement {
     ]),
     gatheredFrom.length > 0
       ? gatherSection(`Gathered from (${gatheredFrom.length})`, gatheredFrom, id)
+      : null,
+    harvestedFrom.length > 0
+      ? nodeSection(`Harvested from (${harvestedFrom.length})`, harvestedFrom, id)
       : null,
     section(`Recipes (${produced.length})`, produced, id, "produces"),
     section(`Used in (${consumed.length})`, consumed, id, "consumes"),
@@ -223,6 +229,50 @@ function renderGatherCard(a: GatherAction, focus: ItemId): HTMLElement {
       { class: "ri-recipe-stacks" },
       drops.map((d) => dropChip(d)),
     ),
+  ]);
+}
+
+function nodeSection(
+  title: string,
+  nodes: ResourceNode[],
+  focusItem: ItemId,
+): HTMLElement {
+  return el("div", { class: "ri-section" }, [
+    el("h4", {}, title),
+    el(
+      "div",
+      { class: "recipe-list" },
+      nodes.map((n) => renderNodeCard(n, focusItem)),
+    ),
+  ]);
+}
+
+function renderNodeCard(n: ResourceNode, focus: ItemId): HTMLElement {
+  const drops = n.drops.filter((d) => d.item === focus);
+  const biome = BIOMES[n.biome];
+  const sub = biome ? `Found by exploring ${biome.name}` : "";
+  return el("div", { class: "ri-recipe" }, [
+    el("div", { class: "ri-recipe-machine", title: n.name }, [
+      el("span", { class: "icon" }, n.icon),
+      el("span", { class: "small" }, n.name),
+    ]),
+    el(
+      "div",
+      { class: "ri-recipe-stacks" },
+      drops.map((d) => dropChip(d)),
+    ),
+    n.requiresTool || sub
+      ? el(
+          "div",
+          { class: "ri-recipe-tool" },
+          [
+            sub,
+            n.requiresTool
+              ? `${sub ? " · " : ""}requires ${n.requiresTool.type} (tier ≥ ${n.requiresTool.minTier})`
+              : "",
+          ].join(""),
+        )
+      : null,
   ]);
 }
 
