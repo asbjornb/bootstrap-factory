@@ -7,6 +7,7 @@ import { createModal } from "./ui/modal";
 import { mountQuestbook } from "./ui/questbook";
 import { mountRecipeIndex, selectItem } from "./ui/recipe-index";
 import { mountRooms } from "./ui/rooms";
+import { startMachineCraftedToasts } from "./ui/toast";
 
 function buildShell(): void {
   const app = document.getElementById("app")!;
@@ -102,6 +103,7 @@ function buildShell(): void {
 function start(): void {
   load();
   buildShell();
+  startMachineCraftedToasts();
   // Best-effort: persist on every state change.
   store.subscribe(() => save());
   window.addEventListener("beforeunload", save);
