@@ -55,10 +55,16 @@ body {
   padding: 4px 10px;
   border-radius: 4px;
   cursor: pointer;
+  transition: transform 60ms ease, background-color 60ms ease, border-color 60ms ease, color 60ms ease;
 }
 .reset-btn:hover {
   color: var(--bad);
   border-color: var(--bad);
+}
+.reset-btn:active {
+  background: var(--bad);
+  color: var(--bg);
+  transform: translateY(1px);
 }
 
 .app-grid {
@@ -150,8 +156,19 @@ body {
   cursor: pointer;
   font-size: 14px;
   width: 100%;
+  transition: transform 60ms ease, background-color 60ms ease, border-color 60ms ease;
 }
 .gather-btn:hover {
+  border-color: var(--accent);
+}
+.gather-btn:active {
+  background: var(--panel-2);
+  border-color: var(--accent);
+  transform: translateY(1px);
+}
+.gather-btn.flash {
+  background: var(--accent);
+  color: var(--bg);
   border-color: var(--accent);
 }
 
@@ -212,8 +229,19 @@ body {
   border-radius: 4px;
   cursor: pointer;
   text-align: left;
+  transition: transform 60ms ease, background-color 60ms ease, border-color 60ms ease, color 60ms ease;
 }
 .recipe-craft-btn:not(:disabled):hover {
+  border-color: var(--good);
+}
+.recipe-craft-btn:not(:disabled):active {
+  background: var(--panel-2);
+  border-color: var(--good);
+  transform: translateY(1px);
+}
+.recipe-craft-btn.flash {
+  background: var(--good);
+  color: var(--bg);
   border-color: var(--good);
 }
 .recipe-craft-btn:disabled {
@@ -350,10 +378,16 @@ body {
   height: 28px;
   border-radius: 4px;
   cursor: pointer;
+  transition: transform 60ms ease, background-color 60ms ease, border-color 60ms ease, color 60ms ease;
 }
 .back-btn:hover {
   color: var(--accent);
   border-color: var(--accent);
+}
+.back-btn:active {
+  background: var(--accent);
+  color: var(--bg);
+  transform: translateY(1px);
 }
 .ri-detail-head h3 {
   margin: 0;

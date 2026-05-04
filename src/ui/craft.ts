@@ -59,8 +59,14 @@ function recipeButton(r: Recipe, s: ReturnType<typeof store.get>): HTMLElement {
           title: check.ok
             ? `Craft ${out.qty}× ${outItem.name}`
             : `Cannot craft${reason}`,
-          onclick: () => {
-            if (craft(r.id).ok) save();
+          onclick: (ev: Event) => {
+            const btn = ev.currentTarget as HTMLElement;
+            btn.classList.add("flash");
+            requestAnimationFrame(() => {
+              setTimeout(() => {
+                if (craft(r.id).ok) save();
+              }, 60);
+            });
           },
         },
         [
