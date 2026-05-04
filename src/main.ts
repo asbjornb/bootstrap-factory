@@ -40,7 +40,6 @@ function buildShell(): void {
 
   const header = el("header", { class: "app-header" }, [
     el("h1", {}, "Bootstrap Factory"),
-    el("span", { class: "tagline muted small" }, "early prototype — recipe index validation"),
     questbookBtn,
     recipesBtn,
     el(
