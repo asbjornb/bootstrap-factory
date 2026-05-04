@@ -292,6 +292,41 @@ const list: Recipe[] = [
     outputs: [{ item: "iron_ingot", qty: 1 }],
     durationMs: 6000,
   },
+
+  // ---- carry gear ----
+  {
+    id: "belt_pouch",
+    machine: "workbench",
+    inputs: [
+      { item: "board", qty: 2 },
+      { item: "cordage", qty: 4 },
+    ],
+    outputs: [{ item: "belt_pouch", qty: 1 }],
+    durationMs: 1500,
+  },
+  {
+    id: "haul_pack",
+    machine: "workbench",
+    inputs: [
+      { item: "board", qty: 4 },
+      { item: "cordage", qty: 6 },
+    ],
+    outputs: [{ item: "haul_pack", qty: 1 }],
+    tool: { type: "axe", minTier: 1 },
+    durationMs: 2500,
+  },
+  {
+    id: "bronze_pack",
+    machine: "workbench",
+    inputs: [
+      { item: "board", qty: 4 },
+      { item: "cordage", qty: 6 },
+      { item: "bronze_ingot", qty: 4 },
+    ],
+    outputs: [{ item: "bronze_pack", qty: 1 }],
+    tool: { type: "axe", minTier: 2 },
+    durationMs: 4000,
+  },
 ];
 
 export const RECIPES: Record<RecipeId, Recipe> = Object.fromEntries(list.map((r) => [r.id, r]));
