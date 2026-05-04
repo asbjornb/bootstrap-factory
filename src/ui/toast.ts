@@ -43,24 +43,21 @@ function dismiss(toast: HTMLElement): void {
 }
 
 /**
- * Fire a one-time toast the first time each machine appears in `everBuilt`,
- * to teach the placement → click-to-craft flow. Already-built machines from
- * a loaded save are silently snapshot at start so reloads don't re-fire.
+ * Fire a single one-time toast the first time the player ever finishes
+ * crafting any machine, to teach the placement → click-to-craft flow.
+ * If the loaded save already has machines built, the hint is skipped.
  */
 export function startMachineCraftedToasts(): void {
-  const seen = new Set<MachineId>(
-    Object.keys(store.get().everBuilt) as MachineId[],
-  );
-  store.subscribe((s) => {
-    for (const id of Object.keys(s.everBuilt) as MachineId[]) {
-      if (seen.has(id)) continue;
-      seen.add(id);
-      const m = MACHINES[id];
-      if (!m) continue;
-      showToast(
-        `${m.name} crafted! Place it in a room, then click it to load a recipe and craft.`,
-        m.icon,
-      );
-    }
+  if (Object.keys(store.get().everBuilt).length > 0) return;
+  const unsubscribe = store.subscribe((s) => {
+    const ids = Object.keys(s.everBuilt) as MachineId[];
+    if (ids.length === 0) return;
+    const m = MACHINES[ids[0]!];
+    unsubscribe();
+    if (!m) return;
+    showToast(
+      `${m.name} crafted! Place it in a room, then click it to load a recipe and craft.`,
+      m.icon,
+    );
   });
 }
