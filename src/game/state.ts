@@ -25,7 +25,7 @@ export interface GameState {
   jobs: MachineJob[];
 }
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 export function emptyState(): GameState {
   return { schemaVersion: SCHEMA_VERSION, inventory: {}, jobs: [] };
