@@ -22,9 +22,17 @@ export function mountGather(root: HTMLElement): void {
                 "button",
                 {
                   class: "gather-btn",
-                  onclick: () => {
-                    gather(a.id);
-                    save();
+                  onclick: (ev: Event) => {
+                    const btn = ev.currentTarget as HTMLElement;
+                    btn.classList.add("flash");
+                    // Defer one paint frame so the press feedback is visible
+                    // before the re-render replaces this button.
+                    requestAnimationFrame(() => {
+                      setTimeout(() => {
+                        gather(a.id);
+                        save();
+                      }, 60);
+                    });
                   },
                 },
                 [el("span", { class: "icon big" }, a.icon), el("span", {}, a.name)],
