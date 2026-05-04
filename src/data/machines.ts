@@ -2,8 +2,10 @@ import type { Machine, MachineId } from "./types";
 
 const list: Machine[] = [
   { id: "hand", name: "By Hand", icon: "✋", description: "Simple recipes you can make with your bare hands." },
-  { id: "crafting_table", name: "Crafting Table", icon: "🧰", description: "Bench-crafted recipes." },
-  { id: "furnace", name: "Furnace", icon: "🔥", description: "Heat-based processing: smelting, baking, alloying." },
+  { id: "workbench", name: "Workbench", icon: "🧰", description: "Bench-assembled recipes — tools, crates, larger machines." },
+  { id: "charcoal_pit", name: "Charcoal Pit", icon: "🔥", description: "Smolders logs into charcoal, slowly." },
+  { id: "clay_kiln", name: "Clay Kiln", icon: "🏺", description: "Fires bricks and crucibles, smelts copper and tin, alloys bronze." },
+  { id: "bloomery", name: "Bloomery", icon: "🏭", description: "A refractory stack hot enough for iron." },
 ];
 
 export const MACHINES: Record<MachineId, Machine> = Object.fromEntries(list.map((m) => [m.id, m]));

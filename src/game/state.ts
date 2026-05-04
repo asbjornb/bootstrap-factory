@@ -29,7 +29,7 @@ export interface GameState {
 
 const SCHEMA_VERSION = 4;
 
-export const ROOM_BUILD_COST: Stack[] = [{ item: "wood", qty: 25 }];
+export const ROOM_BUILD_COST: Stack[] = [{ item: "board", qty: 25 }];
 export const ROOM_BUILD_TOOL: ToolRequirement = { type: "shovel", minTier: 1 };
 
 export function emptyState(): GameState {

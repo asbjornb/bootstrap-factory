@@ -2,9 +2,9 @@
 
 A cozy automation sandbox about crafting, exploring, and over-engineering simple problems.
 
-Start with nothing but your hands, a patch of land, and a few bad ideas. Fell trees, dig earth, mine rough ore, build your first chest, and slowly turn a messy hand-fed workshop into a sprawling network of machines, rooms, storage, recipes, and half-finished automation projects.
+Start with nothing but your hands, a patch of land, and a few bad ideas. Forage logs and fiber, turn the soil for clay, quarry stone for flint and ore, knap your first tools, build your first crate, and slowly turn a messy hand-fed workshop into a sprawling network of machines, rooms, storage, recipes, and half-finished automation projects.
 
-Is it worth automating sunflower oil? Should you spend your first iron on a better pickaxe, another furnace, or the machine that unlocks leather processing? Do you really need four furnaces? Probably not. Will you build them anyway? Probably.
+Is it worth automating sunflower oil? Should you spend your first iron on a better pickaxe, another bloomery, or the machine that unlocks leather processing? Do you really need four kilns? Probably not. Will you build them anyway? Probably.
 
 ## About This Game
 
@@ -16,26 +16,26 @@ There is no single optimal path. Sometimes the best solution is a clean automate
 
 Your first actions are simple:
 
-- **Fell Tree** — gain wood, with a chance of apples
-- **Dig Earth** — gain dirt, with a chance of different seed types
-- **Mine Ores** — gain stone, coal ore, and chances for tin, copper, and iron ore
+- **Forage Woodland** — gain logs and plant fiber, with a chance of resin
+- **Turn Soil** — gain loam and clay, with a chance of seeds
+- **Quarry Outcrop** — gain rubble, fieldstone, and flint, with chances for copper, tin, iron, and coal as your picks improve
 
 From there, every small unlock opens new choices.
 
-Build an axe to make chests. Build a shovel to expand your workshop. Craft better picks to discover better ore. Explore new biomes. Bring back strange materials. Turn those materials into machines. Use those machines to make even stranger materials.
+Knap a flint hatchet to split better boards. Knap a flint pick to pry copper and tin out of the rock. Build a charcoal pit to fuel your first kiln. Smelt copper, alloy bronze, raise a bloomery, find iron. Each tier of pick reveals ores the last tier couldn't reach.
 
 ## Build Your Workshop
 
 Your workshop is made of rooms, machines, and inventories.
 
-- Build a **Room** with a shovel and 25 wood
-- Build a **Chest** with an axe and 8 wood
-- Place furnaces, crafting tables, crushers, presses, kilns, drying racks, and stranger machines
+- Build a **Room** with a shovel and a stack of boards
+- Build a **Crate** with a hatchet, boards, and cordage
+- Place workbenches, charcoal pits, clay kilns, bloomeries, crushers, presses, drying racks, and stranger machines
 - Use generic storage however you like
 - Manually feed machines early on
 - Unlock pipes later to connect machines and inventories
 
-Machines are individual objects, not abstract upgrades. One furnace may be smelting iron while another sits idle. A crusher may be missing input. An oil press may be misconfigured. A chest may be full of wood, seeds, dirt, ore, random parts, and one item you are afraid to use because it looks important.
+Machines are individual objects, not abstract upgrades. One kiln may be smelting copper while another sits idle. A crusher may be missing input. An oil press may be misconfigured. A crate may be full of logs, seeds, loam, ore, random parts, and one item you are afraid to use because it looks important.
 
 ## Recipe Lookup Without Hand-Holding
 
@@ -76,9 +76,11 @@ Exploration does not replace crafting — it feeds it. Each new biome expands th
 
 Better tools do not just make numbers go up. They change what the world gives you.
 
-- A basic pick may only find stone and low-grade ore.
-- A bronze pick may reveal richer copper and tin deposits.
-- An iron pick may unlock new ore drops entirely.
+- Bare hands turn up rubble, fieldstone, and flint.
+- A flint pick pries copper and tin out of softer rock.
+- A copper pick reaches iron ore and the deeper coal seams.
+- A bronze pick reveals richer copper and tin veins.
+- An iron pick pulls richer iron and coal from the rock.
 
 Eventually, the question becomes: should you spend your precious metals on better manual gathering, or save them for automation?
 
@@ -109,7 +111,7 @@ Work together on the same workshop:
 - complete quests
 - argue about whether the oil press should be automated yet
 
-It is not about twitch reflexes or real-time combat. It is about shared progress, shared planning, and shared "who put dirt in the metal chest?" energy.
+It is not about twitch reflexes or real-time combat. It is about shared progress, shared planning, and shared "who put loam in the bound crate?" energy.
 
 ## Why You Might Like This
 

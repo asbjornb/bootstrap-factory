@@ -2,201 +2,295 @@ import { ITEMS } from "./items";
 import type { ItemId, Recipe, RecipeId } from "./types";
 
 const list: Recipe[] = [
-  // hand — instant
+  // ---- by hand ----
   {
-    id: "planks_from_wood",
+    id: "split_log",
     machine: "hand",
-    inputs: [{ item: "wood", qty: 1 }],
-    outputs: [{ item: "planks", qty: 4 }],
+    inputs: [{ item: "log", qty: 1 }],
+    outputs: [{ item: "board", qty: 4 }],
   },
   {
-    id: "sticks_from_planks",
+    id: "twist_cordage",
     machine: "hand",
-    inputs: [{ item: "planks", qty: 2 }],
-    outputs: [{ item: "stick", qty: 4 }],
+    inputs: [{ item: "plant_fiber", qty: 2 }],
+    outputs: [{ item: "cordage", qty: 1 }],
   },
   {
-    id: "crafting_table",
+    id: "shape_haft",
     machine: "hand",
-    inputs: [{ item: "planks", qty: 4 }],
-    outputs: [{ item: "crafting_table", qty: 1 }],
+    inputs: [
+      { item: "board", qty: 1 },
+      { item: "cordage", qty: 1 },
+    ],
+    outputs: [{ item: "haft", qty: 2 }],
+  },
+  {
+    id: "mix_daub",
+    machine: "hand",
+    inputs: [
+      { item: "clay_lump", qty: 2 },
+      { item: "loam", qty: 1 },
+      { item: "plant_fiber", qty: 1 },
+    ],
+    outputs: [{ item: "daub", qty: 4 }],
+  },
+  {
+    id: "workbench",
+    machine: "hand",
+    inputs: [{ item: "board", qty: 4 }],
+    outputs: [{ item: "workbench", qty: 1 }],
+  },
+  {
+    id: "charcoal_pit",
+    machine: "hand",
+    inputs: [
+      { item: "fieldstone", qty: 8 },
+      { item: "daub", qty: 2 },
+    ],
+    outputs: [{ item: "charcoal_pit", qty: 1 }],
   },
 
-  // crafting table — wooden tools
+  // ---- workbench: flint tools ----
   {
-    id: "wooden_axe",
-    machine: "crafting_table",
+    id: "flint_hatchet",
+    machine: "workbench",
     inputs: [
-      { item: "planks", qty: 3 },
-      { item: "stick", qty: 2 },
+      { item: "flint", qty: 2 },
+      { item: "haft", qty: 1 },
+      { item: "cordage", qty: 1 },
     ],
-    outputs: [{ item: "wooden_axe", qty: 1 }],
+    outputs: [{ item: "flint_hatchet", qty: 1 }],
     durationMs: 1500,
   },
   {
-    id: "wooden_pickaxe",
-    machine: "crafting_table",
+    id: "flint_pick",
+    machine: "workbench",
     inputs: [
-      { item: "planks", qty: 3 },
-      { item: "stick", qty: 2 },
+      { item: "flint", qty: 2 },
+      { item: "haft", qty: 1 },
+      { item: "cordage", qty: 1 },
     ],
-    outputs: [{ item: "wooden_pickaxe", qty: 1 }],
+    outputs: [{ item: "flint_pick", qty: 1 }],
     durationMs: 1500,
   },
   {
-    id: "wooden_shovel",
-    machine: "crafting_table",
+    id: "flint_shovel",
+    machine: "workbench",
     inputs: [
-      { item: "planks", qty: 1 },
-      { item: "stick", qty: 2 },
+      { item: "flint", qty: 1 },
+      { item: "haft", qty: 1 },
+      { item: "cordage", qty: 1 },
     ],
-    outputs: [{ item: "wooden_shovel", qty: 1 }],
+    outputs: [{ item: "flint_shovel", qty: 1 }],
     durationMs: 1200,
   },
 
-  // workshop blocks
+  // ---- workbench: workshop blocks ----
   {
-    id: "chest",
-    machine: "crafting_table",
-    inputs: [{ item: "wood", qty: 8 }],
-    outputs: [{ item: "chest", qty: 1 }],
+    id: "crate",
+    machine: "workbench",
+    inputs: [
+      { item: "board", qty: 6 },
+      { item: "cordage", qty: 2 },
+    ],
+    outputs: [{ item: "crate", qty: 1 }],
     tool: { type: "axe", minTier: 1 },
     durationMs: 2500,
   },
   {
-    id: "furnace",
-    machine: "crafting_table",
-    inputs: [{ item: "stone", qty: 8 }],
-    outputs: [{ item: "furnace", qty: 1 }],
+    id: "clay_kiln",
+    machine: "workbench",
+    inputs: [
+      { item: "fieldstone", qty: 12 },
+      { item: "daub", qty: 6 },
+    ],
+    outputs: [{ item: "clay_kiln", qty: 1 }],
+    durationMs: 4000,
+  },
+  {
+    id: "bloomery",
+    machine: "workbench",
+    inputs: [
+      { item: "clay_brick", qty: 16 },
+      { item: "fieldstone", qty: 8 },
+      { item: "cordage", qty: 4 },
+    ],
+    outputs: [{ item: "bloomery", qty: 1 }],
+    tool: { type: "pickaxe", minTier: 2 },
+    durationMs: 6000,
+  },
+
+  // ---- workbench: copper tools ----
+  {
+    id: "copper_axe",
+    machine: "workbench",
+    inputs: [
+      { item: "copper_ingot", qty: 3 },
+      { item: "haft", qty: 1 },
+      { item: "cordage", qty: 1 },
+    ],
+    outputs: [{ item: "copper_axe", qty: 1 }],
+    durationMs: 2500,
+  },
+  {
+    id: "copper_pick",
+    machine: "workbench",
+    inputs: [
+      { item: "copper_ingot", qty: 3 },
+      { item: "haft", qty: 1 },
+      { item: "cordage", qty: 1 },
+    ],
+    outputs: [{ item: "copper_pick", qty: 1 }],
+    durationMs: 2500,
+  },
+  {
+    id: "copper_shovel",
+    machine: "workbench",
+    inputs: [
+      { item: "copper_ingot", qty: 1 },
+      { item: "haft", qty: 1 },
+      { item: "cordage", qty: 1 },
+    ],
+    outputs: [{ item: "copper_shovel", qty: 1 }],
+    durationMs: 2000,
+  },
+
+  // ---- workbench: bronze tools ----
+  {
+    id: "bronze_axe",
+    machine: "workbench",
+    inputs: [
+      { item: "bronze_ingot", qty: 3 },
+      { item: "haft", qty: 1 },
+      { item: "cordage", qty: 1 },
+    ],
+    outputs: [{ item: "bronze_axe", qty: 1 }],
+    durationMs: 3000,
+  },
+  {
+    id: "bronze_pick",
+    machine: "workbench",
+    inputs: [
+      { item: "bronze_ingot", qty: 3 },
+      { item: "haft", qty: 1 },
+      { item: "cordage", qty: 1 },
+    ],
+    outputs: [{ item: "bronze_pick", qty: 1 }],
     durationMs: 3000,
   },
 
-  // stone tier
+  // ---- workbench: iron tools ----
   {
-    id: "stone_pickaxe",
-    machine: "crafting_table",
+    id: "iron_axe",
+    machine: "workbench",
     inputs: [
-      { item: "stone", qty: 3 },
-      { item: "stick", qty: 2 },
+      { item: "iron_ingot", qty: 3 },
+      { item: "haft", qty: 1 },
+      { item: "cordage", qty: 1 },
     ],
-    outputs: [{ item: "stone_pickaxe", qty: 1 }],
-    durationMs: 2000,
+    outputs: [{ item: "iron_axe", qty: 1 }],
+    durationMs: 3500,
   },
   {
-    id: "stone_axe",
-    machine: "crafting_table",
+    id: "iron_pick",
+    machine: "workbench",
     inputs: [
-      { item: "stone", qty: 3 },
-      { item: "stick", qty: 2 },
+      { item: "iron_ingot", qty: 3 },
+      { item: "haft", qty: 1 },
+      { item: "cordage", qty: 1 },
     ],
-    outputs: [{ item: "stone_axe", qty: 1 }],
-    durationMs: 2000,
+    outputs: [{ item: "iron_pick", qty: 1 }],
+    durationMs: 3500,
   },
 
-  // furnace
+  // ---- workbench: bound crate ----
   {
-    id: "smelt_coal",
-    machine: "furnace",
-    inputs: [{ item: "coal_ore", qty: 1 }],
-    outputs: [{ item: "coal", qty: 1 }],
+    id: "bound_crate",
+    machine: "workbench",
+    inputs: [
+      { item: "board", qty: 8 },
+      { item: "bronze_ingot", qty: 2 },
+      { item: "cordage", qty: 2 },
+    ],
+    outputs: [{ item: "bound_crate", qty: 1 }],
+    tool: { type: "axe", minTier: 3 },
+    durationMs: 4000,
+  },
+
+  // ---- charcoal pit ----
+  {
+    id: "burn_charcoal",
+    machine: "charcoal_pit",
+    inputs: [{ item: "log", qty: 2 }],
+    outputs: [{ item: "charcoal", qty: 3 }],
+    durationMs: 8000,
+  },
+
+  // ---- clay kiln ----
+  {
+    id: "fire_brick",
+    machine: "clay_kiln",
+    inputs: [
+      { item: "clay_lump", qty: 2 },
+      { item: "charcoal", qty: 1 },
+    ],
+    outputs: [{ item: "clay_brick", qty: 2 }],
     durationMs: 3000,
   },
   {
-    id: "smelt_tin",
-    machine: "furnace",
+    id: "fire_crucible",
+    machine: "clay_kiln",
     inputs: [
-      { item: "tin_ore", qty: 1 },
-      { item: "coal", qty: 1 },
+      { item: "clay_brick", qty: 2 },
+      { item: "daub", qty: 1 },
+      { item: "charcoal", qty: 1 },
     ],
-    outputs: [{ item: "tin_ingot", qty: 1 }],
+    outputs: [{ item: "crucible", qty: 1 }],
     durationMs: 4000,
   },
   {
     id: "smelt_copper",
-    machine: "furnace",
+    machine: "clay_kiln",
     inputs: [
       { item: "copper_ore", qty: 1 },
-      { item: "coal", qty: 1 },
+      { item: "charcoal", qty: 1 },
     ],
     outputs: [{ item: "copper_ingot", qty: 1 }],
     durationMs: 4000,
   },
   {
-    id: "smelt_iron",
-    machine: "furnace",
+    id: "smelt_tin",
+    machine: "clay_kiln",
     inputs: [
-      { item: "iron_ore", qty: 1 },
-      { item: "coal", qty: 1 },
+      { item: "tin_ore", qty: 1 },
+      { item: "charcoal", qty: 1 },
     ],
-    outputs: [{ item: "iron_ingot", qty: 1 }],
-    durationMs: 5000,
+    outputs: [{ item: "tin_ingot", qty: 1 }],
+    durationMs: 4000,
   },
   {
     id: "alloy_bronze",
-    machine: "furnace",
+    machine: "clay_kiln",
     inputs: [
       { item: "copper_ingot", qty: 3 },
       { item: "tin_ingot", qty: 1 },
-      { item: "coal", qty: 1 },
+      { item: "charcoal", qty: 1 },
+      { item: "crucible", qty: 1 },
     ],
     outputs: [{ item: "bronze_ingot", qty: 4 }],
     durationMs: 6000,
   },
 
-  // bronze tools
+  // ---- bloomery ----
   {
-    id: "bronze_pickaxe",
-    machine: "crafting_table",
+    id: "smelt_iron",
+    machine: "bloomery",
     inputs: [
-      { item: "bronze_ingot", qty: 3 },
-      { item: "stick", qty: 2 },
+      { item: "iron_ore", qty: 1 },
+      { item: "charcoal", qty: 2 },
     ],
-    outputs: [{ item: "bronze_pickaxe", qty: 1 }],
-    durationMs: 3000,
-  },
-  {
-    id: "bronze_axe",
-    machine: "crafting_table",
-    inputs: [
-      { item: "bronze_ingot", qty: 3 },
-      { item: "stick", qty: 2 },
-    ],
-    outputs: [{ item: "bronze_axe", qty: 1 }],
-    durationMs: 3000,
-  },
-
-  // iron tools
-  {
-    id: "iron_pickaxe",
-    machine: "crafting_table",
-    inputs: [
-      { item: "iron_ingot", qty: 3 },
-      { item: "stick", qty: 2 },
-    ],
-    outputs: [{ item: "iron_pickaxe", qty: 1 }],
-    durationMs: 3500,
-  },
-
-  // misc
-  {
-    id: "torch",
-    machine: "hand",
-    inputs: [
-      { item: "stick", qty: 1 },
-      { item: "coal", qty: 1 },
-    ],
-    outputs: [{ item: "torch", qty: 4 }],
-  },
-  {
-    id: "bronze_chest",
-    machine: "crafting_table",
-    inputs: [
-      { item: "wood", qty: 8 },
-      { item: "bronze_ingot", qty: 4 },
-    ],
-    outputs: [{ item: "bronze_chest", qty: 1 }],
-    tool: { type: "axe", minTier: 3 },
-    durationMs: 4000,
+    outputs: [{ item: "iron_ingot", qty: 1 }],
+    durationMs: 6000,
   },
 ];
 
