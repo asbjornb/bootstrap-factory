@@ -14,6 +14,28 @@ export type TrashSource =
 const MIME = "application/x-bf-trash";
 
 let active: TrashSource | null = null;
+let trashMode = false;
+const trashModeListeners = new Set<(on: boolean) => void>();
+
+export function isTrashMode(): boolean {
+  return trashMode;
+}
+
+export function setTrashMode(on: boolean): void {
+  if (trashMode === on) return;
+  trashMode = on;
+  document.body.classList.toggle("trash-armed", on);
+  for (const cb of trashModeListeners) cb(on);
+}
+
+export function toggleTrashMode(): void {
+  setTrashMode(!trashMode);
+}
+
+export function subscribeTrashMode(cb: (on: boolean) => void): () => void {
+  trashModeListeners.add(cb);
+  return () => trashModeListeners.delete(cb);
+}
 
 export function makeDraggable(node: HTMLElement, payload: TrashSource): void {
   node.setAttribute("draggable", "true");
@@ -50,6 +72,9 @@ export function applyTrash(payload: TrashSource): boolean {
 }
 
 export function wireTrashTarget(node: HTMLElement): void {
+  node.addEventListener("click", () => {
+    toggleTrashMode();
+  });
   node.addEventListener("dragover", (ev) => {
     ev.preventDefault();
     if (ev.dataTransfer) ev.dataTransfer.dropEffect = "move";

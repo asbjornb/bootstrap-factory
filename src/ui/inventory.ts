@@ -9,7 +9,13 @@ import {
 } from "../game/state";
 import { clear, el } from "./dom";
 import { selectItem } from "./recipe-index";
-import { makeDraggable, wireTrashTarget } from "./trash-drag";
+import {
+  applyTrash,
+  isTrashMode,
+  makeDraggable,
+  subscribeTrashMode,
+  wireTrashTarget,
+} from "./trash-drag";
 
 export function mountInventory(root: HTMLElement): void {
   const render = () => {
@@ -24,14 +30,23 @@ export function mountInventory(root: HTMLElement): void {
       .filter(([, q]) => q > 0)
       .sort((a, b) => ITEMS[a[0]]!.name.localeCompare(ITEMS[b[0]]!.name));
 
+    const armed = isTrashMode();
+
     clear(root);
     const trashZone = el(
       "div",
       {
-        class: "trash-zone",
-        title: "Drag an item stack here to discard it",
+        class: "trash-zone" + (armed ? " armed" : ""),
+        role: "button",
+        tabindex: "0",
+        title: armed
+          ? "Trash mode on — tap an item to discard it. Tap here to turn off."
+          : "Drag an item stack here, or tap to enter trash mode and tap items to discard",
       },
-      [el("span", { class: "icon" }, "🗑️"), el("span", { class: "small" }, "Trash")],
+      [
+        el("span", { class: "icon" }, "🗑️"),
+        el("span", { class: "small" }, armed ? "Trashing… tap to stop" : "Trash"),
+      ],
     );
     wireTrashTarget(trashZone);
 
@@ -62,8 +77,16 @@ export function mountInventory(root: HTMLElement): void {
                   "li",
                   {
                     class: "inv-row",
-                    title: `${it.name} — ${qty} (${slots} slot${slots === 1 ? "" : "s"} of ${stack}) — click to open in Recipe Index, or drag to trash`,
-                    onclick: () => selectItem(id),
+                    title: armed
+                      ? `Tap to discard ${qty}× ${it.name}`
+                      : `${it.name} — ${qty} (${slots} slot${slots === 1 ? "" : "s"} of ${stack}) — click to open in Recipe Index, or drag to trash`,
+                    onclick: () => {
+                      if (isTrashMode()) {
+                        if (applyTrash({ source: "inventory", itemId: id })) save();
+                        return;
+                      }
+                      selectItem(id);
+                    },
                   },
                   [
                     el("span", { class: "icon" }, it.icon),
@@ -106,8 +129,14 @@ export function mountInventory(root: HTMLElement): void {
                     "li",
                     {
                       class: "inv-row floor-row",
-                      title: `Click to pick up ${qty}× ${it.name}, or drag to trash`,
+                      title: armed
+                        ? `Tap to discard ${qty}× ${it.name}`
+                        : `Click to pick up ${qty}× ${it.name}, or drag to trash`,
                       onclick: () => {
+                        if (isTrashMode()) {
+                          if (applyTrash({ source: "floor", itemId: id })) save();
+                          return;
+                        }
                         pickUpFromFloor(id);
                         save();
                       },
@@ -129,4 +158,5 @@ export function mountInventory(root: HTMLElement): void {
   };
   render();
   store.subscribe(render);
+  subscribeTrashMode(render);
 }
