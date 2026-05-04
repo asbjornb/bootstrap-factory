@@ -7,6 +7,7 @@ import type {
   MachineId,
   Recipe,
   RecipeId,
+  Room,
   Stack,
   ToolRequirement,
 } from "../data/types";
@@ -23,12 +24,21 @@ export interface GameState {
   schemaVersion: number;
   inventory: Record<ItemId, number>;
   jobs: MachineJob[];
+  rooms: Room[];
 }
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
+
+export const ROOM_BUILD_COST: Stack[] = [{ item: "wood", qty: 25 }];
+export const ROOM_BUILD_TOOL: ToolRequirement = { type: "shovel", minTier: 1 };
 
 export function emptyState(): GameState {
-  return { schemaVersion: SCHEMA_VERSION, inventory: {}, jobs: [] };
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    inventory: {},
+    jobs: [],
+    rooms: [{ id: "room-starter", name: "Workshop", machines: {} }],
+  };
 }
 
 type Listener = (s: GameState) => void;
@@ -51,6 +61,7 @@ class Store {
       ...this.state,
       inventory: { ...this.state.inventory },
       jobs: [...this.state.jobs],
+      rooms: this.state.rooms.map((r) => ({ ...r, machines: { ...r.machines } })),
     };
     fn(draft);
     this.set(draft);
@@ -116,10 +127,17 @@ export function meetsToolReq(state: GameState, req: ToolRequirement | undefined)
 
 // ---- machine capacity ----
 
-/** Total slots available for a machine. Hand always has 1; everything else is the inventory count. */
+/** Total of a given machine type placed across all rooms. */
+export function placedMachineCount(state: GameState, machineId: MachineId): number {
+  let n = 0;
+  for (const r of state.rooms) n += r.machines[machineId] ?? 0;
+  return n;
+}
+
+/** Total slots available for a machine. Hand always has 1; everything else must be placed in a room. */
 export function machineCapacity(state: GameState, machineId: MachineId): number {
   if (machineId === "hand") return 1;
-  return state.inventory[machineId] ?? 0;
+  return placedMachineCount(state, machineId);
 }
 
 export function activeJobsFor(state: GameState, machineId: MachineId): MachineJob[] {
@@ -240,6 +258,98 @@ function randInt(lo: number, hi: number): number {
   return Math.floor(Math.random() * (hi - lo + 1)) + lo;
 }
 
+// ---- rooms ----
+
+let roomSeq = 0;
+function newRoomId(): string {
+  roomSeq += 1;
+  return `room-${Date.now().toString(36)}-${roomSeq}`;
+}
+
+export interface BuildRoomResult {
+  ok: boolean;
+  reason?: "missing_inputs" | "missing_tool";
+}
+
+export function canBuildRoom(state: GameState): BuildRoomResult {
+  if (!meetsToolReq(state, ROOM_BUILD_TOOL)) return { ok: false, reason: "missing_tool" };
+  for (const i of ROOM_BUILD_COST) {
+    if ((state.inventory[i.item] ?? 0) < i.qty) return { ok: false, reason: "missing_inputs" };
+  }
+  return { ok: true };
+}
+
+function defaultRoomName(state: GameState): string {
+  return `Room ${state.rooms.length + 1}`;
+}
+
+export function buildRoom(name?: string): BuildRoomResult {
+  let result: BuildRoomResult = { ok: false };
+  store.update((s) => {
+    const check = canBuildRoom(s);
+    if (!check.ok) {
+      result = check;
+      return;
+    }
+    if (!tryConsume(s, ROOM_BUILD_COST)) {
+      result = { ok: false, reason: "missing_inputs" };
+      return;
+    }
+    const room: Room = {
+      id: newRoomId(),
+      name: (name && name.trim()) || defaultRoomName(s),
+      machines: {},
+    };
+    s.rooms.push(room);
+    result = { ok: true };
+  });
+  return result;
+}
+
+export function renameRoom(roomId: string, name: string): void {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  store.update((s) => {
+    const room = s.rooms.find((r) => r.id === roomId);
+    if (room) room.name = trimmed;
+  });
+}
+
+/** Move a machine from inventory into the given room. */
+export function placeMachine(roomId: string, machineId: MachineId): boolean {
+  if (machineId === "hand") return false;
+  let ok = false;
+  store.update((s) => {
+    if ((s.inventory[machineId] ?? 0) < 1) return;
+    const room = s.rooms.find((r) => r.id === roomId);
+    if (!room) return;
+    s.inventory[machineId] = s.inventory[machineId]! - 1;
+    if (s.inventory[machineId]! <= 0) delete s.inventory[machineId];
+    room.machines[machineId] = (room.machines[machineId] ?? 0) + 1;
+    ok = true;
+  });
+  return ok;
+}
+
+/** Take a machine back out of a room into inventory. Refuses if it would interrupt a running job. */
+export function pickupMachine(roomId: string, machineId: MachineId): boolean {
+  if (machineId === "hand") return false;
+  let ok = false;
+  store.update((s) => {
+    const room = s.rooms.find((r) => r.id === roomId);
+    if (!room) return;
+    if ((room.machines[machineId] ?? 0) < 1) return;
+    const totalPlaced = placedMachineCount(s, machineId);
+    const busy = activeJobsFor(s, machineId).length;
+    if (totalPlaced - busy < 1) return;
+    room.machines[machineId] = room.machines[machineId]! - 1;
+    if (room.machines[machineId]! <= 0) delete room.machines[machineId];
+    s.inventory[machineId] = (s.inventory[machineId] ?? 0) + 1;
+    ok = true;
+  });
+  return ok;
+}
+
 // ---- save ----
 
 const SAVE_KEY = "bootstrap-factory:save:v1";
@@ -256,8 +366,9 @@ export function load(): void {
       store.set(emptyState());
       return;
     }
-    // Defensive: ensure jobs array exists.
+    // Defensive: ensure arrays exist.
     if (!Array.isArray(parsed.jobs)) parsed.jobs = [];
+    if (!Array.isArray(parsed.rooms)) parsed.rooms = [];
     store.set(parsed);
     // Resolve any jobs that finished while the tab was closed.
     tickJobs();
