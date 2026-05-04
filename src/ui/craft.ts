@@ -23,11 +23,14 @@ export function mountCraft(root: HTMLElement): void {
     clear(root);
 
     const groups = ALL_MACHINES.map((m) => {
-      const recipes = ALL_RECIPES.filter(
-        (r) => r.machine === m.id && hasInputsAndTool(s, r),
-      );
-      const jobs = activeJobsFor(s, m.id);
       const capacity = machineCapacity(s, m.id);
+      const recipes =
+        capacity > 0
+          ? ALL_RECIPES.filter(
+              (r) => r.machine === m.id && hasInputsAndTool(s, r),
+            )
+          : [];
+      const jobs = activeJobsFor(s, m.id);
       return { machine: m, recipes, jobs, capacity };
     }).filter((g) => g.recipes.length > 0 || g.jobs.length > 0);
 
