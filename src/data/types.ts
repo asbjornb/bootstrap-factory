@@ -52,6 +52,13 @@ export interface DropEntry {
   requiresTool?: ToolRequirement;
 }
 
+export interface Room {
+  id: string;
+  name: string;
+  /** Count of each machine placed in this room. */
+  machines: Record<MachineId, number>;
+}
+
 export interface GatherAction {
   id: GatherId;
   name: string;

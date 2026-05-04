@@ -332,6 +332,136 @@ body {
   transition: width 200ms linear;
 }
 
+/* rooms */
+.room-build-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+.build-room-btn {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: transform 60ms ease, background-color 60ms ease, border-color 60ms ease, color 60ms ease;
+}
+.build-room-btn:not(:disabled):hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.build-room-btn:not(:disabled):active {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+  transform: translateY(1px);
+}
+.build-room-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.room-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.room-card {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.room-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.room-name {
+  flex: 1;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.room-name:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.room-machines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.room-machine {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+}
+.room-machine .qty {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.pickup-btn {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 5px;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1.2;
+}
+.pickup-btn:not(:disabled):hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.pickup-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.room-place-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  border-top: 1px dashed var(--border);
+  padding-top: 6px;
+}
+.place-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.place-btn:not(:disabled):hover {
+  border-color: var(--good);
+  color: var(--good);
+}
+.place-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 /* recipe index */
 .recipe-index .search {
   width: 100%;

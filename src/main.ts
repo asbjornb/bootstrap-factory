@@ -4,6 +4,7 @@ import { mountCraft } from "./ui/craft";
 import { mountGather } from "./ui/gather";
 import { mountInventory } from "./ui/inventory";
 import { mountRecipeIndex } from "./ui/recipe-index";
+import { mountRooms } from "./ui/rooms";
 
 function buildShell(): void {
   const app = document.getElementById("app")!;
@@ -33,7 +34,9 @@ function buildShell(): void {
   gather.appendChild(el("div", { id: "gather-mount" }));
   gather.appendChild(inventory);
 
+  const rooms = el("div", { id: "rooms-mount" });
   const craft = el("div", { id: "craft-mount" });
+  middle.appendChild(rooms);
   middle.appendChild(craft);
 
   const recipe = el("div", { id: "recipe-mount" });
@@ -45,6 +48,7 @@ function buildShell(): void {
 
   mountGather(gather.querySelector("#gather-mount") as HTMLElement);
   mountInventory(inventory);
+  mountRooms(rooms);
   mountCraft(craft);
   mountRecipeIndex(recipe);
 }
