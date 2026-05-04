@@ -2,6 +2,7 @@ import { GATHER_ACTIONS } from "../data/gather";
 import { ITEMS } from "../data/items";
 import { RECIPES } from "../data/recipes";
 import type {
+  GatherAction,
   GatherId,
   ItemId,
   MachineId,
@@ -20,14 +21,21 @@ export interface MachineJob {
   endsAt: number;
 }
 
+export interface GatherJob {
+  gatherId: GatherId;
+  startedAt: number;
+  endsAt: number;
+}
+
 export interface GameState {
   schemaVersion: number;
   inventory: Record<ItemId, number>;
   jobs: MachineJob[];
+  gatherJob: GatherJob | null;
   rooms: Room[];
 }
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 export const ROOM_BUILD_COST: Stack[] = [{ item: "board", qty: 25 }];
 export const ROOM_BUILD_TOOL: ToolRequirement = { type: "shovel", minTier: 1 };
@@ -37,6 +45,7 @@ export function emptyState(): GameState {
     schemaVersion: SCHEMA_VERSION,
     inventory: {},
     jobs: [],
+    gatherJob: null,
     rooms: [{ id: "room-starter", name: "Workshop", machines: {} }],
   };
 }
@@ -61,6 +70,7 @@ class Store {
       ...this.state,
       inventory: { ...this.state.inventory },
       jobs: [...this.state.jobs],
+      gatherJob: this.state.gatherJob ? { ...this.state.gatherJob } : null,
       rooms: this.state.rooms.map((r) => ({ ...r, machines: { ...r.machines } })),
     };
     fn(draft);
@@ -213,9 +223,9 @@ export function craft(recipeId: RecipeId): CraftResult {
 /** Complete any jobs whose endsAt has passed. Returns true if any changed. */
 export function tickJobs(now: number = Date.now()): boolean {
   const s = store.get();
-  if (s.jobs.length === 0) return false;
-  const due = s.jobs.filter((j) => j.endsAt <= now);
-  if (due.length === 0) return false;
+  const machineDue = s.jobs.some((j) => j.endsAt <= now);
+  const gatherDue = s.gatherJob !== null && s.gatherJob.endsAt <= now;
+  if (!machineDue && !gatherDue) return false;
   store.update((draft) => {
     const remaining: MachineJob[] = [];
     for (const j of draft.jobs) {
@@ -227,6 +237,11 @@ export function tickJobs(now: number = Date.now()): boolean {
       }
     }
     draft.jobs = remaining;
+    if (draft.gatherJob && draft.gatherJob.endsAt <= now) {
+      const action = GATHER_ACTIONS[draft.gatherJob.gatherId];
+      if (action) applyGatherDrops(draft, action);
+      draft.gatherJob = null;
+    }
   });
   return true;
 }
@@ -239,19 +254,52 @@ export function startTickLoop(intervalMs = 200): () => void {
   return () => clearInterval(handle);
 }
 
-export function gather(actionId: GatherId): void {
-  const action = GATHER_ACTIONS[actionId];
-  if (!action) throw new Error(`Unknown gather action: ${actionId}`);
-  store.update((s) => {
-    const got: Record<ItemId, number> = {};
-    for (const drop of action.drops) {
-      if (!meetsToolReq(s, drop.requiresTool)) continue;
-      if (Math.random() > drop.chance) continue;
-      const qty = randInt(drop.qty[0], drop.qty[1]);
-      got[drop.item] = (got[drop.item] ?? 0) + qty;
+/** Duration of a gather action given the player's current tools. */
+export function gatherDuration(state: GameState, action: GatherAction): number {
+  let best = action.baseDurationMs;
+  for (const sp of action.speedups ?? []) {
+    if (bestToolTier(state, sp.type) >= sp.minTier && sp.durationMs < best) {
+      best = sp.durationMs;
     }
-    for (const [item, qty] of Object.entries(got)) add(s, item, qty);
+  }
+  return best;
+}
+
+function applyGatherDrops(state: GameState, action: GatherAction): void {
+  const got: Record<ItemId, number> = {};
+  for (const drop of action.drops) {
+    if (!meetsToolReq(state, drop.requiresTool)) continue;
+    if (Math.random() > drop.chance) continue;
+    const qty = randInt(drop.qty[0], drop.qty[1]);
+    got[drop.item] = (got[drop.item] ?? 0) + qty;
+  }
+  for (const [item, qty] of Object.entries(got)) add(state, item, qty);
+}
+
+export interface GatherResult {
+  ok: boolean;
+  reason?: "busy" | "unknown";
+}
+
+export function gather(actionId: GatherId): GatherResult {
+  const action = GATHER_ACTIONS[actionId];
+  if (!action) return { ok: false, reason: "unknown" };
+  let result: GatherResult = { ok: false };
+  store.update((s) => {
+    if (s.gatherJob) {
+      result = { ok: false, reason: "busy" };
+      return;
+    }
+    const dur = gatherDuration(s, action);
+    if (dur <= 0) {
+      applyGatherDrops(s, action);
+    } else {
+      const now = Date.now();
+      s.gatherJob = { gatherId: action.id, startedAt: now, endsAt: now + dur };
+    }
+    result = { ok: true };
   });
+  return result;
 }
 
 function randInt(lo: number, hi: number): number {
@@ -366,9 +414,10 @@ export function load(): void {
       store.set(emptyState());
       return;
     }
-    // Defensive: ensure arrays exist.
+    // Defensive: ensure fields exist.
     if (!Array.isArray(parsed.jobs)) parsed.jobs = [];
     if (!Array.isArray(parsed.rooms)) parsed.rooms = [];
+    if (parsed.gatherJob === undefined) parsed.gatherJob = null;
     store.set(parsed);
     // Resolve any jobs that finished while the tab was closed.
     tickJobs();
