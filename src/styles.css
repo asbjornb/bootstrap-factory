@@ -1065,3 +1065,14 @@ body.trash-armed .chest-row:hover {
 .qb-benefit-label {
   color: var(--muted);
 }
+.qb-requires {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.4;
+}
+.qb-requires-label {
+  color: var(--muted);
+}
