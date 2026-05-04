@@ -9,6 +9,7 @@ import {
 } from "../game/state";
 import { clear, el } from "./dom";
 import { selectItem } from "./recipe-index";
+import { makeDraggable, wireTrashTarget } from "./trash-drag";
 
 export function mountInventory(root: HTMLElement): void {
   const render = () => {
@@ -24,6 +25,16 @@ export function mountInventory(root: HTMLElement): void {
       .sort((a, b) => ITEMS[a[0]]!.name.localeCompare(ITEMS[b[0]]!.name));
 
     clear(root);
+    const trashZone = el(
+      "div",
+      {
+        class: "trash-zone",
+        title: "Drag an item stack here to discard it",
+      },
+      [el("span", { class: "icon" }, "🗑️"), el("span", { class: "small" }, "Trash")],
+    );
+    wireTrashTarget(trashZone);
+
     root.appendChild(
       el("div", { class: "panel" }, [
         el("div", { class: "inv-head" }, [
@@ -36,6 +47,7 @@ export function mountInventory(root: HTMLElement): void {
             },
             `${used} / ${cap} slots`,
           ),
+          trashZone,
         ]),
         entries.length === 0
           ? el("p", { class: "muted" }, "Empty. Try gathering something.")
@@ -46,11 +58,11 @@ export function mountInventory(root: HTMLElement): void {
                 const it = ITEMS[id]!;
                 const stack = stackSize(id);
                 const slots = Math.ceil(qty / stack);
-                return el(
+                const row = el(
                   "li",
                   {
                     class: "inv-row",
-                    title: `${it.name} — ${qty} (${slots} slot${slots === 1 ? "" : "s"} of ${stack}) — click to open in Recipe Index`,
+                    title: `${it.name} — ${qty} (${slots} slot${slots === 1 ? "" : "s"} of ${stack}) — click to open in Recipe Index, or drag to trash`,
                     onclick: () => selectItem(id),
                   },
                   [
@@ -59,6 +71,8 @@ export function mountInventory(root: HTMLElement): void {
                     el("span", { class: "qty" }, String(qty)),
                   ],
                 );
+                makeDraggable(row, { source: "inventory", itemId: id });
+                return row;
               }),
             ),
         floorEntries.length > 0
@@ -88,11 +102,11 @@ export function mountInventory(root: HTMLElement): void {
                 { class: "inventory-list" },
                 floorEntries.map(([id, qty]) => {
                   const it = ITEMS[id]!;
-                  return el(
+                  const row = el(
                     "li",
                     {
                       class: "inv-row floor-row",
-                      title: `Click to pick up ${qty}× ${it.name} (overflow goes back to the floor)`,
+                      title: `Click to pick up ${qty}× ${it.name}, or drag to trash`,
                       onclick: () => {
                         pickUpFromFloor(id);
                         save();
@@ -104,6 +118,8 @@ export function mountInventory(root: HTMLElement): void {
                       el("span", { class: "qty" }, String(qty)),
                     ],
                   );
+                  makeDraggable(row, { source: "floor", itemId: id });
+                  return row;
                 }),
               ),
             ])

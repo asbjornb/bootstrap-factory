@@ -23,6 +23,7 @@ import {
 } from "../game/state";
 import type { Chest, ItemId, Room } from "../data/types";
 import { clear, el } from "./dom";
+import { makeDraggable } from "./trash-drag";
 
 const CHEST_TYPES = Object.keys(CHEST_SLOT_CAP);
 
@@ -247,11 +248,11 @@ function renderChest(roomId: string, chest: Chest): HTMLElement {
           { class: "chest-contents" },
           stored.map(([id, qty]) => {
             const it = ITEMS[id]!;
-            return el(
+            const row = el(
               "li",
               {
                 class: "chest-row",
-                title: `Click to withdraw ${qty}× ${it.name}`,
+                title: `Click to withdraw ${qty}× ${it.name}, or drag to trash`,
                 onclick: () => {
                   if (withdrawFromChest(roomId, chest.id, id)) save();
                 },
@@ -263,6 +264,13 @@ function renderChest(roomId: string, chest: Chest): HTMLElement {
                 el("span", { class: "withdraw-arrow small muted" }, "↑"),
               ],
             );
+            makeDraggable(row, {
+              source: "chest",
+              itemId: id,
+              roomId,
+              chestId: chest.id,
+            });
+            return row;
           }),
         ),
     depositable.length > 0
