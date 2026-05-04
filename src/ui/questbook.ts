@@ -40,11 +40,19 @@ function renderSection(title: string, quests: Quest[], done: boolean): HTMLEleme
 }
 
 function renderQuest(q: Quest, done: boolean): HTMLElement {
+  const kindLabel = q.kind === "progression" ? "Progression" : "Utility";
   return el("li", { class: "qb-quest" + (done ? " done" : "") }, [
     el("span", { class: "qb-check", "aria-hidden": "true" }, done ? "☑" : "☐"),
     el("div", { class: "qb-body" }, [
-      el("div", { class: "qb-title" }, q.title),
+      el("div", { class: "qb-head" }, [
+        el("div", { class: "qb-title" }, q.title),
+        el("span", { class: `qb-kind qb-kind-${q.kind}` }, kindLabel),
+      ]),
       el("div", { class: "qb-desc small muted" }, q.description),
+      el("div", { class: "qb-benefit small" }, [
+        el("span", { class: "qb-benefit-label" }, "Reward: "),
+        el("span", {}, q.benefit),
+      ]),
     ]),
   ]);
 }
