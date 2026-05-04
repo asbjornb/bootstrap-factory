@@ -10,6 +10,7 @@ import {
   hasInputsAndTool,
   machineCapacity,
   onTick,
+  producesObsoleteTool,
   save,
   store,
   togglePin,
@@ -29,7 +30,10 @@ export function mountCraft(root: HTMLElement): void {
       const recipes =
         capacity > 0
           ? ALL_RECIPES.filter(
-              (r) => r.machine === m.id && hasInputsAndTool(s, r),
+              (r) =>
+                r.machine === m.id &&
+                hasInputsAndTool(s, r) &&
+                !producesObsoleteTool(s, r),
             )
           : [];
       const jobs = activeJobsFor(s, m.id);
@@ -38,7 +42,7 @@ export function mountCraft(root: HTMLElement): void {
 
     const pinnedRecipes = s.pinnedRecipes
       .map((id) => RECIPES[id])
-      .filter((r): r is Recipe => !!r);
+      .filter((r): r is Recipe => !!r && !producesObsoleteTool(s, r));
 
     root.appendChild(
       el("div", { class: "panel" }, [

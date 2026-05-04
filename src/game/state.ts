@@ -248,6 +248,41 @@ export function meetsToolReq(state: GameState, req: ToolRequirement | undefined)
   return bestToolTier(state, req.type) >= req.minTier;
 }
 
+/** Highest tier of a given tool type owned anywhere (inventory, chests, floor). */
+export function ownedToolTier(
+  state: GameState,
+  type: ToolRequirement["type"],
+): number {
+  let best = -Infinity;
+  for (const id of Object.keys(ITEMS)) {
+    const tool = ITEMS[id]?.tool;
+    if (!tool || tool.type !== type) continue;
+    const qty =
+      (state.inventory[id] ?? 0) +
+      (state.floor[id] ?? 0) +
+      state.rooms.reduce(
+        (n, r) => n + r.chests.reduce((m, c) => m + (c.contents[id] ?? 0), 0),
+        0,
+      );
+    if (qty > 0 && tool.tier > best) best = tool.tier;
+  }
+  return best;
+}
+
+/**
+ * True if every output of the recipe is a tool item the player already owns
+ * (anywhere) at the same or higher tier. Hides redundant tool crafts.
+ */
+export function producesObsoleteTool(state: GameState, recipe: Recipe): boolean {
+  if (recipe.outputs.length === 0) return false;
+  for (const out of recipe.outputs) {
+    const tool = ITEMS[out.item]?.tool;
+    if (!tool) return false;
+    if (ownedToolTier(state, tool.type) < tool.tier) return false;
+  }
+  return true;
+}
+
 // ---- machine capacity ----
 
 /** Total of a given machine type placed across all rooms. */
