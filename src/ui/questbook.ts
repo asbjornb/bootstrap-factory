@@ -1,8 +1,14 @@
+import { ITEMS } from "../data/items";
 import { questsForDisplay, store } from "../game/state";
-import type { Quest } from "../data/types";
+import type { ItemId, Quest } from "../data/types";
 import { clear, el } from "./dom";
 
-export function mountQuestbook(root: HTMLElement): void {
+export interface QuestbookOptions {
+  /** Called when a required-item chip is clicked. Should focus the item in the recipe index. */
+  onOpenItem?: (id: ItemId) => void;
+}
+
+export function mountQuestbook(root: HTMLElement, opts: QuestbookOptions = {}): void {
   const render = () => {
     const { active, completed } = questsForDisplay(store.get());
     clear(root);
@@ -13,8 +19,8 @@ export function mountQuestbook(root: HTMLElement): void {
           { class: "muted small qb-intro" },
           "Optional. The questbook collects hints toward progression milestones — there are no rewards for finishing one. Ignore them and play your own way if you'd rather.",
         ),
-        renderSection("Active", active, false),
-        renderSection(`Completed (${completed.length})`, completed, true),
+        renderSection("Active", active, false, opts),
+        renderSection(`Completed (${completed.length})`, completed, true, opts),
       ]),
     );
   };
@@ -22,7 +28,12 @@ export function mountQuestbook(root: HTMLElement): void {
   store.subscribe(render);
 }
 
-function renderSection(title: string, quests: Quest[], done: boolean): HTMLElement {
+function renderSection(
+  title: string,
+  quests: Quest[],
+  done: boolean,
+  opts: QuestbookOptions,
+): HTMLElement {
   return el("div", { class: "qb-section" }, [
     el("h3", {}, title),
     quests.length === 0
@@ -34,13 +45,14 @@ function renderSection(title: string, quests: Quest[], done: boolean): HTMLEleme
       : el(
           "ul",
           { class: "qb-list" },
-          quests.map((q) => renderQuest(q, done)),
+          quests.map((q) => renderQuest(q, done, opts)),
         ),
   ]);
 }
 
-function renderQuest(q: Quest, done: boolean): HTMLElement {
+function renderQuest(q: Quest, done: boolean, opts: QuestbookOptions): HTMLElement {
   const kindLabel = q.kind === "progression" ? "Progression" : "Utility";
+  const required = (q.requires ?? []).filter((id) => ITEMS[id]);
   return el("li", { class: "qb-quest" + (done ? " done" : "") }, [
     el("span", { class: "qb-check", "aria-hidden": "true" }, done ? "☑" : "☐"),
     el("div", { class: "qb-body" }, [
@@ -53,6 +65,25 @@ function renderQuest(q: Quest, done: boolean): HTMLElement {
         el("span", { class: "qb-benefit-label" }, "Reward: "),
         el("span", {}, q.benefit),
       ]),
+      required.length > 0
+        ? el("div", { class: "qb-requires small" }, [
+            el("span", { class: "qb-requires-label" }, "Required: "),
+            ...required.map((id) => requiredChip(id, opts)),
+          ])
+        : null,
     ]),
   ]);
+}
+
+function requiredChip(id: ItemId, opts: QuestbookOptions): HTMLElement {
+  const it = ITEMS[id]!;
+  return el(
+    "button",
+    {
+      class: "stack-chip qb-required-chip",
+      title: `${it.name} — open in recipe index`,
+      onclick: () => opts.onOpenItem?.(id),
+    },
+    [el("span", { class: "icon" }, it.icon), el("span", {}, ` ${it.name}`)],
+  );
 }

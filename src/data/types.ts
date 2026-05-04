@@ -144,6 +144,8 @@ export interface Quest {
   kind: QuestKind;
   /** Short note on what completing this quest gets the player. */
   benefit: string;
+  /** Items the player needs to obtain or build to complete the quest. Shown as chips that open the recipe index. */
+  requires?: ItemId[];
   /** Quest is shown (as active) when this returns true and it isn't completed yet. */
   visible: (ctx: QuestContext) => boolean;
   /** Quest is checked off when this returns true. */

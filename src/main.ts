@@ -5,7 +5,7 @@ import { mountGather } from "./ui/gather";
 import { mountInventory } from "./ui/inventory";
 import { createModal } from "./ui/modal";
 import { mountQuestbook } from "./ui/questbook";
-import { mountRecipeIndex } from "./ui/recipe-index";
+import { mountRecipeIndex, selectItem } from "./ui/recipe-index";
 import { mountRooms } from "./ui/rooms";
 
 function buildShell(): void {
@@ -16,7 +16,13 @@ function buildShell(): void {
   mountRecipeIndex(recipesModal.body);
 
   const questbookModal = createModal("Questbook");
-  mountQuestbook(questbookModal.body);
+  mountQuestbook(questbookModal.body, {
+    onOpenItem: (id) => {
+      selectItem(id);
+      questbookModal.close();
+      recipesModal.open();
+    },
+  });
 
   const recipesBtn = el(
     "button",
