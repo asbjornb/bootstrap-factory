@@ -440,6 +440,45 @@ export function pickUpFromFloor(id: ItemId): void {
   });
 }
 
+// ---- trash ----
+
+/** Discard the entire stack of an item from inventory. */
+export function trashFromInventory(id: ItemId): boolean {
+  let ok = false;
+  store.update((s) => {
+    if ((s.inventory[id] ?? 0) <= 0) return;
+    delete s.inventory[id];
+    ok = true;
+  });
+  return ok;
+}
+
+/** Discard the entire stack of an item from the floor pile. */
+export function trashFromFloor(id: ItemId): boolean {
+  let ok = false;
+  store.update((s) => {
+    if ((s.floor[id] ?? 0) <= 0) return;
+    delete s.floor[id];
+    ok = true;
+  });
+  return ok;
+}
+
+/** Discard the entire stack of an item from a placed chest. */
+export function trashFromChest(roomId: string, chestId: string, id: ItemId): boolean {
+  let ok = false;
+  store.update((s) => {
+    const room = s.rooms.find((r) => r.id === roomId);
+    if (!room) return;
+    const chest = room.chests.find((c) => c.id === chestId);
+    if (!chest) return;
+    if ((chest.contents[id] ?? 0) <= 0) return;
+    delete chest.contents[id];
+    ok = true;
+  });
+  return ok;
+}
+
 // ---- rooms ----
 
 let roomSeq = 0;

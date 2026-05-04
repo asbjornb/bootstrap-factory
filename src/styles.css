@@ -287,6 +287,36 @@ body {
 .inv-cap.full {
   color: var(--bad);
 }
+.trash-zone {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  color: var(--muted);
+  background: var(--panel-2);
+  cursor: default;
+  user-select: none;
+  transition: border-color 80ms ease, color 80ms ease, background-color 80ms ease, transform 80ms ease;
+}
+body.trash-dragging .trash-zone {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+.trash-zone.trash-over {
+  border-style: solid;
+  border-color: var(--bad);
+  color: var(--bg);
+  background: var(--bad);
+  transform: scale(1.05);
+}
+[draggable="true"] {
+  cursor: grab;
+}
+[draggable="true"]:active {
+  cursor: grabbing;
+}
 .floor-pile {
   margin-top: 12px;
   padding-top: 8px;
