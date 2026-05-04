@@ -1,54 +1,65 @@
 import type { Item, ItemId } from "./types";
 
 const list: Item[] = [
-  // raw / nature
-  { id: "wood", name: "Wood", icon: "🪵", description: "Rough logs from a felled tree." },
-  { id: "apple", name: "Apple", icon: "🍎", description: "Edible. Occasionally falls from a tree." },
-  { id: "dirt", name: "Dirt", icon: "🟫", description: "Soft earth. Useful for terrain and a handful of recipes." },
+  // raw / woodland
+  { id: "log", name: "Log", icon: "🪵", description: "A rough length of split wood from a felled tree." },
+  { id: "plant_fiber", name: "Plant Fiber", icon: "🌿", description: "Tough strands of grass and bark. Twists into cordage." },
+  { id: "resin", name: "Resin", icon: "💧", description: "Sticky tree sap. Useful, eventually." },
+
+  // soil
+  { id: "loam", name: "Loam", icon: "🟤", description: "Dark crumbly soil. Binds clay into daub." },
+  { id: "clay_lump", name: "Clay Lump", icon: "🟫", description: "Wet, plastic clay. Fires into bricks." },
   { id: "wheat_seed", name: "Wheat Seed", icon: "🌾", description: "Could grow something, eventually.", stackSize: 32 },
   { id: "sunflower_seed", name: "Sunflower Seed", icon: "🌻", description: "Bright. Pressable. Probably.", stackSize: 32 },
 
-  // stone tier
-  { id: "stone", name: "Stone", icon: "🪨", description: "The bones of the workshop." },
-  { id: "coal_ore", name: "Coal Ore", icon: "⬛", description: "Smelts down into coal." },
-  { id: "coal", name: "Coal", icon: "🪨", description: "Burns. Powers furnaces." },
+  // quarry
+  { id: "rubble", name: "Rubble", icon: "🪨", description: "Loose chips and broken rock. The bones of cob walls." },
+  { id: "fieldstone", name: "Fieldstone", icon: "🗿", description: "Solid hand-sized blocks. Stacks into hearths and kilns." },
+  { id: "flint", name: "Flint", icon: "⬛", description: "Glassy stone that flakes to a sharp edge. Knap it into a blade." },
+  { id: "coal", name: "Coal", icon: "⚫", description: "Burns hotter than charcoal. Found deeper in the rock." },
+  { id: "copper_ore", name: "Copper Ore", icon: "🟠", description: "Greenish veined rock. The first metal humans worked." },
+  { id: "tin_ore", name: "Tin Ore", icon: "⚪", description: "Heavy black stone with a bright streak. The other half of bronze." },
+  { id: "iron_ore", name: "Iron Ore", icon: "🟥", description: "Dense, rusty. Needs a hotter fire than a kiln can manage." },
 
-  // metal ores
-  { id: "tin_ore", name: "Tin Ore", icon: "⬜", description: "Soft, shiny, requires at least a wooden pickaxe to gather." },
-  { id: "copper_ore", name: "Copper Ore", icon: "🟧", description: "Reddish. Half of bronze." },
-  { id: "iron_ore", name: "Iron Ore", icon: "🟥", description: "Dense. Needs a stone pickaxe or better." },
+  // intermediates
+  { id: "board", name: "Board", icon: "🟫", description: "Hand-split from a log. Construction stock." },
+  { id: "haft", name: "Haft", icon: "➖", description: "A shaped wooden handle. Lashed to tool heads." },
+  { id: "cordage", name: "Cordage", icon: "🪢", description: "Twisted plant fiber. Lashes hafts to heads, holds crates together." },
+  { id: "charcoal", name: "Charcoal", icon: "🌑", description: "Wood baked anaerobic. Burns clean and hot enough for copper and bronze." },
+  { id: "daub", name: "Daub", icon: "🟫", description: "Clay, fiber and loam mashed together. Sets hard when fired." },
+  { id: "clay_brick", name: "Clay Brick", icon: "🧱", description: "Kiln-fired refractory brick. Holds heat for the bloomery." },
+  { id: "crucible", name: "Crucible", icon: "🍶", description: "A fired clay vessel for alloying. Cracks after one pour." },
 
   // metal ingots
-  { id: "tin_ingot", name: "Tin Ingot", icon: "⚪", description: "Smelted tin.", stackSize: 32 },
-  { id: "copper_ingot", name: "Copper Ingot", icon: "🟠", description: "Smelted copper.", stackSize: 32 },
-  { id: "iron_ingot", name: "Iron Ingot", icon: "⚙️", description: "Smelted iron.", stackSize: 32 },
-  { id: "bronze_ingot", name: "Bronze Ingot", icon: "🟡", description: "Copper + tin, alloyed in a furnace.", stackSize: 32 },
+  { id: "copper_ingot", name: "Copper Ingot", icon: "🟧", description: "Smelted copper. Soft enough to cold-hammer.", stackSize: 32 },
+  { id: "tin_ingot", name: "Tin Ingot", icon: "◽", description: "Smelted tin. Useless alone, transformative in alloy.", stackSize: 32 },
+  { id: "bronze_ingot", name: "Bronze Ingot", icon: "🟡", description: "Copper and tin married in a crucible. The first real metal.", stackSize: 32 },
+  { id: "iron_ingot", name: "Iron Ingot", icon: "⚙️", description: "Hammered out of a bloom. Hard, stubborn, worth it.", stackSize: 32 },
 
-  // intermediate
-  { id: "planks", name: "Planks", icon: "🟫", description: "Sawn from wood. Building block of nearly everything." },
-  { id: "stick", name: "Stick", icon: "➖", description: "Tool handles, fences, torches." },
-  { id: "torch", name: "Torch", icon: "🔥", description: "Light. Probably useful in caves.", stackSize: 32 },
-
-  // tools (single-stack)
-  { id: "wooden_axe", name: "Wooden Axe", icon: "🪓", description: "Required to chop boards into chests.", tool: { type: "axe", tier: 1 }, stackSize: 1 },
-  { id: "wooden_pickaxe", name: "Wooden Pickaxe", icon: "⛏️", description: "Pries loose tin and copper.", tool: { type: "pickaxe", tier: 1 }, stackSize: 1 },
-  { id: "wooden_shovel", name: "Wooden Shovel", icon: "🥄", description: "For laying out new rooms.", tool: { type: "shovel", tier: 1 }, stackSize: 1 },
-  { id: "stone_pickaxe", name: "Stone Pickaxe", icon: "⛏️", description: "Strong enough for iron ore.", tool: { type: "pickaxe", tier: 2 }, stackSize: 1 },
-  { id: "stone_axe", name: "Stone Axe", icon: "🪓", description: "Better wood yields.", tool: { type: "axe", tier: 2 }, stackSize: 1 },
-  { id: "bronze_pickaxe", name: "Bronze Pickaxe", icon: "⛏️", description: "Reveals richer ore deposits.", tool: { type: "pickaxe", tier: 3 }, stackSize: 1 },
+  // tools (tier 1 = flint, 2 = copper, 3 = bronze, 4 = iron)
+  { id: "flint_hatchet", name: "Flint Hatchet", icon: "🪓", description: "A knapped flint head lashed to a haft. Cuts wood, just barely.", tool: { type: "axe", tier: 1 }, stackSize: 1 },
+  { id: "flint_pick", name: "Flint Pick", icon: "⛏️", description: "Sharp enough to pry copper and tin out of softer rock.", tool: { type: "pickaxe", tier: 1 }, stackSize: 1 },
+  { id: "flint_shovel", name: "Flint Shovel", icon: "🥄", description: "A flake of flint on a haft. Better than digging with hands.", tool: { type: "shovel", tier: 1 }, stackSize: 1 },
+  { id: "copper_axe", name: "Copper Axe", icon: "🪓", description: "Cold-hammered copper. Bites cleaner than flint.", tool: { type: "axe", tier: 2 }, stackSize: 1 },
+  { id: "copper_pick", name: "Copper Pick", icon: "⛏️", description: "Strong enough for iron ore and the deeper coal seams.", tool: { type: "pickaxe", tier: 2 }, stackSize: 1 },
+  { id: "copper_shovel", name: "Copper Shovel", icon: "🥄", description: "Turns soil faster and finds more clay.", tool: { type: "shovel", tier: 2 }, stackSize: 1 },
   { id: "bronze_axe", name: "Bronze Axe", icon: "🪓", description: "A real axe.", tool: { type: "axe", tier: 3 }, stackSize: 1 },
-  { id: "iron_pickaxe", name: "Iron Pickaxe", icon: "⛏️", description: "Unlocks ores a bronze pick can't.", tool: { type: "pickaxe", tier: 4 }, stackSize: 1 },
+  { id: "bronze_pick", name: "Bronze Pick", icon: "⛏️", description: "Reveals richer copper and tin veins.", tool: { type: "pickaxe", tier: 3 }, stackSize: 1 },
+  { id: "iron_axe", name: "Iron Axe", icon: "🪓", description: "Heavy. Splits a log in two strokes.", tool: { type: "axe", tier: 4 }, stackSize: 1 },
+  { id: "iron_pick", name: "Iron Pick", icon: "⛏️", description: "Pulls deeper iron from the rock and exposes ores a bronze pick can't reach.", tool: { type: "pickaxe", tier: 4 }, stackSize: 1 },
 
   // carry gear — owning the item buffs your inventory cap (highest bonus wins)
-  { id: "tool_belt", name: "Tool Belt", icon: "🎒", description: "A simple belt with loops and pouches. Carry a little more.", stackSize: 1, carryBonus: 4 },
-  { id: "backpack", name: "Backpack", icon: "🎒", description: "A proper pack. Hauls a respectable load.", stackSize: 1, carryBonus: 8 },
-  { id: "bronze_backpack", name: "Bronze-Frame Backpack", icon: "🎒", description: "Reinforced frame, deeper pockets. The hauler's choice.", stackSize: 1, carryBonus: 12 },
+  { id: "belt_pouch", name: "Belt Pouch", icon: "🎒", description: "A simple belt with loops and pouches. Carry a little more.", stackSize: 1, carryBonus: 4 },
+  { id: "haul_pack", name: "Haul Pack", icon: "🎒", description: "Boards and cordage shaped into a proper pack. Hauls a respectable load.", stackSize: 1, carryBonus: 8 },
+  { id: "bronze_pack", name: "Bronze-Frame Pack", icon: "🎒", description: "Reinforced frame, deeper pockets. The hauler's choice.", stackSize: 1, carryBonus: 12 },
 
-  // workshop blocks
-  { id: "crafting_table", name: "Crafting Table", icon: "🧰", description: "Hand-crafting station for non-trivial recipes.", stackSize: 1 },
-  { id: "chest", name: "Wooden Chest", icon: "🟫", description: "Generic storage. Probably full of dirt soon.", stackSize: 1 },
-  { id: "furnace", name: "Furnace", icon: "🔥", description: "Smelts ores and bakes intermediates.", stackSize: 1 },
-  { id: "bronze_chest", name: "Bronze-Bound Chest", icon: "🟧", description: "Looks important. Probably is.", stackSize: 1 },
+  // workshop blocks (also act as machine "slots" via inventory count)
+  { id: "workbench", name: "Workbench", icon: "🧰", description: "A bench for non-trivial hand assembly.", stackSize: 1 },
+  { id: "crate", name: "Crate", icon: "📦", description: "Generic storage. Probably full of loam soon.", stackSize: 1 },
+  { id: "bound_crate", name: "Bronze-Bound Crate", icon: "🗃️", description: "Looks important. Probably is.", stackSize: 1 },
+  { id: "charcoal_pit", name: "Charcoal Pit", icon: "🔥", description: "A turf-covered pit that smolders logs into charcoal.", stackSize: 1 },
+  { id: "clay_kiln", name: "Clay Kiln", icon: "🏺", description: "A cob-and-stone kiln. Fires bricks, smelts copper and tin, alloys bronze.", stackSize: 1 },
+  { id: "bloomery", name: "Bloomery", icon: "🏭", description: "A refractory stack hot enough to coax iron out of ore.", stackSize: 1 },
 ];
 
 export const ITEMS: Record<ItemId, Item> = Object.fromEntries(list.map((i) => [i.id, i]));

@@ -3,6 +3,7 @@ import { el } from "./ui/dom";
 import { mountCraft } from "./ui/craft";
 import { mountGather } from "./ui/gather";
 import { mountInventory } from "./ui/inventory";
+import { createModal } from "./ui/modal";
 import { mountRecipeIndex } from "./ui/recipe-index";
 import { mountRooms } from "./ui/rooms";
 
@@ -10,9 +11,22 @@ function buildShell(): void {
   const app = document.getElementById("app")!;
   app.innerHTML = "";
 
+  const recipesModal = createModal("Recipe Index");
+  mountRecipeIndex(recipesModal.body);
+
+  const recipesBtn = el(
+    "button",
+    {
+      class: "header-btn",
+      title: "Open recipe index (R)",
+      onclick: () => recipesModal.open(),
+    },
+    "📖 Recipes",
+  );
+
   const header = el("header", { class: "app-header" }, [
     el("h1", {}, "Bootstrap Factory"),
-    el("span", { class: "tagline muted small" }, "early prototype — recipe index validation"),
+    recipesBtn,
     el(
       "button",
       {
@@ -28,7 +42,6 @@ function buildShell(): void {
 
   const gather = el("section", { id: "gather", class: "col col-left" });
   const middle = el("section", { id: "middle", class: "col col-mid" });
-  const right = el("section", { id: "right", class: "col col-right" });
 
   const inventory = el("div");
   gather.appendChild(el("div", { id: "gather-mount" }));
@@ -39,10 +52,7 @@ function buildShell(): void {
   middle.appendChild(rooms);
   middle.appendChild(craft);
 
-  const recipe = el("div", { id: "recipe-mount" });
-  right.appendChild(recipe);
-
-  const main = el("main", { class: "app-grid" }, [gather, middle, right]);
+  const main = el("main", { class: "app-grid" }, [gather, middle]);
   app.appendChild(header);
   app.appendChild(main);
 
@@ -50,7 +60,18 @@ function buildShell(): void {
   mountInventory(inventory);
   mountRooms(rooms);
   mountCraft(craft);
-  mountRecipeIndex(recipe);
+
+  document.addEventListener("keydown", (ev) => {
+    const target = ev.target as HTMLElement | null;
+    if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+      return;
+    }
+    if (ev.key === "r" || ev.key === "R") {
+      ev.preventDefault();
+      if (recipesModal.isOpen()) recipesModal.close();
+      else recipesModal.open();
+    }
+  });
 }
 
 function start(): void {

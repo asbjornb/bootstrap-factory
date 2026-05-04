@@ -81,7 +81,7 @@ export function mountInventory(root: HTMLElement): void {
               el(
                 "p",
                 { class: "muted small" },
-                "Stuff that didn't fit in your pockets. Build a chest, free up some slots, or pick it back up.",
+                "Stuff that didn't fit in your pockets. Build a crate, free up some slots, or pick it back up.",
               ),
               el(
                 "ul",

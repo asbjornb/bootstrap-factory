@@ -1,3 +1,4 @@
+import { gatherActionsProducing } from "../data/gather";
 import { ALL_ITEMS, ITEMS } from "../data/items";
 import { MACHINES } from "../data/machines";
 import {
@@ -6,7 +7,7 @@ import {
   recipesUsingAsTool,
 } from "../data/recipes";
 import { store } from "../game/state";
-import type { ItemId, Recipe } from "../data/types";
+import type { DropEntry, GatherAction, ItemId, Recipe } from "../data/types";
 import { clear, el } from "./dom";
 
 interface IndexState {
@@ -45,8 +46,7 @@ export function mountRecipeIndex(root: HTMLElement): void {
   const render = () => {
     clear(root);
     root.appendChild(
-      el("div", { class: "panel recipe-index" }, [
-        el("h2", {}, "Recipe Index"),
+      el("div", { class: "recipe-index" }, [
         el("input", {
           class: "search",
           type: "search",
@@ -109,6 +109,7 @@ function renderDetail(): HTMLElement {
   const produced = recipesProducing(id);
   const consumed = recipesConsuming(id);
   const asTool = recipesUsingAsTool(id);
+  const gatheredFrom = gatherActionsProducing(id);
   const owned = store.get().inventory[id] ?? 0;
 
   return el("div", { class: "ri-detail" }, [
@@ -130,6 +131,9 @@ function renderDetail(): HTMLElement {
           : null,
       ]),
     ]),
+    gatheredFrom.length > 0
+      ? gatherSection(`Gathered from (${gatheredFrom.length})`, gatheredFrom, id)
+      : null,
     section(`Recipes (${produced.length})`, produced, id, "produces"),
     section(`Used in (${consumed.length})`, consumed, id, "consumes"),
     asTool.length > 0
@@ -176,6 +180,57 @@ function renderRecipeCard(r: Recipe, focus: ItemId, mode: "produces" | "consumes
         )
       : null,
   ]);
+}
+
+function gatherSection(
+  title: string,
+  actions: GatherAction[],
+  focusItem: ItemId,
+): HTMLElement {
+  return el("div", { class: "ri-section" }, [
+    el("h4", {}, title),
+    el(
+      "div",
+      { class: "recipe-list" },
+      actions.map((a) => renderGatherCard(a, focusItem)),
+    ),
+  ]);
+}
+
+function renderGatherCard(a: GatherAction, focus: ItemId): HTMLElement {
+  const drops = a.drops.filter((d) => d.item === focus);
+  return el("div", { class: "ri-recipe" }, [
+    el("div", { class: "ri-recipe-machine", title: a.name }, [
+      el("span", { class: "icon" }, a.icon),
+      el("span", { class: "small" }, a.name),
+    ]),
+    el(
+      "div",
+      { class: "ri-recipe-stacks" },
+      drops.map((d) => dropChip(d)),
+    ),
+  ]);
+}
+
+function dropChip(d: DropEntry): HTMLElement {
+  const it = ITEMS[d.item]!;
+  const qty = d.qty[0] === d.qty[1] ? `${d.qty[0]}` : `${d.qty[0]}–${d.qty[1]}`;
+  const pct = `${Math.round(d.chance * 100)}%`;
+  const tool = d.requiresTool
+    ? ` · needs ${d.requiresTool.type} ≥ ${d.requiresTool.minTier}`
+    : "";
+  return el(
+    "button",
+    {
+      class: "stack-chip focus",
+      title: `${it.name} — open`,
+      onclick: () => selectItem(d.item),
+    },
+    [
+      el("span", { class: "icon" }, it.icon),
+      el("span", {}, ` ${qty} ${it.name} (${pct}${tool})`),
+    ],
+  );
 }
 
 function stackChip(id: ItemId, qty: number, focused: boolean): HTMLElement {

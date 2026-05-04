@@ -77,7 +77,7 @@ export function mountRooms(root: HTMLElement): void {
           ? el(
               "p",
               { class: "muted small" },
-              "No rooms yet. Gather wood, craft a shovel, and build your first room.",
+              "No rooms yet. Forage logs, knap a flint shovel, and build your first room.",
             )
           : el(
               "div",
