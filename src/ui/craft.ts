@@ -13,23 +13,41 @@ export function mountCraft(root: HTMLElement): void {
 
     const groups = ALL_MACHINES.map((m) => ({
       machine: m,
-      recipes: ALL_RECIPES.filter((r) => r.machine === m.id),
+      recipes: ALL_RECIPES.filter(
+        (r) => r.machine === m.id && canCraft(s, r).ok,
+      ),
     })).filter((g) => g.recipes.length > 0);
 
     root.appendChild(
       el("div", { class: "panel" }, [
         el("h2", {}, "Craft"),
-        el("p", { class: "muted small" }, "Recipes you can run from your current inventory and tools."),
-        ...groups.map((g) =>
-          el("div", { class: "craft-group" }, [
-            el("h3", {}, [el("span", { class: "icon" }, g.machine.icon), " ", g.machine.name]),
-            el(
-              "div",
-              { class: "recipe-grid" },
-              g.recipes.map((r) => recipeButton(r, s)),
-            ),
-          ]),
+        el(
+          "p",
+          { class: "muted small" },
+          "Recipes you can run right now. Look up others in the Recipe Index.",
         ),
+        ...(groups.length === 0
+          ? [
+              el(
+                "p",
+                { class: "muted small" },
+                "Nothing craftable yet — gather some materials first.",
+              ),
+            ]
+          : groups.map((g) =>
+              el("div", { class: "craft-group" }, [
+                el("h3", {}, [
+                  el("span", { class: "icon" }, g.machine.icon),
+                  " ",
+                  g.machine.name,
+                ]),
+                el(
+                  "div",
+                  { class: "recipe-grid" },
+                  g.recipes.map((r) => recipeButton(r)),
+                ),
+              ]),
+            )),
       ]),
     );
   };
@@ -37,28 +55,19 @@ export function mountCraft(root: HTMLElement): void {
   store.subscribe(render);
 }
 
-function recipeButton(r: Recipe, s: ReturnType<typeof store.get>): HTMLElement {
-  const check = canCraft(s, r);
+function recipeButton(r: Recipe): HTMLElement {
   const out = r.outputs[0]!;
   const outItem = ITEMS[out.item]!;
-  const reason = check.ok
-    ? ""
-    : check.reason === "missing_tool"
-      ? ` (need ${r.tool!.type} tier ${r.tool!.minTier})`
-      : "";
 
   return el(
     "div",
-    { class: "recipe-card" + (check.ok ? "" : " locked") },
+    { class: "recipe-card" },
     [
       el(
         "button",
         {
           class: "recipe-craft-btn",
-          disabled: !check.ok,
-          title: check.ok
-            ? `Craft ${out.qty}× ${outItem.name}`
-            : `Cannot craft${reason}`,
+          title: `Craft ${out.qty}× ${outItem.name}`,
           onclick: (ev: Event) => {
             const btn = ev.currentTarget as HTMLElement;
             btn.classList.add("flash");
@@ -82,9 +91,7 @@ function recipeButton(r: Recipe, s: ReturnType<typeof store.get>): HTMLElement {
             el(
               "span",
               {
-                class:
-                  "ingredient" +
-                  ((s.inventory[i.item] ?? 0) >= i.qty ? "" : " missing"),
+                class: "ingredient",
                 title: `${ITEMS[i.item]!.name} — open in Recipe Index`,
                 onclick: (ev: Event) => {
                   ev.stopPropagation();
