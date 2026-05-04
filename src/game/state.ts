@@ -20,6 +20,7 @@ import type {
   ItemId,
   MachineId,
   NodeId,
+  PerishableBatch,
   PlacedChest,
   PlacedMachine,
   QuestId,
@@ -30,6 +31,8 @@ import type {
   Stack,
   ToolRequirement,
 } from "../data/types";
+
+export type { PerishableBatch } from "../data/types";
 
 export interface MachineJob {
   id: string;
@@ -75,15 +78,16 @@ export interface GameState {
   /** Day count, starting at 1. Bumps on Sleep. */
   dayNumber: number;
   /**
-   * For each perishable item id currently held: the absolute game-minute
-   * at which the entire stack spoils. Cleared when the stack hits zero.
+   * Per perishable item id: a FIFO list of batches with their own expiry,
+   * sorted oldest-first. The total qty across an id's batches always equals
+   * `inventory[id] + floor[id]`. Empty arrays are pruned.
    */
-  perishables: Record<ItemId, number>;
+  perishables: Record<ItemId, PerishableBatch[]>;
   /** Index 0..3 for spring/summer/autumn/winter. Advances every `daysPerSeason` sleeps. */
   seasonIndex: number;
 }
 
-const SCHEMA_VERSION = 11;
+const SCHEMA_VERSION = 13;
 
 /** Number of in-world days per season. 4 seasons make a year. */
 export const DAYS_PER_SEASON = 8;
@@ -170,13 +174,27 @@ class Store {
         cells: r.cells.map((c) =>
           c.kind === "machine"
             ? { ...c, output: { ...c.output } }
-            : { ...c, contents: { ...c.contents } },
+            : {
+                ...c,
+                contents: { ...c.contents },
+                perishables: Object.fromEntries(
+                  Object.entries(c.perishables).map(([k, v]) => [
+                    k,
+                    v.map((b) => ({ ...b })),
+                  ]),
+                ),
+              },
         ),
       })),
       everBuilt: { ...this.state.everBuilt },
       completedQuests: [...this.state.completedQuests],
       pinnedRecipes: [...this.state.pinnedRecipes],
-      perishables: { ...this.state.perishables },
+      perishables: Object.fromEntries(
+        Object.entries(this.state.perishables).map(([k, v]) => [
+          k,
+          v.map((b) => ({ ...b })),
+        ]),
+      ),
     };
     fn(draft);
     evaluateQuests(draft);
@@ -248,17 +266,68 @@ export function add(state: GameState, id: ItemId, qty: number): void {
   const availableSlots = cap - (used - currentSlots);
   const maxQty = Math.max(0, availableSlots * stack);
   const canAdd = Math.max(0, Math.min(qty, maxQty - currentQty));
-  const had = currentQty + (state.floor[id] ?? 0);
   if (canAdd > 0) state.inventory[id] = currentQty + canAdd;
   const overflow = qty - canAdd;
   if (overflow > 0) state.floor[id] = (state.floor[id] ?? 0) + overflow;
-  // Perishables: start a fresh spoilage timer when this item went from
-  // nothing to something. Restocks into an existing pile inherit the
-  // older timer (mixing fresh into stale doesn't refresh anything).
+  // Perishables: each gather pushes its own batch onto the FIFO so freshly
+  // picked food keeps its full shelf life regardless of older stock.
   const perish = ITEMS[id]?.spoilsAfter;
-  if (perish && had <= 0) {
-    state.perishables[id] = gameMinutes(state) + perish;
+  if (perish) {
+    const batches = state.perishables[id] ?? [];
+    batches.push({ qty, expiresAt: gameMinutes(state) + perish });
+    state.perishables[id] = batches;
   }
+}
+
+/**
+ * Drain `amount` units from the front of the FIFO batches for `id`. Used
+ * whenever items leave inventory+floor for any reason (eating, crafting,
+ * trashing). Older batches go first. Returns the batches that were taken
+ * (with their original expiresAt) so callers that move items elsewhere
+ * (e.g. into a chest) can preserve freshness.
+ */
+function consumeFromBatches(
+  map: Record<ItemId, PerishableBatch[]>,
+  id: ItemId,
+  amount: number,
+): PerishableBatch[] {
+  if (amount <= 0) return [];
+  const batches = map[id];
+  if (!batches || batches.length === 0) return [];
+  const taken: PerishableBatch[] = [];
+  let remaining = amount;
+  while (remaining > 0 && batches.length > 0) {
+    const head = batches[0]!;
+    if (head.qty <= remaining) {
+      remaining -= head.qty;
+      taken.push(batches.shift()!);
+    } else {
+      taken.push({ qty: remaining, expiresAt: head.expiresAt });
+      head.qty -= remaining;
+      remaining = 0;
+    }
+  }
+  if (batches.length === 0) delete map[id];
+  return taken;
+}
+
+function consumePerishable(
+  state: GameState,
+  id: ItemId,
+  amount: number,
+): PerishableBatch[] {
+  return consumeFromBatches(state.perishables, id, amount);
+}
+
+/** Insert `incoming` batches into `target` keeping the list sorted oldest-first. */
+function mergeBatches(
+  target: PerishableBatch[],
+  incoming: PerishableBatch[],
+): PerishableBatch[] {
+  if (incoming.length === 0) return target;
+  const merged = target.concat(incoming);
+  merged.sort((a, b) => a.expiresAt - b.expiresAt);
+  return merged;
 }
 
 /**
@@ -268,20 +337,45 @@ export function add(state: GameState, id: ItemId, qty: number): void {
  */
 export function tickSpoilage(state: GameState): ItemId[] {
   const now = gameMinutes(state);
-  const expired: ItemId[] = [];
-  for (const [id, t] of Object.entries(state.perishables)) {
-    const total = (state.inventory[id] ?? 0) + (state.floor[id] ?? 0);
-    if (total <= 0) {
-      delete state.perishables[id];
-      continue;
+  const expired = new Set<ItemId>();
+  // Player's inventory + floor.
+  for (const [id, batches] of Object.entries(state.perishables)) {
+    let lost = 0;
+    while (batches.length > 0 && batches[0]!.expiresAt <= now) {
+      lost += batches.shift()!.qty;
     }
-    if (t > now) continue;
-    expired.push(id);
-    delete state.perishables[id];
-    delete state.inventory[id];
-    delete state.floor[id];
+    if (batches.length === 0) delete state.perishables[id];
+    if (lost <= 0) continue;
+    const fromInv = Math.min(state.inventory[id] ?? 0, lost);
+    if (fromInv > 0) {
+      state.inventory[id] = (state.inventory[id] ?? 0) - fromInv;
+      if (state.inventory[id]! <= 0) delete state.inventory[id];
+    }
+    const fromFloor = lost - fromInv;
+    if (fromFloor > 0) {
+      state.floor[id] = (state.floor[id] ?? 0) - fromFloor;
+      if (state.floor[id]! <= 0) delete state.floor[id];
+    }
+    expired.add(id);
   }
-  return expired;
+  // Every placed chest spoils on the same clock — chests aren't fridges.
+  for (const room of state.rooms) {
+    for (const cell of room.cells) {
+      if (cell.kind !== "chest") continue;
+      for (const [id, batches] of Object.entries(cell.perishables)) {
+        let lost = 0;
+        while (batches.length > 0 && batches[0]!.expiresAt <= now) {
+          lost += batches.shift()!.qty;
+        }
+        if (batches.length === 0) delete cell.perishables[id];
+        if (lost <= 0) continue;
+        cell.contents[id] = (cell.contents[id] ?? 0) - lost;
+        if (cell.contents[id]! <= 0) delete cell.contents[id];
+        expired.add(id);
+      }
+    }
+  }
+  return [...expired];
 }
 
 /** Apply a recipe's outputs and remember any machine that was just built for the first time. */
@@ -300,6 +394,7 @@ export function tryConsume(state: GameState, stacks: Stack[]): boolean {
   for (const s of stacks) {
     state.inventory[s.item] = (state.inventory[s.item] ?? 0) - s.qty;
     if (state.inventory[s.item]! <= 0) delete state.inventory[s.item];
+    consumePerishable(state, s.item, s.qty);
   }
   return true;
 }
@@ -329,6 +424,7 @@ function tryConsumeLenient(state: GameState, stacks: Stack[]): boolean {
     if (fromInv > 0) {
       state.inventory[s.item] = (state.inventory[s.item] ?? 0) - fromInv;
       if (state.inventory[s.item]! <= 0) delete state.inventory[s.item];
+      consumePerishable(state, s.item, fromInv);
       need -= fromInv;
     }
     if (need <= 0) continue;
@@ -341,6 +437,7 @@ function tryConsumeLenient(state: GameState, stacks: Stack[]): boolean {
         const take = Math.min(have, need);
         cell.contents[s.item] = have - take;
         if (cell.contents[s.item]! <= 0) delete cell.contents[s.item];
+        consumeFromBatches(cell.perishables, s.item, take);
         need -= take;
       }
       if (need <= 0) break;
@@ -1034,6 +1131,7 @@ export function eat(itemId: ItemId): boolean {
     if ((s.inventory[itemId] ?? 0) <= 0) return;
     s.inventory[itemId] = s.inventory[itemId]! - 1;
     if (s.inventory[itemId]! <= 0) delete s.inventory[itemId];
+    consumePerishable(s, itemId, 1);
     s.timeBudget = Math.min(s.dayLength, s.timeBudget + item.food!.satiatesMinutes);
     ok = true;
   });
@@ -1082,22 +1180,39 @@ function randInt(lo: number, hi: number): number {
 
 // ---- floor pile ----
 
+/**
+ * Move as many of `id` as fit from the floor into inventory; leave the rest.
+ * Bypasses `add()` so perishable batches (which span inv+floor) aren't reset.
+ */
+function moveFromFloor(state: GameState, id: ItemId): void {
+  const totalQty = state.floor[id] ?? 0;
+  if (totalQty <= 0) return;
+  const stack = stackSize(id);
+  const cap = carryCap(state);
+  const used = inventorySlotsUsed(state);
+  const currentQty = state.inventory[id] ?? 0;
+  const currentSlots = Math.ceil(currentQty / stack);
+  const availableSlots = cap - (used - currentSlots);
+  const maxQty = Math.max(0, availableSlots * stack);
+  const moveQty = Math.max(0, Math.min(totalQty, maxQty - currentQty));
+  if (moveQty <= 0) return;
+  state.inventory[id] = currentQty + moveQty;
+  const leftover = totalQty - moveQty;
+  if (leftover > 0) state.floor[id] = leftover;
+  else delete state.floor[id];
+}
+
 /** Pick up everything from the floor that fits into inventory; leave the rest. */
 export function pickUpAllFromFloor(): void {
   store.update((s) => {
-    const snapshot = Object.entries(s.floor).filter(([, q]) => q > 0);
-    s.floor = {};
-    for (const [id, qty] of snapshot) add(s, id, qty);
+    for (const id of Object.keys(s.floor)) moveFromFloor(s, id);
   });
 }
 
 /** Pick up just one item type from the floor. */
 export function pickUpFromFloor(id: ItemId): void {
   store.update((s) => {
-    const qty = s.floor[id] ?? 0;
-    if (qty <= 0) return;
-    delete s.floor[id];
-    add(s, id, qty);
+    moveFromFloor(s, id);
   });
 }
 
@@ -1107,8 +1222,10 @@ export function pickUpFromFloor(id: ItemId): void {
 export function trashFromInventory(id: ItemId): boolean {
   let ok = false;
   store.update((s) => {
-    if ((s.inventory[id] ?? 0) <= 0) return;
+    const had = s.inventory[id] ?? 0;
+    if (had <= 0) return;
     delete s.inventory[id];
+    consumePerishable(s, id, had);
     ok = true;
   });
   return ok;
@@ -1118,8 +1235,10 @@ export function trashFromInventory(id: ItemId): boolean {
 export function trashFromFloor(id: ItemId): boolean {
   let ok = false;
   store.update((s) => {
-    if ((s.floor[id] ?? 0) <= 0) return;
+    const had = s.floor[id] ?? 0;
+    if (had <= 0) return;
     delete s.floor[id];
+    consumePerishable(s, id, had);
     ok = true;
   });
   return ok;
@@ -1133,6 +1252,7 @@ export function trashFromChest(roomId: string, instanceId: string, id: ItemId): 
     if (!found || found.roomId !== roomId) return;
     if ((found.cell.contents[id] ?? 0) <= 0) return;
     delete found.cell.contents[id];
+    delete found.cell.perishables[id];
     ok = true;
   });
   return ok;
@@ -1319,6 +1439,7 @@ export function placeChest(roomId: string, chestType: ItemId): boolean {
       instanceId: newInstanceId("c"),
       type: chestType,
       contents: {},
+      perishables: {},
     });
     ok = true;
   });
@@ -1369,6 +1490,14 @@ export function depositToChest(
     chest.contents[itemId] = currentQty + move;
     s.inventory[itemId] = have - move;
     if (s.inventory[itemId]! <= 0) delete s.inventory[itemId];
+    // Carry the freshness batches with the items so chests aren't a fridge.
+    const taken = consumePerishable(s, itemId, move);
+    if (taken.length > 0) {
+      chest.perishables[itemId] = mergeBatches(
+        chest.perishables[itemId] ?? [],
+        taken,
+      );
+    }
     ok = true;
   });
   return ok;
@@ -1387,7 +1516,18 @@ export function withdrawFromChest(
     const have = found.cell.contents[itemId] ?? 0;
     if (have <= 0) return;
     delete found.cell.contents[itemId];
+    const chestBatches = found.cell.perishables[itemId];
+    delete found.cell.perishables[itemId];
+    // add() pushes a fresh batch — for perishable items we drop that and
+    // restore the original batches we just lifted out of the chest, so
+    // freshness is preserved across the round trip.
     add(s, itemId, have);
+    if (chestBatches && chestBatches.length > 0) {
+      const fresh = s.perishables[itemId];
+      if (fresh && fresh.length > 0) fresh.pop();
+      const remaining = s.perishables[itemId] ?? [];
+      s.perishables[itemId] = mergeBatches(remaining, chestBatches);
+    }
     ok = true;
   });
   return ok;
@@ -1433,6 +1573,10 @@ export function load(): void {
     if (typeof parsed.worldClock !== "number" || parsed.worldClock < 0) parsed.worldClock = 0;
     if (typeof parsed.dayNumber !== "number" || parsed.dayNumber < 1) parsed.dayNumber = 1;
     if (!parsed.perishables || typeof parsed.perishables !== "object") parsed.perishables = {};
+    for (const id of Object.keys(parsed.perishables)) {
+      const v = parsed.perishables[id];
+      if (!Array.isArray(v) || v.length === 0) delete parsed.perishables[id];
+    }
     if (typeof parsed.seasonIndex !== "number" || parsed.seasonIndex < 0) {
       parsed.seasonIndex = Math.floor((parsed.dayNumber - 1) / DAYS_PER_SEASON) % SEASONS.length;
     }
@@ -1440,6 +1584,16 @@ export function load(): void {
     parsed.worldClock = Math.min(parsed.worldClock, parsed.dayLength);
     for (const r of parsed.rooms) {
       if (!Array.isArray(r.cells)) r.cells = [];
+      for (const c of r.cells) {
+        if (c.kind !== "chest") continue;
+        if (!c.perishables || typeof c.perishables !== "object") {
+          c.perishables = {};
+        }
+        for (const id of Object.keys(c.perishables)) {
+          const v = c.perishables[id];
+          if (!Array.isArray(v) || v.length === 0) delete c.perishables[id];
+        }
+      }
     }
     evaluateQuests(parsed);
     store.set(parsed);
