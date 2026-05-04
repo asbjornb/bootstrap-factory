@@ -48,7 +48,8 @@ export function mountGather(root: HTMLElement): void {
       for (const node of ALL_NODES) {
         if (node.biome !== biome.id) continue;
         const charges = s.nodeCharges[node.id] ?? 0;
-        if (charges <= 0) continue;
+        const isActive = job?.kind === "harvest" && job.nodeId === node.id;
+        if (charges <= 0 && !isActive) continue;
         cards.push(renderNodeCard(node, charges, s, busy, job));
       }
     }
@@ -251,7 +252,9 @@ function renderNodeCard(
       [
         el("span", { class: "icon big" }, node.icon),
         el("span", {}, node.name),
-        el("span", { class: "node-charges", title: "Charges left" }, `×${charges}`),
+        charges > 0
+          ? el("span", { class: "node-charges", title: "Charges left" }, `×${charges}`)
+          : null,
       ],
     ),
     isThisActive
