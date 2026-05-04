@@ -14,6 +14,7 @@ import {
   gatherActiveTime,
   gatherDuration,
   harvestNode,
+  hasProvisions,
   hasUndiscoveredBiomes,
   nodeActiveTime,
   nodeHarvestDuration,
@@ -23,7 +24,7 @@ import {
   wanderActiveTime,
 } from "../game/state";
 import { WANDER_DURATION_MS } from "../data/wander";
-import type { Biome, GatherAction, ResourceNode } from "../data/types";
+import type { Biome, GatherAction, ResourceNode, Stack } from "../data/types";
 import { clear, el } from "./dom";
 
 export function mountGather(root: HTMLElement): void {
@@ -104,13 +105,14 @@ function renderGatherCard(
   const isFloor = a.id === FLOOR_GATHER_ID;
   const dayOk = fitsInDay(s, at);
   const budgetOk = canAfford(s, at, isFloor);
-  const gate = gateFor(at, dayOk, budgetOk, busy && !isThisActive, dur);
+  const provOk = hasProvisions(s, a.provisions);
+  const gate = gateFor(at, dayOk, budgetOk, provOk, a.provisions, busy && !isThisActive, dur);
   return el("div", { class: "gather-card" }, [
     el(
       "button",
       {
         class: "gather-btn",
-        disabled: busy || !dayOk || !budgetOk,
+        disabled: busy || !dayOk || !budgetOk || !provOk,
         title: gate.title,
         onclick: (ev: Event) => flashThen(ev, () => gather(a.id)),
       },
@@ -120,6 +122,7 @@ function renderGatherCard(
       ? renderProgressBar(job!.startedAt, job!.endsAt)
       : el("p", { class: "muted small" }, gate.subline),
     el("p", { class: "muted small" }, a.description ?? ""),
+    a.provisions ? renderProvisions(a.provisions) : null,
     ...Array.from(machineLocked.entries()).map(([machineId, items]) =>
       el(
         "p",
@@ -148,13 +151,14 @@ function renderExploreCard(
   const at = biomeActiveTime(biome);
   const dayOk = fitsInDay(s, at);
   const budgetOk = canAfford(s, at, false);
-  const gate = gateFor(at, dayOk, budgetOk, busy && !isThisActive, dur);
+  const provOk = hasProvisions(s, biome.provisions);
+  const gate = gateFor(at, dayOk, budgetOk, provOk, biome.provisions, busy && !isThisActive, dur);
   return el("div", { class: "gather-card explore-card" }, [
     el(
       "button",
       {
         class: "gather-btn",
-        disabled: busy || !dayOk || !budgetOk,
+        disabled: busy || !dayOk || !budgetOk || !provOk,
         title: gate.title,
         onclick: (ev: Event) => flashThen(ev, () => exploreBiome(biome.id)),
       },
@@ -167,6 +171,7 @@ function renderExploreCard(
       ? renderProgressBar(job!.startedAt, job!.endsAt)
       : el("p", { class: "muted small" }, gate.subline),
     el("p", { class: "muted small" }, biome.description ?? ""),
+    biome.provisions ? renderProvisions(biome.provisions) : null,
   ]);
 }
 
@@ -180,7 +185,7 @@ function renderWanderCard(
   const at = wanderActiveTime();
   const dayOk = fitsInDay(s, at);
   const budgetOk = canAfford(s, at, false);
-  const gate = gateFor(at, dayOk, budgetOk, busy && !isThisActive, dur);
+  const gate = gateFor(at, dayOk, budgetOk, true, undefined, busy && !isThisActive, dur);
   return el("div", { class: "gather-card explore-card" }, [
     el(
       "button",
@@ -309,6 +314,8 @@ function gateFor(
   activeTime: number,
   dayOk: boolean,
   budgetOk: boolean,
+  provOk: boolean,
+  provisions: Stack[] | undefined,
   busyOther: boolean,
   realDur: number,
 ): { title: string; subline: string } {
@@ -327,8 +334,33 @@ function gateFor(
       subline: `⏱ ${formatDuration(realDur)} · needs ${formatMinutes(activeTime)} energy`,
     };
   }
+  if (!provOk && provisions) {
+    const need = provisions
+      .map((p) => `${p.qty}× ${ITEMS[p.item]?.name ?? p.item}`)
+      .join(", ");
+    return {
+      title: `Pack rations first — needs ${need}`,
+      subline: `⏱ ${formatDuration(realDur)} · needs rations`,
+    };
+  }
   return {
     title: `Takes ${formatDuration(realDur)} (${formatMinutes(activeTime)} in-world)`,
     subline: `⏱ ${formatDuration(realDur)} · ${formatMinutes(activeTime)} in-world`,
   };
+}
+
+function renderProvisions(provisions: Stack[]): HTMLElement {
+  return el("p", { class: "small provisions" }, [
+    el("span", {}, "Pack: "),
+    ...provisions.flatMap((p, i) => {
+      const it = ITEMS[p.item];
+      const label = `${p.qty}× ${it?.name ?? p.item}`;
+      const node = el(
+        "span",
+        { class: "provision-chip", title: "Consumed up-front when the action starts" },
+        [el("span", { class: "icon" }, it?.icon ?? "❓"), el("span", {}, label)],
+      );
+      return i === 0 ? [node] : [el("span", {}, ", "), node];
+    }),
+  ]);
 }

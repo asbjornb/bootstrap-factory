@@ -19,6 +19,23 @@ const list: GatherAction[] = [
       { item: "plant_fiber", qty: [1, 1], chance: 0.2 },
     ],
   },
+  {
+    id: "distant_foray",
+    name: "Distant Foray",
+    icon: "🥾",
+    description:
+      "Pack a ration and strike out for the further bramble-and-marsh country. A long day, but you come back with the basket full.",
+    baseDurationMs: 14000,
+    activeTime: 4 * 60,
+    provisions: [{ item: "dried_berries", qty: 1 }],
+    drops: [
+      { item: "berries", qty: [3, 6], chance: 1 },
+      { item: "edible_root", qty: [2, 4], chance: 0.9 },
+      { item: "plant_fiber", qty: [2, 4], chance: 0.7 },
+      { item: "stick", qty: [2, 4], chance: 0.6 },
+      { item: "resin", qty: [1, 1], chance: 0.15 },
+    ],
+  },
 ];
 
 export const GATHER_ACTIONS: Record<GatherId, GatherAction> = Object.fromEntries(

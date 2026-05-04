@@ -1,5 +1,12 @@
-import { sleep, store } from "../game/state";
+import { currentSeason, DAYS_PER_SEASON, sleep, store } from "../game/state";
 import { clear, el } from "./dom";
+
+const SEASON_ICON: Record<string, string> = {
+  Spring: "🌱",
+  Summer: "☀️",
+  Autumn: "🍂",
+  Winter: "❄️",
+};
 
 /** Format minutes as a coarse "h" reading per the spec ("don't show raw minutes"). */
 function formatHours(minutes: number): string {
@@ -17,11 +24,21 @@ export function mountTimebar(root: HTMLElement): void {
     const budgetPct = Math.round((s.timeBudget / s.dayLength) * 100);
     const dayPct = Math.round((s.worldClock / s.dayLength) * 100);
     const canSleep = !s.actionJob;
+    const season = currentSeason(s);
+    const dayInSeason = ((s.dayNumber - 1) % DAYS_PER_SEASON) + 1;
     clear(root);
     root.appendChild(
       el("div", { class: "panel timebar" }, [
         el("div", { class: "timebar-head" }, [
           el("h2", {}, `Day ${s.dayNumber}`),
+          el(
+            "span",
+            {
+              class: "season-chip small",
+              title: `${season}, day ${dayInSeason} of ${DAYS_PER_SEASON}. Seasons shape what the land yields.`,
+            },
+            `${SEASON_ICON[season] ?? ""} ${season}`,
+          ),
           el(
             "button",
             {

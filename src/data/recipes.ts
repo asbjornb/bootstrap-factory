@@ -225,6 +225,37 @@ const list: Recipe[] = [
     durationMs: 4000,
   },
 
+  // ---- workbench: drying rack ----
+  {
+    id: "drying_rack",
+    machine: "workbench",
+    inputs: [
+      { item: "stick", qty: 6 },
+      { item: "cordage", qty: 3 },
+    ],
+    outputs: [{ item: "drying_rack", qty: 1 }],
+    durationMs: 2500,
+  },
+
+  // ---- drying rack ----
+  {
+    id: "dry_berries",
+    machine: "drying_rack",
+    inputs: [{ item: "berries", qty: 3 }],
+    outputs: [{ item: "dried_berries", qty: 1 }],
+    durationMs: 5000,
+  },
+  {
+    id: "smoke_root",
+    machine: "drying_rack",
+    inputs: [
+      { item: "edible_root", qty: 2 },
+      { item: "charcoal", qty: 1 },
+    ],
+    outputs: [{ item: "smoked_root", qty: 1 }],
+    durationMs: 6000,
+  },
+
   // ---- charcoal pit ----
   {
     id: "burn_charcoal",
