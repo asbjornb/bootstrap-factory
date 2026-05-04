@@ -17,6 +17,10 @@ export interface Item {
   description?: string;
   /** If set, this item can be used as a tool of the given type. */
   tool?: { type: ToolType; tier: number };
+  /** Max units in one inventory slot. Default 64. Tools/machines/chests use 1. */
+  stackSize?: number;
+  /** Owning this item adds to the player's carry capacity. Highest single bonus applies (does not stack). */
+  carryBonus?: number;
 }
 
 export interface Stack {
@@ -52,11 +56,21 @@ export interface DropEntry {
   requiresTool?: ToolRequirement;
 }
 
+export interface Chest {
+  id: string;
+  /** Item id of the chest type (e.g. "chest", "bronze_chest"). */
+  type: ItemId;
+  /** Stored contents. */
+  contents: Record<ItemId, number>;
+}
+
 export interface Room {
   id: string;
   name: string;
   /** Count of each machine placed in this room. */
   machines: Record<MachineId, number>;
+  /** Storage chests placed in this room. */
+  chests: Chest[];
 }
 
 export interface GatherSpeedup {
