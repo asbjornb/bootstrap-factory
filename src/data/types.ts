@@ -66,3 +66,20 @@ export interface GatherAction {
   description?: string;
   drops: DropEntry[];
 }
+
+export type QuestId = string;
+
+export interface QuestContext {
+  has: (item: ItemId, qty?: number) => boolean;
+  completed: (questId: QuestId) => boolean;
+}
+
+export interface Quest {
+  id: QuestId;
+  title: string;
+  description: string;
+  /** Quest is shown (as active) when this returns true and it isn't completed yet. */
+  visible: (ctx: QuestContext) => boolean;
+  /** Quest is checked off when this returns true. */
+  done: (ctx: QuestContext) => boolean;
+}

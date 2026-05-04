@@ -4,6 +4,7 @@ import { mountCraft } from "./ui/craft";
 import { mountGather } from "./ui/gather";
 import { mountInventory } from "./ui/inventory";
 import { createModal } from "./ui/modal";
+import { mountQuestbook } from "./ui/questbook";
 import { mountRecipeIndex } from "./ui/recipe-index";
 import { mountRooms } from "./ui/rooms";
 
@@ -13,6 +14,9 @@ function buildShell(): void {
 
   const recipesModal = createModal("Recipe Index");
   mountRecipeIndex(recipesModal.body);
+
+  const questbookModal = createModal("Questbook");
+  mountQuestbook(questbookModal.body);
 
   const recipesBtn = el(
     "button",
@@ -24,9 +28,20 @@ function buildShell(): void {
     "📖 Recipes",
   );
 
+  const questbookBtn = el(
+    "button",
+    {
+      class: "header-btn",
+      title: "Open questbook (Q)",
+      onclick: () => questbookModal.open(),
+    },
+    "📜 Quests",
+  );
+
   const header = el("header", { class: "app-header" }, [
     el("h1", {}, "Bootstrap Factory"),
     el("span", { class: "tagline muted small" }, "early prototype — recipe index validation"),
+    questbookBtn,
     recipesBtn,
     el(
       "button",
@@ -71,6 +86,10 @@ function buildShell(): void {
       ev.preventDefault();
       if (recipesModal.isOpen()) recipesModal.close();
       else recipesModal.open();
+    } else if (ev.key === "q" || ev.key === "Q") {
+      ev.preventDefault();
+      if (questbookModal.isOpen()) questbookModal.close();
+      else questbookModal.open();
     }
   });
 }

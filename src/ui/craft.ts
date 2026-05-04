@@ -3,6 +3,7 @@ import { ALL_MACHINES, MACHINES } from "../data/machines";
 import { ALL_RECIPES, RECIPES } from "../data/recipes";
 import {
   activeJobsFor,
+  bestToolTier,
   canCraft,
   craft,
   freeSlotsFor,
@@ -11,6 +12,7 @@ import {
   onTick,
   save,
   store,
+  togglePin,
 } from "../game/state";
 import type { Machine, Recipe } from "../data/types";
 import type { MachineJob } from "../game/state";
@@ -34,6 +36,10 @@ export function mountCraft(root: HTMLElement): void {
       return { machine: m, recipes, jobs, capacity };
     }).filter((g) => g.recipes.length > 0 || g.jobs.length > 0);
 
+    const pinnedRecipes = s.pinnedRecipes
+      .map((id) => RECIPES[id])
+      .filter((r): r is Recipe => !!r);
+
     root.appendChild(
       el("div", { class: "panel" }, [
         el("h2", {}, "Craft"),
@@ -42,6 +48,19 @@ export function mountCraft(root: HTMLElement): void {
           { class: "muted small" },
           "Recipes you can run right now. Look up others in the Recipe Index.",
         ),
+        pinnedRecipes.length > 0
+          ? el("div", { class: "craft-pinned" }, [
+              el("h3", {}, [
+                el("span", { class: "icon" }, "📌"),
+                " Pinned",
+              ]),
+              el(
+                "div",
+                { class: "recipe-grid" },
+                pinnedRecipes.map((r) => recipeButton(r, true)),
+              ),
+            ])
+          : null,
         ...(groups.length === 0
           ? [
               el(
@@ -130,7 +149,7 @@ function jobRow(j: MachineJob): HTMLElement {
   ]);
 }
 
-function recipeButton(r: Recipe): HTMLElement {
+function recipeButton(r: Recipe, pinned = false): HTMLElement {
   const out = r.outputs[0]!;
   const outItem = ITEMS[out.item]!;
   const s = store.get();
@@ -141,8 +160,23 @@ function recipeButton(r: Recipe): HTMLElement {
 
   return el(
     "div",
-    { class: "recipe-card" + (disabled ? " locked" : "") },
+    { class: "recipe-card" + (disabled ? " locked" : "") + (pinned ? " pinned" : "") },
     [
+      pinned
+        ? el(
+            "button",
+            {
+              class: "pin-btn pinned card-pin",
+              title: "Unpin",
+              "aria-label": "Unpin recipe",
+              onclick: (ev: Event) => {
+                ev.stopPropagation();
+                togglePin(r.id);
+              },
+            },
+            "📌",
+          )
+        : null,
       el(
         "button",
         {
@@ -170,12 +204,17 @@ function recipeButton(r: Recipe): HTMLElement {
         "div",
         { class: "recipe-meta" },
         [
-          ...r.inputs.map((i) =>
-            el(
+          ...r.inputs.map((i) => {
+            const have = s.inventory[i.item] ?? 0;
+            const short = have < i.qty;
+            return el(
               "span",
               {
-                class: "ingredient",
-                title: `${ITEMS[i.item]!.name} — open in Recipe Index`,
+                class: "ingredient" + (short && pinned ? " short" : ""),
+                title:
+                  short && pinned
+                    ? `${ITEMS[i.item]!.name} — have ${have}/${i.qty}`
+                    : `${ITEMS[i.item]!.name} — open in Recipe Index`,
                 onclick: (ev: Event) => {
                   ev.stopPropagation();
                   selectItem(i.item);
@@ -183,12 +222,20 @@ function recipeButton(r: Recipe): HTMLElement {
               },
               [
                 el("span", { class: "icon" }, ITEMS[i.item]!.icon),
-                ` ${i.qty}`,
+                ` ${pinned && short ? `${have}/${i.qty}` : i.qty}`,
               ],
-            ),
-          ),
+            );
+          }),
           r.tool
-            ? el("span", { class: "tool-req" }, `🛠 ${r.tool.type} ≥${r.tool.minTier}`)
+            ? (() => {
+                const tier = bestToolTier(s, r.tool!.type);
+                const short = tier < r.tool!.minTier;
+                return el(
+                  "span",
+                  { class: "tool-req" + (short && pinned ? " short" : "") },
+                  `🛠 ${r.tool!.type} ≥${r.tool!.minTier}`,
+                );
+              })()
             : null,
           r.durationMs && r.durationMs > 0
             ? el("span", { class: "duration" }, `⏱ ${formatDuration(r.durationMs)}`)
@@ -198,12 +245,36 @@ function recipeButton(r: Recipe): HTMLElement {
       el(
         "div",
         { class: "recipe-foot small muted" },
-        busy
-          ? `${MACHINES[r.machine]!.name} busy (${free}/${machineCapacity(s, r.machine)} free)`
-          : `at ${MACHINES[r.machine]!.name}`,
+        pinned && disabled
+          ? missingSummary(r, check.reason)
+          : busy
+            ? `${MACHINES[r.machine]!.name} busy (${free}/${machineCapacity(s, r.machine)} free)`
+            : `at ${MACHINES[r.machine]!.name}`,
       ),
     ],
   );
+}
+
+function missingSummary(r: Recipe, reason: string | undefined): string {
+  const s = store.get();
+  if (reason === "missing_tool" && r.tool) {
+    return `Need ${r.tool.type} (tier ≥${r.tool.minTier})`;
+  }
+  if (reason === "machine_busy") {
+    const cap = machineCapacity(s, r.machine);
+    if (cap === 0) return `Need ${MACHINES[r.machine]!.name}`;
+    return `${MACHINES[r.machine]!.name} busy`;
+  }
+  if (reason === "missing_inputs") {
+    const missing = r.inputs.filter((i) => (s.inventory[i.item] ?? 0) < i.qty);
+    if (missing.length > 0) {
+      const list = missing
+        .map((i) => `${(i.qty - (s.inventory[i.item] ?? 0))}× ${ITEMS[i.item]!.name}`)
+        .join(", ");
+      return `Need ${list}`;
+    }
+  }
+  return `at ${MACHINES[r.machine]!.name}`;
 }
 
 function formatDuration(ms: number): string {

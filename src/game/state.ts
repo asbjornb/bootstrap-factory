@@ -1,10 +1,12 @@
 import { GATHER_ACTIONS } from "../data/gather";
 import { ITEMS } from "../data/items";
+import { ALL_QUESTS } from "../data/quests";
 import { RECIPES } from "../data/recipes";
 import type {
   GatherId,
   ItemId,
   MachineId,
+  QuestId,
   Recipe,
   RecipeId,
   Room,
@@ -25,9 +27,11 @@ export interface GameState {
   inventory: Record<ItemId, number>;
   jobs: MachineJob[];
   rooms: Room[];
+  completedQuests: QuestId[];
+  pinnedRecipes: RecipeId[];
 }
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 export const ROOM_BUILD_COST: Stack[] = [{ item: "board", qty: 25 }];
 export const ROOM_BUILD_TOOL: ToolRequirement = { type: "shovel", minTier: 1 };
@@ -38,6 +42,8 @@ export function emptyState(): GameState {
     inventory: {},
     jobs: [],
     rooms: [{ id: "room-starter", name: "Workshop", machines: {} }],
+    completedQuests: [],
+    pinnedRecipes: [],
   };
 }
 
@@ -62,8 +68,11 @@ class Store {
       inventory: { ...this.state.inventory },
       jobs: [...this.state.jobs],
       rooms: this.state.rooms.map((r) => ({ ...r, machines: { ...r.machines } })),
+      completedQuests: [...this.state.completedQuests],
+      pinnedRecipes: [...this.state.pinnedRecipes],
     };
     fn(draft);
+    evaluateQuests(draft);
     this.set(draft);
   }
 
@@ -350,6 +359,53 @@ export function pickupMachine(roomId: string, machineId: MachineId): boolean {
   return ok;
 }
 
+// ---- quests ----
+
+export function questContext(state: GameState): import("../data/types").QuestContext {
+  const completed = new Set(state.completedQuests);
+  return {
+    has: (item, qty = 1) => (state.inventory[item] ?? 0) >= qty,
+    completed: (id) => completed.has(id),
+  };
+}
+
+/** Mark any visible quest whose `done` predicate now holds. Mutates the draft. */
+function evaluateQuests(draft: GameState): void {
+  const ctx = questContext(draft);
+  const already = new Set(draft.completedQuests);
+  for (const q of ALL_QUESTS) {
+    if (already.has(q.id)) continue;
+    if (!q.visible(ctx)) continue;
+    if (q.done(ctx)) draft.completedQuests.push(q.id);
+  }
+}
+
+export function questsForDisplay(state: GameState): {
+  active: typeof ALL_QUESTS;
+  completed: typeof ALL_QUESTS;
+} {
+  const ctx = questContext(state);
+  const completedSet = new Set(state.completedQuests);
+  const active = ALL_QUESTS.filter((q) => !completedSet.has(q.id) && q.visible(ctx));
+  const completed = ALL_QUESTS.filter((q) => completedSet.has(q.id));
+  return { active, completed };
+}
+
+// ---- pinned recipes ----
+
+export function isPinned(state: GameState, id: RecipeId): boolean {
+  return state.pinnedRecipes.includes(id);
+}
+
+export function togglePin(id: RecipeId): void {
+  if (!RECIPES[id]) return;
+  store.update((s) => {
+    const i = s.pinnedRecipes.indexOf(id);
+    if (i >= 0) s.pinnedRecipes.splice(i, 1);
+    else s.pinnedRecipes.push(id);
+  });
+}
+
 // ---- save ----
 
 const SAVE_KEY = "bootstrap-factory:save:v1";
@@ -369,6 +425,9 @@ export function load(): void {
     // Defensive: ensure arrays exist.
     if (!Array.isArray(parsed.jobs)) parsed.jobs = [];
     if (!Array.isArray(parsed.rooms)) parsed.rooms = [];
+    if (!Array.isArray(parsed.completedQuests)) parsed.completedQuests = [];
+    if (!Array.isArray(parsed.pinnedRecipes)) parsed.pinnedRecipes = [];
+    evaluateQuests(parsed);
     store.set(parsed);
     // Resolve any jobs that finished while the tab was closed.
     tickJobs();

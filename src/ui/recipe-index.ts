@@ -5,7 +5,7 @@ import {
   recipesProducing,
   recipesUsingAsTool,
 } from "../data/recipes";
-import { store } from "../game/state";
+import { isPinned, store, togglePin } from "../game/state";
 import type { ItemId, Recipe } from "../data/types";
 import { clear, el } from "./dom";
 
@@ -153,6 +153,7 @@ function section(
 
 function renderRecipeCard(r: Recipe, focus: ItemId, mode: "produces" | "consumes" | "tool"): HTMLElement {
   const m = MACHINES[r.machine]!;
+  const pinned = isPinned(store.get(), r.id);
   return el("div", { class: "ri-recipe" }, [
     el("div", { class: "ri-recipe-machine", title: m.name }, [
       el("span", { class: "icon" }, m.icon),
@@ -166,6 +167,19 @@ function renderRecipeCard(r: Recipe, focus: ItemId, mode: "produces" | "consumes
         el("span", { class: "arrow" }, "→"),
         ...r.outputs.map((s) => stackChip(s.item, s.qty, s.item === focus && mode === "produces")),
       ],
+    ),
+    el(
+      "button",
+      {
+        class: "pin-btn" + (pinned ? " pinned" : ""),
+        title: pinned ? "Unpin from Craft panel" : "Pin to Craft panel",
+        "aria-pressed": pinned ? "true" : "false",
+        onclick: (ev: Event) => {
+          ev.stopPropagation();
+          togglePin(r.id);
+        },
+      },
+      pinned ? "📌" : "📍",
     ),
     r.tool
       ? el(
