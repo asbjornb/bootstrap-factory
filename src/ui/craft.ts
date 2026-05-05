@@ -13,6 +13,7 @@ import {
   onTick,
   producesObsoleteTool,
   save,
+  SEASONS,
   store,
   togglePin,
   totalAvailableForTag,
@@ -300,6 +301,10 @@ function missingSummary(r: Recipe, reason: string | undefined): string {
     const cap = machineCapacity(s, r.machine);
     if (cap === 0) return `Need ${MACHINES[r.machine]!.name}`;
     return `${MACHINES[r.machine]!.name} busy`;
+  }
+  if (reason === "wrong_season" && r.seasons) {
+    const names = r.seasons.map((i) => SEASONS[i]).join("/");
+    return `Plant in ${names}`;
   }
   if (reason === "missing_inputs") {
     const missing = r.inputs.filter((i) => {

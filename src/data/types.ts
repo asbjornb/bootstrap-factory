@@ -68,6 +68,12 @@ export interface Recipe {
   tool?: ToolRequirement;
   /** How long the machine is busy producing this recipe. 0/undefined = instant. */
   durationMs?: number;
+  /**
+   * If set, the recipe can only be started when the current season is in the
+   * list (0=Spring, 1=Summer, 2=Autumn, 3=Winter). Used by planting recipes
+   * that only make sense in a sowing window.
+   */
+  seasons?: number[];
 }
 
 export interface Machine {

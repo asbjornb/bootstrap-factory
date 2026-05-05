@@ -257,6 +257,57 @@ const list: Recipe[] = [
     durationMs: 2500,
   },
 
+  // ---- workbench: tilled plot ----
+  // Stake out a bed of turned soil. The shovel is the gate — bare hands
+  // make daub, not a furrow.
+  {
+    id: "tilled_plot",
+    machine: "workbench",
+    inputs: [
+      { item: "board", qty: 4 },
+      { item: "loam", qty: 4 },
+    ],
+    outputs: [{ item: "tilled_plot", qty: 1 }],
+    tool: { type: "shovel", minTier: 1 },
+    durationMs: 2500,
+  },
+
+  // ---- agriculture: hand ----
+  // Stone-and-pestle milling. Slow and tactile; later eclipsed by a millstone.
+  {
+    id: "mill_flour",
+    machine: "hand",
+    inputs: [{ item: "wheat_grain", qty: 2 }],
+    outputs: [{ item: "flour", qty: 1 }],
+  },
+
+  // ---- tilled plot ----
+  // Wheat: spring sowing, ~most-of-a-day to mature. Returns the seed plus a
+  // small grain harvest, so a single seed both feeds and re-seeds.
+  {
+    id: "plant_wheat",
+    machine: "tilled_plot",
+    inputs: [{ item: "wheat_seed", qty: 1 }],
+    outputs: [
+      { item: "wheat_grain", qty: 3 },
+      { item: "wheat_seed", qty: 1 },
+    ],
+    seasons: [0],
+    durationMs: 90000,
+  },
+
+  // ---- campfire: bread ----
+  {
+    id: "bake_bread",
+    machine: "campfire",
+    inputs: [
+      { item: "flour", qty: 1 },
+      { item: "stick", qty: 1 },
+    ],
+    outputs: [{ item: "bread", qty: 1 }],
+    durationMs: 4000,
+  },
+
   // ---- drying rack ----
   {
     id: "dry_berries",

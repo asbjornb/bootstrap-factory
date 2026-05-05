@@ -15,6 +15,7 @@ import {
   depositToChest,
   gameNow,
   hasInputsAndTool,
+  hasInputsAndToolIgnoringSeason,
   jobForInstance,
   meetsToolReq,
   onTick,
@@ -25,6 +26,7 @@ import {
   producesObsoleteTool,
   renameRoom,
   save,
+  SEASONS,
   store,
   takeMachineOutput,
   withdrawFromChest,
@@ -301,11 +303,14 @@ function renderMachineDetail(cell: PlacedMachine): HTMLElement {
   const recipe = job ? RECIPES[job.recipeId] : null;
   const outputEntries = Object.entries(cell.output).filter(([, q]) => q > 0);
 
-  // Recipes the player could plausibly run here right now.
+  // Recipes the player could plausibly run here right now. Off-season
+  // recipes still show — greyed out, so the player can see what the plot
+  // is for in winter — but obsolete-tool recipes and missing-input ones
+  // stay hidden as before.
   const candidateRecipes = ALL_RECIPES.filter(
     (r) =>
       r.machine === cell.machineId &&
-      hasInputsAndTool(s, r) &&
+      (hasInputsAndTool(s, r) || (r.seasons && hasInputsAndToolIgnoringSeason(s, r))) &&
       !producesObsoleteTool(s, r),
   );
 
@@ -435,6 +440,10 @@ function renderInstanceRecipe(cell: PlacedMachine, r: Recipe): HTMLElement {
   const check = canCraft(s, r);
   const busy = !!cell.jobId;
   const disabled = !check.ok || busy;
+  const seasonNote =
+    check.reason === "wrong_season" && r.seasons
+      ? `Plant in ${r.seasons.map((i) => SEASONS[i]).join("/")}`
+      : null;
 
   return el("div", { class: "recipe-card" + (disabled ? " locked" : "") }, [
     el(
@@ -442,9 +451,11 @@ function renderInstanceRecipe(cell: PlacedMachine, r: Recipe): HTMLElement {
       {
         class: "recipe-craft-btn",
         disabled: disabled,
-        title: busy
-          ? `${MACHINES[r.machine]!.name} is busy`
-          : `Craft ${out.qty}× ${outItem.name} here`,
+        title: seasonNote
+          ? seasonNote
+          : busy
+            ? `${MACHINES[r.machine]!.name} is busy`
+            : `Craft ${out.qty}× ${outItem.name} here`,
         onclick: (ev: Event) => {
           const btn = ev.currentTarget as HTMLElement;
           btn.classList.add("flash");

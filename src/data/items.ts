@@ -29,8 +29,13 @@ const list: Item[] = [
   // soil
   { id: "loam", name: "Loam", icon: "🟤", description: "Dark crumbly soil. Binds clay into daub." },
   { id: "clay_lump", name: "Clay Lump", icon: "🟫", description: "Wet, plastic clay. Fires into bricks." },
-  { id: "wheat_seed", name: "Wheat Seed", icon: "🌾", description: "Could grow something, eventually.", stackSize: 32 },
+  { id: "wheat_seed", name: "Wheat Seed", icon: "🌾", description: "Plant in spring. With luck the soil gives back more than it took.", stackSize: 32 },
   { id: "sunflower_seed", name: "Sunflower Seed", icon: "🌻", description: "Bright. Pressable. Probably.", stackSize: 32 },
+
+  // agriculture — wheat chain
+  { id: "wheat_grain", name: "Wheat Grain", icon: "🌾", description: "Threshed wheat. Gritty raw — milled to flour, baked to bread.", stackSize: 32 },
+  { id: "flour", name: "Flour", icon: "🥣", description: "Stone-milled wheat. Lasts the winter on a shelf, but only becomes food once it meets a fire.", stackSize: 32 },
+  { id: "bread", name: "Bread", icon: "🍞", description: "Flour and a fire and a little patience. The first food worth carrying that the season can't take from you.", food: { satiatesMinutes: 110 }, spoilsAfter: 32 * 60, stackSize: 16 },
 
   // quarry
   { id: "rubble", name: "Rubble", icon: "🪨", description: "Loose chips and broken rock. The bones of cob walls." },
@@ -83,6 +88,7 @@ const list: Item[] = [
   { id: "clay_kiln", name: "Clay Kiln", icon: "🏺", description: "A cob-and-stone kiln. Fires bricks, smelts copper and tin, alloys bronze.", stackSize: 1 },
   { id: "bloomery", name: "Bloomery", icon: "🏭", description: "A refractory stack hot enough to coax iron out of ore.", stackSize: 1 },
   { id: "drying_rack", name: "Drying Rack", icon: "🪵", description: "Frame and lashings strung in the sun and breeze. Turns berries and roots into food that keeps.", stackSize: 1 },
+  { id: "tilled_plot", name: "Tilled Plot", icon: "🟫", description: "A bed of turned soil staked out for one planting. Crops grow in season; sleep through the wait and come back to a harvest.", stackSize: 1 },
 ];
 
 export const ITEMS: Record<ItemId, Item> = Object.fromEntries(list.map((i) => [i.id, i]));
