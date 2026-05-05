@@ -1,4 +1,5 @@
-import { ITEMS } from "./items";
+import { hasTag, ITEMS } from "./items";
+import { isTagInput } from "./types";
 import type { ItemId, Recipe, RecipeId } from "./types";
 
 const list: Recipe[] = [
@@ -241,7 +242,7 @@ const list: Recipe[] = [
   {
     id: "dry_berries",
     machine: "drying_rack",
-    inputs: [{ item: "berries", qty: 3 }],
+    inputs: [{ tag: "berry", qty: 3 }],
     outputs: [{ item: "dried_berries", qty: 1 }],
     durationMs: 5000,
   },
@@ -376,9 +377,13 @@ export function recipesProducing(itemId: ItemId): Recipe[] {
   return list.filter((r) => r.outputs.some((o) => o.item === itemId));
 }
 
-/** All recipes that CONSUME the given item as an input. */
+/** All recipes that CONSUME the given item as an input — directly or via a matching tag. */
 export function recipesConsuming(itemId: ItemId): Recipe[] {
-  return list.filter((r) => r.inputs.some((i) => i.item === itemId));
+  return list.filter((r) =>
+    r.inputs.some((i) =>
+      isTagInput(i) ? hasTag(itemId, i.tag) : i.item === itemId,
+    ),
+  );
 }
 
 /** Recipes whose tool requirement is satisfied by the given item (must itself be a tool). */

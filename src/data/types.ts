@@ -31,6 +31,11 @@ export interface Item {
    * from zero). Mixing fresh into an old stack inherits the older timer.
    */
   spoilsAfter?: number;
+  /**
+   * Free-form tags. Recipes can require an input by tag (e.g. any "berry"),
+   * letting one recipe accept any matching item.
+   */
+  tags?: string[];
 }
 
 export interface Stack {
@@ -38,10 +43,26 @@ export interface Stack {
   qty: number;
 }
 
+/**
+ * Recipe input matched by tag instead of a specific item. The engine pulls
+ * any combination of tagged items totalling `qty`, preferring the closest to
+ * spoiling first.
+ */
+export interface TagInput {
+  tag: string;
+  qty: number;
+}
+
+export type RecipeInput = Stack | TagInput;
+
+export function isTagInput(i: RecipeInput): i is TagInput {
+  return (i as TagInput).tag !== undefined;
+}
+
 export interface Recipe {
   id: RecipeId;
   machine: MachineId;
-  inputs: Stack[];
+  inputs: RecipeInput[];
   outputs: Stack[];
   /** Tool that must be held (not consumed) to perform the recipe. */
   tool?: ToolRequirement;
@@ -66,6 +87,11 @@ export interface DropEntry {
   requiresTool?: ToolRequirement;
   /** If set, the drop only rolls once the player has ever crafted this machine. */
   requiresMachineEverBuilt?: MachineId;
+  /**
+   * If set, this drop only rolls when the current season is in the list
+   * (0=Spring, 1=Summer, 2=Autumn, 3=Winter). Otherwise it's year-round.
+   */
+  seasons?: number[];
 }
 
 export interface PlacedMachine {

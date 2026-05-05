@@ -7,13 +7,17 @@ const list: Item[] = [
   { id: "plant_fiber", name: "Plant Fiber", icon: "🌿", description: "Tough strands of grass and bark. Twists into cordage." },
   { id: "resin", name: "Resin", icon: "💧", description: "Sticky tree sap. Useful, eventually." },
 
-  // forage food (perishable)
-  { id: "berries", name: "Wild Berries", icon: "🫐", description: "A handful of bramble berries. Eat soon — they don't keep.", food: { satiatesMinutes: 30 }, spoilsAfter: 12 * 60 },
+  // forage food (perishable). Berries are tagged so any berry can dry.
+  { id: "bramble_berries", name: "Bramble Berries", icon: "🫐", description: "A handful of summer brambles. Sweet and bursting — eat soon, they don't keep.", food: { satiatesMinutes: 30 }, spoilsAfter: 12 * 60, tags: ["berry"] },
+  { id: "elderberries", name: "Elderberries", icon: "🍇", description: "Dark autumn clusters. A little tart, a little astringent, but they hold a few days longer than the summer fruit.", food: { satiatesMinutes: 30 }, spoilsAfter: 16 * 60, tags: ["berry"] },
+  { id: "spring_shoots", name: "Spring Shoots", icon: "🌱", description: "Tender new greens pushed up after the thaw. Bitter but filling, and the first real food of the year.", food: { satiatesMinutes: 20 }, spoilsAfter: 8 * 60 },
   { id: "edible_root", name: "Edible Root", icon: "🥕", description: "A stubby tuber pulled from the soil. Earthy. Filling.", food: { satiatesMinutes: 60 }, spoilsAfter: 32 * 60 },
+  { id: "pine_bark", name: "Pine Bark", icon: "🪵", description: "Strips of inner bark, peeled in winter when nothing else stirs. Tough and resinous, but it keeps a body going.", food: { satiatesMinutes: 20 } },
+  { id: "frozen_tuber", name: "Frozen Tuber", icon: "🥶", description: "A root pried from frozen ground. Hard as wood until you thaw it, but full of stored sugars.", food: { satiatesMinutes: 50 } },
 
-  // preserved food (long shelf life, big payoff)
-  { id: "dried_berries", name: "Dried Berries", icon: "🍇", description: "Sun-and-rack dried. Keep for a season; cover a hard day's work.", food: { satiatesMinutes: 4 * 60 }, stackSize: 32 },
-  { id: "smoked_root", name: "Smoked Root", icon: "🍠", description: "Slow-smoked over a low fire. Sweet, leathery, road-ready.", food: { satiatesMinutes: 8 * 60 }, stackSize: 32 },
+  // preserved food (long shelf life, modest nutrition loss vs. fresh)
+  { id: "dried_berries", name: "Dried Berries", icon: "🍇", description: "Sun-and-rack dried. Keeps for a season — preserves the food, with a small loss of nourishment from the drying.", food: { satiatesMinutes: 80 }, stackSize: 32 },
+  { id: "smoked_root", name: "Smoked Root", icon: "🍠", description: "Slow-smoked over a low fire. Road-ready and shelf-stable; the heat costs a little of the food value.", food: { satiatesMinutes: 100 }, stackSize: 32 },
 
   // soil
   { id: "loam", name: "Loam", icon: "🟤", description: "Dark crumbly soil. Binds clay into daub." },
@@ -83,4 +87,13 @@ export function item(id: ItemId): Item {
 
 export function stackSize(id: ItemId): number {
   return ITEMS[id]?.stackSize ?? 64;
+}
+
+/** All items that carry the given tag. */
+export function itemsWithTag(tag: string): Item[] {
+  return list.filter((i) => i.tags?.includes(tag));
+}
+
+export function hasTag(id: ItemId, tag: string): boolean {
+  return ITEMS[id]?.tags?.includes(tag) ?? false;
 }

@@ -46,11 +46,23 @@ free so the loop is never bricked.
 
 ## Tuning targets
 
-- Foraging takes ~50% of early-day time.
+- Foraging covers a full day's food in 50–67% of day-time during the
+  good seasons (summer, autumn). Forage Nearby has 48-min cycles, so
+  per-cycle food yields of ~72 (summer) and ~96 (autumn) hit those
+  targets.
+- Spring is lean (~80% time = self-sustain) — last winter's preserves
+  carry the gap.
+- Winter is sustenance only (~89% time = self-sustain). A player with
+  no stockpile can survive but has almost no slack time.
 - Shovel, belt pouch, and clay kiln are reachable before any
   preservation tech is required.
 - Day = 16 active hours. First-day food budget ≈ 6–8h.
-- Berry ≈ 30min food, smoked fish ≈ 4h, jerky ≈ 8h (rough targets).
+- Fresh berry ≈ 30min food. Preservation is roughly nutrition-neutral
+  (with a small drying loss): dried berries ≈ 80min for 3 fresh
+  berries (~11% loss), smoked root ≈ 100min for 2 fresh roots
+  (~17% loss). Preservation buys shelf life, not extra food.
+- Cooking (boil/bake, future stage) is the path to *gaining* food
+  value, not preservation.
 
 ## Stages
 
@@ -129,6 +141,21 @@ free so the loop is never bricked.
 - Slow cycle (e.g. every N sleeps = 1 season; 4 seasons = 1 year).
 - Modulate node spawn rates by season (berries summer/fall, fish runs
   spring, etc.). Pure tuning layer; no new mechanics.
+
+### Stage 8 — Seasonal forage flavor + preservation rebalance [done]
+
+- `DropEntry.seasons?` lets gather/node/biome drops gate by season,
+  matching the existing `BiomeOutcome.seasons` field.
+- Forage Nearby drops split four ways: spring shoots + roots, summer
+  bramble berries, autumn elderberries + root flush, winter pine bark
+  and frozen tubers. Distant Foray follows the same berry-by-season
+  pattern.
+- Items grow a `tags?: string[]` field. Berry-tagged items (bramble
+  berries, elderberries) all dry to `dried_berries` via a single
+  `{ tag: "berry" }` recipe input. Future tags: any oil, any wood, etc.
+- Preservation is no longer a food multiplier — it's a shelf-life
+  trade with a small nutrition loss. This opens a future cooking
+  stage (boil/bake) as the real food-value upgrade.
 
 ## Open questions
 

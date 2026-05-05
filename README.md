@@ -91,6 +91,21 @@ Picks themselves don't unlock ores. They speed up every swing and, at higher tie
 
 Eventually, the question becomes: should you spend your precious metals on better manual gathering, or save them for automation?
 
+## Food, Seasons, and the Day Loop
+
+Days are sixteen active hours long, and every action costs time. Your time budget is how many minutes of work you have left before you need to stop and eat — running out doesn't kill you, it just narrows your options to the food-shaped ones. **Forage Nearby** is the always-available floor: even a starved-out player can wander the edges of camp turning over leaves for something to chew on.
+
+What you find depends on the season:
+
+- **Spring** — lean. Last year's preserves and the first tender shoots carry you through.
+- **Summer** — bramble berries thick on the vine. Steady going, time for other work.
+- **Autumn** — elderberries and a flush of late roots. The stockpiling window. Dry what you can.
+- **Winter** — pine bark and frozen tubers. Sustenance only. Hope you put up enough food.
+
+Raw food spoils. The **drying rack** and **smoker** turn perishables into shelf-stable preserves at a small nutrition cost — preservation buys you time, not calories. Cooking, when it lands, will be the path to *gaining* food value.
+
+**Sleep** advances the world to dawn, ticks spoilage and machine progress, and resolves whatever background jobs finished overnight. Time you didn't spend doesn't roll over — use it or lose it. Stockpile in autumn or ration in winter; either way, the year is the rhythm you're working against.
+
 ## Features
 
 - Sandbox crafting and automation
@@ -104,6 +119,9 @@ Eventually, the question becomes: should you spend your precious metals on bette
 - Biome exploration and one-time resource nodes
 - Tool progression that changes gathering outcomes
 - Meaningful manual-vs-automation decisions
+- Hunger as a daily time budget, never a fail state
+- Four seasons that change what foraging yields, with autumn the year's stockpiling window
+- Perishable raw food and lossy preservation — drying buys shelf life, not calories
 - Designed for players who like planning, spreadsheets, and "just one more recipe"
 
 ## Multiplayer Concept

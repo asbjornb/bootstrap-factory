@@ -1,6 +1,6 @@
 import { BIOMES } from "../data/biomes";
 import { GATHER_ACTIONS } from "../data/gather";
-import { ITEMS, stackSize } from "../data/items";
+import { ITEMS, itemsWithTag, stackSize } from "../data/items";
 import { MACHINES } from "../data/machines";
 import { NODES } from "../data/nodes";
 import { ALL_QUESTS } from "../data/quests";
@@ -9,6 +9,7 @@ import { WANDER_ACTIVE_TIME, WANDER_DURATION_MS, WANDER_OUTCOMES, type WanderOut
 import { DURATION_SCALE } from "./dev";
 import { migrate } from "./migrations";
 import { realMsToGameMinutes } from "./time";
+import { isTagInput } from "../data/types";
 import type {
   Biome,
   BiomeId,
@@ -26,6 +27,7 @@ import type {
   QuestId,
   Recipe,
   RecipeId,
+  RecipeInput,
   ResourceNode,
   Room,
   Stack,
@@ -87,7 +89,7 @@ export interface GameState {
   seasonIndex: number;
 }
 
-const SCHEMA_VERSION = 13;
+const SCHEMA_VERSION = 14;
 
 /** Number of in-world days per season. 4 seasons make a year. */
 export const DAYS_PER_SEASON = 8;
@@ -411,39 +413,101 @@ export function totalAvailable(state: GameState, id: ItemId): number {
 }
 
 /**
- * Lenient consume: pulls from inventory first, then from any chest in any room.
- * Used by recipe crafting so chests act as a shared pantry.
+ * Total qty available across every item carrying the given tag. Used by
+ * tag-based recipe inputs (e.g. "any berry").
  */
-function tryConsumeLenient(state: GameState, stacks: Stack[]): boolean {
-  for (const s of stacks) {
-    if (totalAvailable(state, s.item) < s.qty) return false;
+export function totalAvailableForTag(state: GameState, tag: string): number {
+  let total = 0;
+  for (const it of itemsWithTag(tag)) {
+    total += totalAvailable(state, it.id);
   }
-  for (const s of stacks) {
-    let need = s.qty;
-    const fromInv = Math.min(need, state.inventory[s.item] ?? 0);
-    if (fromInv > 0) {
-      state.inventory[s.item] = (state.inventory[s.item] ?? 0) - fromInv;
-      if (state.inventory[s.item]! <= 0) delete state.inventory[s.item];
-      consumePerishable(state, s.item, fromInv);
-      need -= fromInv;
-    }
-    if (need <= 0) continue;
+  return total;
+}
+
+export function totalAvailableForInput(state: GameState, input: RecipeInput): number {
+  return isTagInput(input)
+    ? totalAvailableForTag(state, input.tag)
+    : totalAvailable(state, input.item);
+}
+
+/**
+ * For a tag input, build the order in which we'll spend matching items.
+ * Sorts by oldest perishable batch first (closest to spoiling), then
+ * non-perishables last — using up vulnerable food before it rots.
+ */
+function tagSpendOrder(state: GameState, tag: string): ItemId[] {
+  const candidates = itemsWithTag(tag).filter((it) => totalAvailable(state, it.id) > 0);
+  const earliestExpiry = (id: ItemId): number => {
+    let best = Infinity;
+    const inv = state.perishables[id];
+    if (inv && inv.length > 0) best = Math.min(best, inv[0]!.expiresAt);
     for (const r of state.rooms) {
-      for (const cell of r.cells) {
-        if (need <= 0) break;
-        if (cell.kind !== "chest") continue;
-        const have = cell.contents[s.item] ?? 0;
-        if (have <= 0) continue;
-        const take = Math.min(have, need);
-        cell.contents[s.item] = have - take;
-        if (cell.contents[s.item]! <= 0) delete cell.contents[s.item];
-        consumeFromBatches(cell.perishables, s.item, take);
-        need -= take;
+      for (const c of r.cells) {
+        if (c.kind !== "chest") continue;
+        const batches = c.perishables[id];
+        if (batches && batches.length > 0) best = Math.min(best, batches[0]!.expiresAt);
       }
-      if (need <= 0) break;
+    }
+    return best;
+  };
+  return candidates
+    .map((it) => ({ id: it.id, expiry: earliestExpiry(it.id) }))
+    .sort((a, b) => a.expiry - b.expiry)
+    .map((c) => c.id);
+}
+
+/**
+ * Lenient consume: pulls from inventory first, then from any chest in any room.
+ * Used by recipe crafting so chests act as a shared pantry. Accepts both
+ * concrete `Stack` inputs and tag inputs (any item carrying a given tag).
+ */
+function tryConsumeLenient(state: GameState, inputs: readonly RecipeInput[]): boolean {
+  for (const i of inputs) {
+    if (totalAvailableForInput(state, i) < i.qty) return false;
+  }
+  for (const i of inputs) {
+    if (isTagInput(i)) {
+      let need = i.qty;
+      for (const id of tagSpendOrder(state, i.tag)) {
+        if (need <= 0) break;
+        const take = Math.min(need, totalAvailable(state, id));
+        if (take > 0) {
+          consumeOneItem(state, id, take);
+          need -= take;
+        }
+      }
+    } else {
+      consumeOneItem(state, i.item, i.qty);
     }
   }
   return true;
+}
+
+/** Pull `qty` of a specific item from inventory then chests, oldest perishable first. */
+function consumeOneItem(state: GameState, id: ItemId, qty: number): void {
+  let need = qty;
+  const fromInv = Math.min(need, state.inventory[id] ?? 0);
+  if (fromInv > 0) {
+    state.inventory[id] = (state.inventory[id] ?? 0) - fromInv;
+    if (state.inventory[id]! <= 0) delete state.inventory[id];
+    consumePerishable(state, id, fromInv);
+    need -= fromInv;
+  }
+  if (need <= 0) return;
+  for (const r of state.rooms) {
+    for (const cell of r.cells) {
+      if (need <= 0) break;
+      if (cell.kind !== "chest") continue;
+      const have = cell.contents[id] ?? 0;
+      if (have <= 0) continue;
+      const take = Math.min(have, need);
+      cell.contents[id] = have - take;
+      if (cell.contents[id]! <= 0) delete cell.contents[id];
+      consumeFromBatches(cell.perishables, id, take);
+      need -= take;
+    }
+    if (need <= 0) break;
+  }
 }
 
 // ---- tool helpers ----
@@ -590,7 +654,7 @@ export interface CraftResult {
 export function hasInputsAndTool(state: GameState, recipe: Recipe): boolean {
   if (!meetsToolReq(state, recipe.tool)) return false;
   for (const i of recipe.inputs) {
-    if (totalAvailable(state, i.item) < i.qty) return false;
+    if (totalAvailableForInput(state, i) < i.qty) return false;
   }
   return true;
 }
@@ -598,7 +662,7 @@ export function hasInputsAndTool(state: GameState, recipe: Recipe): boolean {
 export function canCraft(state: GameState, recipe: Recipe): CraftResult {
   if (!meetsToolReq(state, recipe.tool)) return { ok: false, reason: "missing_tool" };
   for (const i of recipe.inputs) {
-    if (totalAvailable(state, i.item) < i.qty) return { ok: false, reason: "missing_inputs" };
+    if (totalAvailableForInput(state, i) < i.qty) return { ok: false, reason: "missing_inputs" };
   }
   if (freeSlotsFor(state, recipe.machine) < 1) return { ok: false, reason: "machine_busy" };
   return { ok: true };
@@ -685,7 +749,7 @@ export function craftAt(instanceId: string, recipeId: RecipeId): CraftResult {
       return;
     }
     for (const i of recipe.inputs) {
-      if (totalAvailable(s, i.item) < i.qty) {
+      if (totalAvailableForInput(s, i) < i.qty) {
         result = { ok: false, reason: "missing_inputs" };
         return;
       }
@@ -847,6 +911,7 @@ export function canAfford(state: GameState, activeTime: number, isFloor: boolean
 function rollDrops(state: GameState, drops: DropEntry[]): Record<ItemId, number> {
   const got: Record<ItemId, number> = {};
   for (const drop of drops) {
+    if (drop.seasons && !drop.seasons.includes(state.seasonIndex)) continue;
     if (!meetsToolReq(state, drop.requiresTool)) continue;
     if (drop.requiresMachineEverBuilt && !state.everBuilt[drop.requiresMachineEverBuilt]) continue;
     if (Math.random() > drop.chance) continue;
