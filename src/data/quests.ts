@@ -78,6 +78,28 @@ export const ALL_QUESTS: Quest[] = [
     visible: () => true,
     done: (ctx) => ctx.has("bread"),
   },
+  {
+    id: "oil_press",
+    title: "Press the first oil",
+    description:
+      "A bronze-bound screw and a stone bed. Plant sunflowers in summer, press the heads in autumn — oil for the dark and seedcake for the table.",
+    kind: "progression",
+    benefit: "Unlocks sunflower oil and seedcake — the first products that aren't pulled from the ground or off a tree.",
+    requires: ["oil_press"],
+    visible: (ctx) => ctx.completed("clay_kiln"),
+    done: (ctx) => ctx.has("oil_press"),
+  },
+  {
+    id: "strong_cordage",
+    title: "Twist a length of strong cordage",
+    description:
+      "Wild plant fiber parts under load. Plant flax in spring, sink the stalks in a retting pit, spin the freed fibers to thread, and ply the thread into a rope worth lashing a haul to.",
+    kind: "progression",
+    benefit: "Stronger cordage — substitutes anywhere plain cordage is called for, and a meaningfully better return per cycle than wild fiber.",
+    requires: ["strong_cordage"],
+    visible: (ctx) => ctx.completed("tilled_plot"),
+    done: (ctx) => ctx.has("strong_cordage"),
+  },
 ];
 
 export const QUESTS: Record<QuestId, Quest> = Object.fromEntries(

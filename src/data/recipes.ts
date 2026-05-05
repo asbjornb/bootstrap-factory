@@ -21,7 +21,7 @@ const list: Recipe[] = [
     machine: "hand",
     inputs: [
       { item: "board", qty: 1 },
-      { item: "cordage", qty: 1 },
+      { tag: "cordage", qty: 1 },
     ],
     outputs: [{ item: "haft", qty: 2 }],
   },
@@ -30,7 +30,7 @@ const list: Recipe[] = [
     machine: "hand",
     inputs: [
       { item: "stick", qty: 2 },
-      { item: "cordage", qty: 1 },
+      { tag: "cordage", qty: 1 },
     ],
     outputs: [{ item: "haft", qty: 1 }],
   },
@@ -64,7 +64,7 @@ const list: Recipe[] = [
     machine: "hand",
     inputs: [
       { item: "stick", qty: 2 },
-      { item: "cordage", qty: 1 },
+      { tag: "cordage", qty: 1 },
     ],
     outputs: [{ item: "bow_drill", qty: 1 }],
   },
@@ -86,7 +86,7 @@ const list: Recipe[] = [
     inputs: [
       { item: "flint", qty: 2 },
       { item: "haft", qty: 1 },
-      { item: "cordage", qty: 1 },
+      { tag: "cordage", qty: 1 },
     ],
     outputs: [{ item: "flint_hatchet", qty: 1 }],
     durationMs: 1500,
@@ -97,7 +97,7 @@ const list: Recipe[] = [
     inputs: [
       { item: "flint", qty: 2 },
       { item: "haft", qty: 1 },
-      { item: "cordage", qty: 1 },
+      { tag: "cordage", qty: 1 },
     ],
     outputs: [{ item: "flint_pick", qty: 1 }],
     durationMs: 1500,
@@ -108,7 +108,7 @@ const list: Recipe[] = [
     inputs: [
       { item: "flint", qty: 1 },
       { item: "haft", qty: 1 },
-      { item: "cordage", qty: 1 },
+      { tag: "cordage", qty: 1 },
     ],
     outputs: [{ item: "flint_shovel", qty: 1 }],
     durationMs: 1200,
@@ -120,7 +120,7 @@ const list: Recipe[] = [
     machine: "workbench",
     inputs: [
       { item: "board", qty: 6 },
-      { item: "cordage", qty: 2 },
+      { tag: "cordage", qty: 2 },
     ],
     outputs: [{ item: "crate", qty: 1 }],
     tool: { type: "axe", minTier: 1 },
@@ -142,7 +142,7 @@ const list: Recipe[] = [
     inputs: [
       { item: "clay_brick", qty: 16 },
       { item: "fieldstone", qty: 8 },
-      { item: "cordage", qty: 4 },
+      { tag: "cordage", qty: 4 },
     ],
     outputs: [{ item: "bloomery", qty: 1 }],
     durationMs: 6000,
@@ -155,7 +155,7 @@ const list: Recipe[] = [
     inputs: [
       { item: "copper_ingot", qty: 3 },
       { item: "haft", qty: 1 },
-      { item: "cordage", qty: 1 },
+      { tag: "cordage", qty: 1 },
     ],
     outputs: [{ item: "copper_axe", qty: 1 }],
     durationMs: 2500,
@@ -166,7 +166,7 @@ const list: Recipe[] = [
     inputs: [
       { item: "copper_ingot", qty: 3 },
       { item: "haft", qty: 1 },
-      { item: "cordage", qty: 1 },
+      { tag: "cordage", qty: 1 },
     ],
     outputs: [{ item: "copper_pick", qty: 1 }],
     durationMs: 2500,
@@ -177,7 +177,7 @@ const list: Recipe[] = [
     inputs: [
       { item: "copper_ingot", qty: 1 },
       { item: "haft", qty: 1 },
-      { item: "cordage", qty: 1 },
+      { tag: "cordage", qty: 1 },
     ],
     outputs: [{ item: "copper_shovel", qty: 1 }],
     durationMs: 2000,
@@ -190,7 +190,7 @@ const list: Recipe[] = [
     inputs: [
       { item: "bronze_ingot", qty: 3 },
       { item: "haft", qty: 1 },
-      { item: "cordage", qty: 1 },
+      { tag: "cordage", qty: 1 },
     ],
     outputs: [{ item: "bronze_axe", qty: 1 }],
     durationMs: 3000,
@@ -201,7 +201,7 @@ const list: Recipe[] = [
     inputs: [
       { item: "bronze_ingot", qty: 3 },
       { item: "haft", qty: 1 },
-      { item: "cordage", qty: 1 },
+      { tag: "cordage", qty: 1 },
     ],
     outputs: [{ item: "bronze_pick", qty: 1 }],
     durationMs: 3000,
@@ -214,7 +214,7 @@ const list: Recipe[] = [
     inputs: [
       { item: "iron_ingot", qty: 3 },
       { item: "haft", qty: 1 },
-      { item: "cordage", qty: 1 },
+      { tag: "cordage", qty: 1 },
     ],
     outputs: [{ item: "iron_axe", qty: 1 }],
     durationMs: 3500,
@@ -225,7 +225,7 @@ const list: Recipe[] = [
     inputs: [
       { item: "iron_ingot", qty: 3 },
       { item: "haft", qty: 1 },
-      { item: "cordage", qty: 1 },
+      { tag: "cordage", qty: 1 },
     ],
     outputs: [{ item: "iron_pick", qty: 1 }],
     durationMs: 3500,
@@ -238,7 +238,7 @@ const list: Recipe[] = [
     inputs: [
       { item: "board", qty: 8 },
       { item: "bronze_ingot", qty: 2 },
-      { item: "cordage", qty: 2 },
+      { tag: "cordage", qty: 2 },
     ],
     outputs: [{ item: "bound_crate", qty: 1 }],
     tool: { type: "axe", minTier: 3 },
@@ -251,7 +251,7 @@ const list: Recipe[] = [
     machine: "workbench",
     inputs: [
       { item: "stick", qty: 6 },
-      { item: "cordage", qty: 3 },
+      { tag: "cordage", qty: 3 },
     ],
     outputs: [{ item: "drying_rack", qty: 1 }],
     durationMs: 2500,
@@ -272,6 +272,37 @@ const list: Recipe[] = [
     durationMs: 2500,
   },
 
+  // ---- workbench: oil press ----
+  // First non-tool use of bronze: a screw and a bed heavy enough to crush
+  // sunflower heads without splintering.
+  {
+    id: "oil_press",
+    machine: "workbench",
+    inputs: [
+      { item: "board", qty: 6 },
+      { tag: "cordage", qty: 2 },
+      { item: "bronze_ingot", qty: 2 },
+    ],
+    outputs: [{ item: "oil_press", qty: 1 }],
+    tool: { type: "axe", minTier: 2 },
+    durationMs: 4500,
+  },
+
+  // ---- workbench: retting pit ----
+  // A clay-lined hollow held shallow with water. Fieldstone for the rim,
+  // daub to seal the seam — a water-themed counterpart to the kiln.
+  {
+    id: "retting_pit",
+    machine: "workbench",
+    inputs: [
+      { item: "fieldstone", qty: 6 },
+      { item: "daub", qty: 4 },
+    ],
+    outputs: [{ item: "retting_pit", qty: 1 }],
+    tool: { type: "shovel", minTier: 1 },
+    durationMs: 4000,
+  },
+
   // ---- agriculture: hand ----
   // Stone-and-pestle milling. Slow and tactile; later eclipsed by a millstone.
   {
@@ -280,10 +311,27 @@ const list: Recipe[] = [
     inputs: [{ item: "wheat_grain", qty: 2 }],
     outputs: [{ item: "flour", qty: 1 }],
   },
+  // Linen thread off the distaff. Long fibers spin clean — one pull, one thread.
+  {
+    id: "spin_thread",
+    machine: "hand",
+    inputs: [{ item: "retted_flax", qty: 1 }],
+    outputs: [{ item: "linen_thread", qty: 1 }],
+  },
+  // Plied thread becomes rope. Stronger than wild-fiber twist and counts
+  // as cordage anywhere a recipe asks for it.
+  {
+    id: "twist_strong_cordage",
+    machine: "hand",
+    inputs: [{ item: "linen_thread", qty: 2 }],
+    outputs: [{ item: "strong_cordage", qty: 1 }],
+  },
 
   // ---- tilled plot ----
   // Wheat: spring sowing, ~most-of-a-day to mature. Returns the seed plus a
   // small grain harvest, so a single seed both feeds and re-seeds.
+  // goToSeedDays: leave the harvest sitting too long and the grain gets
+  // taken by birds/sprout/rot — only the seed remains. See sleep().
   {
     id: "plant_wheat",
     machine: "tilled_plot",
@@ -294,6 +342,60 @@ const list: Recipe[] = [
     ],
     seasons: [0],
     durationMs: 90000,
+    goToSeedDays: 2,
+  },
+  // Sunflower: summer sowing, autumn ripeness. Heads go to the press, seed
+  // returns for next year's planting.
+  {
+    id: "plant_sunflower",
+    machine: "tilled_plot",
+    inputs: [{ item: "sunflower_seed", qty: 1 }],
+    outputs: [
+      { item: "sunflower_head", qty: 4 },
+      { item: "sunflower_seed", qty: 1 },
+    ],
+    seasons: [1],
+    durationMs: 110000,
+    goToSeedDays: 2,
+  },
+  // Flax: spring sowing, summer pull. Stalks go to the retting pit; one seed
+  // back so the line keeps itself.
+  {
+    id: "plant_flax",
+    machine: "tilled_plot",
+    inputs: [{ item: "flax_seed", qty: 1 }],
+    outputs: [
+      { item: "flax_stalks", qty: 6 },
+      { item: "flax_seed", qty: 1 },
+    ],
+    seasons: [0],
+    durationMs: 100000,
+    goToSeedDays: 2,
+  },
+
+  // ---- oil press ----
+  // Heads in, oil and cake out. Cake is mealy food, oil is for everything
+  // that comes later (lamps, frying, bearings).
+  {
+    id: "press_oil",
+    machine: "oil_press",
+    inputs: [{ item: "sunflower_head", qty: 4 }],
+    outputs: [
+      { item: "sunflower_oil", qty: 1 },
+      { item: "seedcake", qty: 2 },
+    ],
+    durationMs: 5000,
+  },
+
+  // ---- retting pit ----
+  // A long soak that softens the bast away from the woody stem. Two stalks
+  // make one usable bundle of fiber.
+  {
+    id: "ret_flax",
+    machine: "retting_pit",
+    inputs: [{ item: "flax_stalks", qty: 2 }],
+    outputs: [{ item: "retted_flax", qty: 1 }],
+    durationMs: 12000,
   },
 
   // ---- campfire: bread ----
@@ -441,7 +543,7 @@ const list: Recipe[] = [
     machine: "workbench",
     inputs: [
       { item: "board", qty: 2 },
-      { item: "cordage", qty: 4 },
+      { tag: "cordage", qty: 4 },
     ],
     outputs: [{ item: "belt_pouch", qty: 1 }],
     durationMs: 1500,
@@ -451,7 +553,7 @@ const list: Recipe[] = [
     machine: "workbench",
     inputs: [
       { item: "board", qty: 4 },
-      { item: "cordage", qty: 6 },
+      { tag: "cordage", qty: 6 },
     ],
     outputs: [{ item: "haul_pack", qty: 1 }],
     tool: { type: "axe", minTier: 1 },
@@ -462,7 +564,7 @@ const list: Recipe[] = [
     machine: "workbench",
     inputs: [
       { item: "board", qty: 4 },
-      { item: "cordage", qty: 6 },
+      { tag: "cordage", qty: 6 },
       { item: "bronze_ingot", qty: 4 },
     ],
     outputs: [{ item: "bronze_pack", qty: 1 }],

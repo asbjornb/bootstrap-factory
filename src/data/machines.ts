@@ -9,6 +9,8 @@ const list: Machine[] = [
   { id: "bloomery", name: "Bloomery", icon: "🏭", description: "A refractory stack hot enough for iron." },
   { id: "drying_rack", name: "Drying Rack", icon: "🪵", description: "Open-air rack for preserving raw food into something that keeps." },
   { id: "tilled_plot", name: "Tilled Plot", icon: "🟫", description: "A bed of turned soil. Plant a seed in season; wait for the harvest." },
+  { id: "oil_press", name: "Oil Press", icon: "🫒", description: "Crushes sunflower heads into oil and seedcake." },
+  { id: "retting_pit", name: "Retting Pit", icon: "🪣", description: "Soaks flax stalks until the fibers come free." },
 ];
 
 export const MACHINES: Record<MachineId, Machine> = Object.fromEntries(list.map((m) => [m.id, m]));

@@ -54,6 +54,11 @@ const MIGRATIONS: Record<number, Migration> = {
   // wheat → flour → bread chain. Pure additive content; no save data needs
   // rewriting.
   15: (_s) => {},
+  // v16 → v17: agriculture stages 2-5 — sunflower/oil-press chain, flax/
+  // retting/strong-cordage chain, plot go-to-seed deadline fields, cordage
+  // tag for cross-substitution. Pure additive content; the new optional
+  // PlacedMachine fields default to undefined on existing cells.
+  16: (_s) => {},
   // v12 → v13: chests now track their own perishable batches. Old saves had
   // no per-chest tracking (chests acted as fridges). Seed each chest's
   // perishable contents with a single batch sized to the current count and
