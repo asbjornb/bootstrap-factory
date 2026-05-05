@@ -11,6 +11,7 @@ import {
   fitsInDay,
   FLOOR_GATHER_ID,
   forageAutoEatPreview,
+  gameNow,
   gather,
   gatherActiveTime,
   gatherDuration,
@@ -322,7 +323,7 @@ function flashThen(ev: Event, fn: () => void): void {
 }
 
 function progressPct(start: number, end: number): number {
-  return Math.min(100, Math.max(0, ((Date.now() - start) / (end - start)) * 100));
+  return Math.min(100, Math.max(0, ((gameNow() - start) / (end - start)) * 100));
 }
 
 function formatDuration(ms: number): string {

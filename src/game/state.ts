@@ -211,6 +211,24 @@ class Store {
 
 export const store = new Store();
 
+// Game clock: wall-clock minus accumulated idle time. In-game time only
+// passes while the player has a foreground actionJob in flight, so machine
+// jobs (anchored to gameNow) freeze whenever the player is idle. The
+// drift accumulator also covers tab-closed periods via save/load.
+let pauseDriftMs = 0;
+let lastSampledAt = Date.now();
+
+/** Wall-clock time, paused while no foreground action is in flight. */
+export function gameNow(): number {
+  const now = Date.now();
+  const delta = now - lastSampledAt;
+  lastSampledAt = now;
+  if (delta > 0 && !store.get().actionJob) {
+    pauseDriftMs += delta;
+  }
+  return now - pauseDriftMs;
+}
+
 // Tick listeners fire on a steady interval so progress bars can repaint
 // without forcing a full state mutation every frame.
 const tickListeners = new Set<() => void>();
@@ -714,7 +732,7 @@ export function craft(recipeId: RecipeId): CraftResult {
     if (dur <= 0) {
       applyRecipeOutputs(s, recipe);
     } else {
-      const now = Date.now();
+      const now = gameNow();
       s.jobs.push({
         id: newJobId(),
         machineId: recipe.machine,
@@ -765,7 +783,7 @@ export function craftAt(instanceId: string, recipeId: RecipeId): CraftResult {
         if (MACHINES[o.item]) s.everBuilt[o.item] = true;
       }
     } else {
-      const now = Date.now();
+      const now = gameNow();
       const jobId = newJobId();
       found.cell.jobId = jobId;
       s.jobs.push({
@@ -801,7 +819,7 @@ export function takeMachineOutput(instanceId: string, itemId?: ItemId): boolean 
 }
 
 /** Complete any jobs whose endsAt has passed. Returns true if any changed. */
-export function tickJobs(now: number = Date.now()): boolean {
+export function tickJobs(now: number = gameNow()): boolean {
   const s = store.get();
   const machineDue = s.jobs.some((j) => j.endsAt <= now);
   const actionDue = s.actionJob !== null && s.actionJob.endsAt <= now;
@@ -840,7 +858,7 @@ export function tickJobs(now: number = Date.now()): boolean {
 
 export function startTickLoop(intervalMs = 200): () => void {
   const handle = setInterval(() => {
-    tickJobs();
+    tickJobs(gameNow());
     for (const l of tickListeners) l();
   }, intervalMs);
   return () => clearInterval(handle);
@@ -1073,7 +1091,7 @@ export function gather(actionId: GatherId): ActionResult {
     if (dur <= 0) {
       applyDrops(s, action.drops);
     } else {
-      const now = Date.now();
+      const now = gameNow();
       s.actionJob = { kind: "gather", gatherId: action.id, startedAt: now, endsAt: now + dur * DURATION_SCALE };
     }
     result = { ok: true };
@@ -1114,7 +1132,7 @@ export function harvestNode(nodeId: NodeId): ActionResult {
     if (dur <= 0) {
       applyDrops(s, node.drops);
     } else {
-      const now = Date.now();
+      const now = gameNow();
       s.actionJob = { kind: "harvest", nodeId, startedAt: now, endsAt: now + dur * DURATION_SCALE };
     }
     result = { ok: true };
@@ -1158,7 +1176,7 @@ export function exploreBiome(biomeId: BiomeId): ActionResult {
     if (dur <= 0) {
       finishActionJob(s, { kind: "explore", biomeId, startedAt: 0, endsAt: 0 });
     } else {
-      const now = Date.now();
+      const now = gameNow();
       s.actionJob = { kind: "explore", biomeId, startedAt: now, endsAt: now + dur * DURATION_SCALE };
     }
     result = { ok: true };
@@ -1184,7 +1202,7 @@ export function wander(): ActionResult {
     }
     spendActiveTime(s, at, false);
     s.lastExploreMessage = null;
-    const now = Date.now();
+    const now = gameNow();
     s.actionJob = { kind: "wander", startedAt: now, endsAt: now + WANDER_DURATION_MS * DURATION_SCALE };
     result = { ok: true };
   });
@@ -1288,9 +1306,8 @@ export function sleep(): boolean {
       // Already at end of day — still allow sleeping (rolls to next morning).
     }
     // Fast-forward machine job timestamps so they continue from the new dawn.
-    // 1 in-world minute == 1 real second of action time, but background
-    // machines are wall-clock based, so we just shift their endsAt back by
-    // however much real time the slept duration represents at the same scale.
+    // Job timestamps live in game-clock ms (paused while idle); shifting them
+    // back by the slept duration converts the slept rest into machine progress.
     const realMsPerMinute = 1000 * DURATION_SCALE;
     const shiftMs = Math.max(0, sleptMinutes) * realMsPerMinute;
     if (shiftMs > 0) {
@@ -1679,10 +1696,20 @@ export function load(): void {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) {
+      pauseDriftMs = 0;
+      lastSampledAt = Date.now();
       store.set(emptyState());
       return;
     }
-    const result = migrate(JSON.parse(raw), SCHEMA_VERSION);
+    const rawParsed = JSON.parse(raw);
+    // Restore the game clock to where it was at save time so machine job
+    // timestamps stay valid and tab-closed time counts as paused.
+    const savedGameClock =
+      typeof rawParsed.__savedGameClock === "number" ? rawParsed.__savedGameClock : null;
+    delete rawParsed.__savedGameClock;
+    pauseDriftMs = savedGameClock !== null ? Math.max(0, Date.now() - savedGameClock) : 0;
+    lastSampledAt = Date.now();
+    const result = migrate(rawParsed, SCHEMA_VERSION);
     if (!result) {
       store.set(emptyState());
       return;
@@ -1742,13 +1769,16 @@ export function load(): void {
 
 export function save(): void {
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(store.get()));
+    const payload = { ...store.get(), __savedGameClock: gameNow() };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
   } catch {
     // quota / disabled storage — silently ignore for now
   }
 }
 
 export function reset(): void {
+  pauseDriftMs = 0;
+  lastSampledAt = Date.now();
   store.set(emptyState());
   save();
 }

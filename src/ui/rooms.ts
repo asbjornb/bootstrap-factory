@@ -13,6 +13,7 @@ import {
   chestSlotsUsed,
   craftAt,
   depositToChest,
+  gameNow,
   hasInputsAndTool,
   jobForInstance,
   meetsToolReq,
@@ -116,13 +117,14 @@ export function mountRooms(root: HTMLElement): void {
   subscribeTrashMode(render);
   // Repaint progress bars between state changes.
   onTick(() => {
+    const now = gameNow();
     for (const bar of root.querySelectorAll<HTMLElement>(".job-progress-fill")) {
       const start = Number(bar.dataset.start);
       const end = Number(bar.dataset.end);
       if (!start || !end) continue;
       const pct = Math.min(
         100,
-        Math.max(0, ((Date.now() - start) / (end - start)) * 100),
+        Math.max(0, ((now - start) / (end - start)) * 100),
       );
       bar.style.width = `${pct}%`;
     }
@@ -267,7 +269,7 @@ function tileStatusLabel(status: "working" | "output" | "idle"): string {
 }
 
 function progressStyle(start: number, end: number): string {
-  const pct = Math.min(100, Math.max(0, ((Date.now() - start) / (end - start)) * 100));
+  const pct = Math.min(100, Math.max(0, ((gameNow() - start) / (end - start)) * 100));
   return `width: ${pct}%`;
 }
 
