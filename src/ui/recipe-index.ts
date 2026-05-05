@@ -6,6 +6,7 @@ import { nodesProducing } from "../data/nodes";
 import {
   recipesConsuming,
   recipesProducing,
+  recipesUsingAsMachine,
   recipesUsingAsTool,
 } from "../data/recipes";
 import { isPinned, SEASONS, store, togglePin } from "../game/state";
@@ -140,6 +141,7 @@ function renderItemDetail(id: ItemId): HTMLElement {
   const produced = recipesProducing(id);
   const consumed = recipesConsuming(id);
   const asTool = recipesUsingAsTool(id);
+  const asMachine = MACHINES[id] ? recipesUsingAsMachine(id) : [];
   const gatheredFrom = gatherActionsProducing(id);
   const harvestedFrom = nodesProducing(id);
   const owned = store.get().inventory[id] ?? 0;
@@ -174,6 +176,9 @@ function renderItemDetail(id: ItemId): HTMLElement {
     section(`Used in (${consumed.length})`, consumed, focus, "consumes"),
     asTool.length > 0
       ? section(`Used as tool in (${asTool.length})`, asTool, focus, "tool")
+      : null,
+    asMachine.length > 0
+      ? section(`Crafted at this (${asMachine.length})`, asMachine, focus, "machine")
       : null,
   ]);
 }
@@ -269,6 +274,8 @@ type Focus =
   | { kind: "item"; id: ItemId }
   | { kind: "tag"; tag: string };
 
+type RecipeMode = "produces" | "consumes" | "tool" | "machine";
+
 function focusMatchesItem(focus: Focus, id: ItemId): boolean {
   if (focus.kind === "item") return focus.id === id;
   return ITEMS[id]?.tags?.includes(focus.tag) ?? false;
@@ -283,7 +290,7 @@ function section(
   title: string,
   recipes: Recipe[],
   focus: Focus,
-  mode: "produces" | "consumes" | "tool",
+  mode: RecipeMode,
 ): HTMLElement {
   return el("div", { class: "ri-section" }, [
     el("h4", {}, title),
@@ -293,11 +300,12 @@ function section(
   ]);
 }
 
-function renderRecipeCard(r: Recipe, focus: Focus, mode: "produces" | "consumes" | "tool"): HTMLElement {
+function renderRecipeCard(r: Recipe, focus: Focus, mode: RecipeMode): HTMLElement {
   const m = MACHINES[r.machine]!;
   const pinned = isPinned(store.get(), r.id);
+  const machineFocused = mode === "machine" && focus.kind === "item" && r.machine === focus.id;
   return el("div", { class: "ri-recipe" }, [
-    el("div", { class: "ri-recipe-machine", title: m.name }, [
+    el("div", { class: "ri-recipe-machine" + (machineFocused ? " focus" : ""), title: m.name }, [
       el("span", { class: "icon" }, m.icon),
       el("span", { class: "small" }, m.name),
     ]),
@@ -447,7 +455,7 @@ function dropChip(d: DropEntry): HTMLElement {
 function inputChip(
   i: RecipeInput,
   focus: Focus,
-  mode: "produces" | "consumes" | "tool",
+  mode: RecipeMode,
 ): HTMLElement {
   if (isTagInput(i)) {
     const matches = itemsWithTag(i.tag);
