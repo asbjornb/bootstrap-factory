@@ -1,4 +1,4 @@
-import { ITEMS, stackSize } from "../data/items";
+import { ITEMS, itemsWithTag, stackSize } from "../data/items";
 import { ALL_MACHINES, MACHINES } from "../data/machines";
 import { ALL_RECIPES, RECIPES } from "../data/recipes";
 import {
@@ -28,6 +28,7 @@ import {
   takeMachineOutput,
   withdrawFromChest,
 } from "../game/state";
+import { isTagInput } from "../data/types";
 import type {
   ItemId,
   PlacedChest,
@@ -462,6 +463,26 @@ function renderInstanceRecipe(cell: PlacedMachine, r: Recipe): HTMLElement {
       { class: "recipe-meta" },
       [
         ...r.inputs.map((i) => {
+          if (isTagInput(i)) {
+            const matches = itemsWithTag(i.tag);
+            const first = matches[0];
+            const detail = matches.map((m) => m.name).join(", ");
+            return el(
+              "span",
+              {
+                class: "ingredient tag-input",
+                title: `Any ${i.tag} — ${detail}`,
+                onclick: (ev: Event) => {
+                  ev.stopPropagation();
+                  if (first) selectItem(first.id);
+                },
+              },
+              [
+                el("span", { class: "icon" }, first?.icon ?? "•"),
+                ` ${i.qty} any ${i.tag}`,
+              ],
+            );
+          }
           return el(
             "span",
             {

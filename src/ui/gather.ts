@@ -87,9 +87,14 @@ function renderGatherCard(
   busy: boolean,
   job: ReturnType<typeof store.get>["actionJob"],
 ): HTMLElement {
+  const inSeason = (d: typeof a.drops[number]): boolean =>
+    !d.seasons || d.seasons.includes(s.seasonIndex);
   const toolLocked = new Set<string>();
   const machineLocked = new Map<string, Set<string>>();
+  const seasonalDrops: string[] = [];
+  const isSeasonal = a.drops.some((d) => d.seasons && d.seasons.length < 4);
   for (const d of a.drops) {
+    if (!inSeason(d)) continue;
     const itemName = ITEMS[d.item]!.name;
     if (d.requiresTool && bestToolTier(s, d.requiresTool.type) < d.requiresTool.minTier) {
       toolLocked.add(itemName);
@@ -99,6 +104,7 @@ function renderGatherCard(
       if (!machineLocked.has(gate)) machineLocked.set(gate, new Set());
       machineLocked.get(gate)!.add(itemName);
     }
+    if (isSeasonal && !seasonalDrops.includes(itemName)) seasonalDrops.push(itemName);
   }
   const dur = gatherDuration(s, a);
   const isThisActive = job?.kind === "gather" && job.gatherId === a.id;
@@ -124,6 +130,13 @@ function renderGatherCard(
       : el("p", { class: "muted small" }, gate.subline),
     el("p", { class: "muted small" }, a.description ?? ""),
     a.provisions ? renderProvisions(a.provisions) : null,
+    isSeasonal
+      ? el(
+          "p",
+          { class: "small season-drops" },
+          `This season: ${seasonalDrops.length > 0 ? seasonalDrops.join(", ") : "nothing's in reach"}.`,
+        )
+      : null,
     ...Array.from(machineLocked.entries()).map(([machineId, items]) =>
       el(
         "p",

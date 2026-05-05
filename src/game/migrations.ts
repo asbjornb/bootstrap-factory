@@ -38,6 +38,12 @@ const MIGRATIONS: Record<number, Migration> = {
     }
     s.perishables = next;
   },
+  // v13 → v14: rename `berries` → `bramble_berries` (the summer variant of
+  // the new seasonal berry set). Item id has to be rewritten anywhere it
+  // appears as a record key.
+  13: (s) => {
+    renameItemId(s, "berries", "bramble_berries");
+  },
   // v12 → v13: chests now track their own perishable batches. Old saves had
   // no per-chest tracking (chests acted as fridges). Seed each chest's
   // perishable contents with a single batch sized to the current count and
@@ -66,6 +72,39 @@ const MIGRATIONS: Record<number, Migration> = {
     }
   },
 };
+
+/** Move every record-keyed entry from `from` to `to`, summing on collision. */
+function renameItemId(s: any, from: string, to: string): void {
+  const moveMap = (m: any): void => {
+    if (!m || typeof m !== "object") return;
+    if (m[from] === undefined) return;
+    m[to] = (m[to] ?? 0) + m[from];
+    delete m[from];
+  };
+  const moveBatches = (m: any): void => {
+    if (!m || typeof m !== "object") return;
+    const old = m[from];
+    if (!Array.isArray(old)) return;
+    const merged = Array.isArray(m[to]) ? [...m[to], ...old] : old;
+    merged.sort((a: any, b: any) => (a?.expiresAt ?? 0) - (b?.expiresAt ?? 0));
+    m[to] = merged;
+    delete m[from];
+  };
+  moveMap(s.inventory);
+  moveMap(s.floor);
+  moveBatches(s.perishables);
+  if (Array.isArray(s.rooms)) {
+    for (const r of s.rooms) {
+      if (!r || !Array.isArray(r.cells)) continue;
+      for (const c of r.cells) {
+        if (!c) continue;
+        moveMap(c.contents);
+        moveBatches(c.perishables);
+        moveMap(c.output);
+      }
+    }
+  }
+}
 
 export interface MigrationResult {
   state: any;

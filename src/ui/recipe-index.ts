@@ -1,6 +1,6 @@
 import { BIOMES } from "../data/biomes";
 import { gatherActionsProducing } from "../data/gather";
-import { ALL_ITEMS, ITEMS } from "../data/items";
+import { ALL_ITEMS, ITEMS, itemsWithTag } from "../data/items";
 import { MACHINES } from "../data/machines";
 import { nodesProducing } from "../data/nodes";
 import {
@@ -8,8 +8,9 @@ import {
   recipesProducing,
   recipesUsingAsTool,
 } from "../data/recipes";
-import { isPinned, store, togglePin } from "../game/state";
-import type { DropEntry, GatherAction, ItemId, Recipe, ResourceNode } from "../data/types";
+import { isPinned, SEASONS, store, togglePin } from "../game/state";
+import { isTagInput } from "../data/types";
+import type { DropEntry, GatherAction, ItemId, Recipe, RecipeInput, ResourceNode } from "../data/types";
 import { clear, el } from "./dom";
 
 interface IndexState {
@@ -176,7 +177,7 @@ function renderRecipeCard(r: Recipe, focus: ItemId, mode: "produces" | "consumes
       "div",
       { class: "ri-recipe-stacks" },
       [
-        ...r.inputs.map((s) => stackChip(s.item, s.qty, s.item === focus && mode === "consumes")),
+        ...r.inputs.map((i) => inputChip(i, focus, mode)),
         el("span", { class: "arrow" }, "→"),
         ...r.outputs.map((s) => stackChip(s.item, s.qty, s.item === focus && mode === "produces")),
       ],
@@ -288,6 +289,9 @@ function dropChip(d: DropEntry): HTMLElement {
   const machine = d.requiresMachineEverBuilt
     ? ` · after building ${MACHINES[d.requiresMachineEverBuilt]?.name ?? d.requiresMachineEverBuilt}`
     : "";
+  const season = d.seasons && d.seasons.length < 4
+    ? ` · ${d.seasons.map((i) => SEASONS[i]).join("/")}`
+    : "";
   return el(
     "button",
     {
@@ -297,9 +301,35 @@ function dropChip(d: DropEntry): HTMLElement {
     },
     [
       el("span", { class: "icon" }, it.icon),
-      el("span", {}, ` ${qty} ${it.name} (${pct}${tool}${machine})`),
+      el("span", {}, ` ${qty} ${it.name} (${pct}${tool}${machine}${season})`),
     ],
   );
+}
+
+function inputChip(
+  i: RecipeInput,
+  focus: ItemId,
+  mode: "produces" | "consumes" | "tool",
+): HTMLElement {
+  if (isTagInput(i)) {
+    const matches = itemsWithTag(i.tag);
+    const first = matches[0];
+    const focused = mode === "consumes" && matches.some((m) => m.id === focus);
+    const detail = matches.map((m) => m.name).join(", ");
+    return el(
+      "button",
+      {
+        class: "stack-chip tag-chip" + (focused ? " focus" : ""),
+        title: `Any ${i.tag} — ${detail}`,
+        onclick: () => { if (first) selectItem(first.id); },
+      },
+      [
+        el("span", { class: "icon" }, first?.icon ?? "•"),
+        el("span", {}, ` ${i.qty} any ${i.tag}`),
+      ],
+    );
+  }
+  return stackChip(i.item, i.qty, i.item === focus && mode === "consumes");
 }
 
 function stackChip(id: ItemId, qty: number, focused: boolean): HTMLElement {

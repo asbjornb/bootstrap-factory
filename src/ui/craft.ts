@@ -1,4 +1,4 @@
-import { ITEMS } from "../data/items";
+import { ITEMS, itemsWithTag } from "../data/items";
 import { ALL_MACHINES, MACHINES } from "../data/machines";
 import { ALL_RECIPES, RECIPES } from "../data/recipes";
 import {
@@ -14,8 +14,10 @@ import {
   save,
   store,
   togglePin,
+  totalAvailableForTag,
 } from "../game/state";
-import type { Machine, Recipe } from "../data/types";
+import { isTagInput } from "../data/types";
+import type { Machine, Recipe, RecipeInput } from "../data/types";
 import type { MachineJob } from "../game/state";
 import { clear, el } from "./dom";
 import { selectItem } from "./recipe-index";
@@ -211,6 +213,32 @@ function recipeButton(r: Recipe, pinned = false): HTMLElement {
         { class: "recipe-meta" },
         [
           ...r.inputs.map((i) => {
+            if (isTagInput(i)) {
+              const have = totalAvailableForTag(s, i.tag);
+              const short = have < i.qty;
+              const matches = itemsWithTag(i.tag);
+              const first = matches[0];
+              const label = `Any ${i.tag}`;
+              const detail = matches.map((m) => m.name).join(", ");
+              return el(
+                "span",
+                {
+                  class: "ingredient tag-input" + (short && pinned ? " short" : ""),
+                  title:
+                    short && pinned
+                      ? `${label} — have ${have}/${i.qty} (${detail})`
+                      : `${label} — any of: ${detail}`,
+                  onclick: (ev: Event) => {
+                    ev.stopPropagation();
+                    if (first) selectItem(first.id);
+                  },
+                },
+                [
+                  el("span", { class: "icon" }, first?.icon ?? "•"),
+                  ` ${pinned && short ? `${have}/${i.qty}` : i.qty} ${label}`,
+                ],
+              );
+            }
             const have = s.inventory[i.item] ?? 0;
             const short = have < i.qty;
             return el(
@@ -272,10 +300,19 @@ function missingSummary(r: Recipe, reason: string | undefined): string {
     return `${MACHINES[r.machine]!.name} busy`;
   }
   if (reason === "missing_inputs") {
-    const missing = r.inputs.filter((i) => (s.inventory[i.item] ?? 0) < i.qty);
+    const missing = r.inputs.filter((i) => {
+      const have = isTagInput(i) ? totalAvailableForTag(s, i.tag) : (s.inventory[i.item] ?? 0);
+      return have < i.qty;
+    });
     if (missing.length > 0) {
       const list = missing
-        .map((i) => `${(i.qty - (s.inventory[i.item] ?? 0))}× ${ITEMS[i.item]!.name}`)
+        .map((i: RecipeInput) => {
+          if (isTagInput(i)) {
+            const need = i.qty - totalAvailableForTag(s, i.tag);
+            return `${need}× any ${i.tag}`;
+          }
+          return `${(i.qty - (s.inventory[i.item] ?? 0))}× ${ITEMS[i.item]!.name}`;
+        })
         .join(", ");
       return `Need ${list}`;
     }
