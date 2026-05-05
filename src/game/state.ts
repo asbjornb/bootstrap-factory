@@ -1102,11 +1102,11 @@ export interface ActionResult {
     | "missing_provisions";
 }
 
-/** True iff every provision stack is available across inventory + chests. */
-export function hasProvisions(state: GameState, stacks: Stack[] | undefined): boolean {
-  if (!stacks || stacks.length === 0) return true;
-  for (const s of stacks) {
-    if (totalAvailable(state, s.item) < s.qty) return false;
+/** True iff every provision input is available across inventory + chests. */
+export function hasProvisions(state: GameState, inputs: RecipeInput[] | undefined): boolean {
+  if (!inputs || inputs.length === 0) return true;
+  for (const i of inputs) {
+    if (totalAvailableForInput(state, i) < i.qty) return false;
   }
   return true;
 }
