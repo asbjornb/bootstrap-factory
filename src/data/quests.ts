@@ -24,6 +24,17 @@ export const ALL_QUESTS: Quest[] = [
     done: (ctx) => ctx.has("belt_pouch"),
   },
   {
+    id: "campfire",
+    title: "Light a campfire",
+    description:
+      "Raw forage burns through the day faster than it fills it. Spin a bow drill to coax a coal, ring it in fieldstone, and feed it sticks — heat unlocks calories the raw food keeps to itself.",
+    kind: "utility",
+    benefit: "Unlocks roasting roots, tubers, and greens — meaningfully more food per harvest.",
+    requires: ["campfire"],
+    visible: () => true,
+    done: (ctx) => ctx.has("campfire"),
+  },
+  {
     id: "drying_rack",
     title: "Raise a drying rack",
     description:
