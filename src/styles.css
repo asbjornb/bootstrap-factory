@@ -525,6 +525,21 @@ body.trash-dragging .trash-zone {
 .trash-zone.trash-over {
   transform: scale(1.05);
 }
+.trash-undo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  background: var(--panel-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.trash-undo:hover {
+  border-style: solid;
+  border-color: var(--good, var(--text));
+}
 body.trash-armed .inv-row,
 body.trash-armed .chest-row {
   outline: 1px dashed var(--bad);
