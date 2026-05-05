@@ -24,7 +24,7 @@ Once a node is on the board, the work begins:
 - **Chop Tree** — gain logs, with a chance of resin
 - **Gather Plant Fiber** — strip undergrowth for fiber
 - **Forage** — sticks, the odd handful of fiber, sometimes a length of log
-- **Turn Soil** — gain loam and clay, with a chance of seeds
+- **Turn Soil** — gain loam and clay, with a chance of wheat and sunflower seeds
 - **Quarry Outcrop** — gain rubble, fieldstone, and flint. Copper and tin start showing up once you can smelt them; iron and coal once you can work them.
 
 When the charges run out, explore again. From there, every small unlock opens new choices.
@@ -102,9 +102,11 @@ What you find depends on the season:
 - **Autumn** — elderberries and a flush of late roots. The stockpiling window. Dry what you can.
 - **Winter** — pine bark and frozen tubers. Sustenance only. Hope you put up enough food.
 
-Raw food spoils. The **drying rack** turns perishables into shelf-stable preserves at a small nutrition cost — preservation buys you time, not calories. Cooking, when it lands, will be the path to *gaining* food value.
+Raw food spoils. The **drying rack** turns perishables into shelf-stable preserves at a small nutrition cost — preservation buys you time, not calories. The **campfire** is the other half: heat unlocks calories the raw form keeps to itself, so a roast root or a wilted handful of greens goes further than what you put on the embers.
 
-**Sleep** advances the world to dawn, ticks spoilage and machine progress, and resolves whatever background jobs finished overnight. Time you didn't spend doesn't roll over — use it or lose it. Stockpile in autumn or ration in winter; either way, the year is the rhythm you're working against.
+Forage feeds you; **agriculture** is how you stop being at the mercy of the season. Build a tilled plot at the workbench, plant a seed in its sowing window, sleep through the wait, and come back to a harvest — wheat in summer, flax in summer, sunflowers in autumn. Mill grain into flour and bake bread on the campfire for the first food worth carrying that the season can't take from you. Sink flax stalks in a retting pit, spin the freed fibers to thread, and twist a length of strong cordage that subs in anywhere plain cordage was called for. Press sunflower heads in an oil press for oil and a heavy ration of seedcake. Leave a finished plot sitting too long and the harvest goes to seed — birds and sprouting take the rest.
+
+**Sleep** advances the world to dawn, ticks spoilage and machine progress, ripens crops, and resolves whatever background jobs finished overnight. Time you didn't spend doesn't roll over — use it or lose it. Stockpile in autumn or ration in winter; either way, the year is the rhythm you're working against.
 
 ## Features
 
@@ -122,6 +124,9 @@ Raw food spoils. The **drying rack** turns perishables into shelf-stable preserv
 - Hunger as a daily time budget, never a fail state
 - Four seasons that change what foraging yields, with autumn the year's stockpiling window
 - Perishable raw food and lossy preservation — drying buys shelf life, not calories
+- Cooking that gains food value where preservation only saves it
+- Seasonal agriculture — tilled plots, season-gated planting, and a missed-harvest "go to seed" penalty
+- Crop chains for bread, sunflower oil, and stronger cordage from flax
 - Designed for players who like planning, spreadsheets, and "just one more recipe"
 
 ## Multiplayer Concept
