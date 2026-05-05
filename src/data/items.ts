@@ -95,6 +95,8 @@ const list: Item[] = [
   { id: "workbench", name: "Workbench", icon: "🧰", description: "A bench for non-trivial hand assembly.", stackSize: 1 },
   { id: "crate", name: "Crate", icon: "📦", description: "Generic storage. Probably full of loam soon.", stackSize: 1 },
   { id: "bound_crate", name: "Bronze-Bound Crate", icon: "🗃️", description: "Looks important. Probably is.", stackSize: 1 },
+  { id: "clay_jar", name: "Clay Jar", icon: "🏺", description: "A fired earthen jar with a heavy lid. Cool, dark, and dry — food kept inside lasts noticeably longer than on a shelf.", stackSize: 1 },
+  { id: "sealed_jar", name: "Pitched Jar", icon: "🫙", description: "A clay jar with a rim of melted resin sealing the lid. Air barely gets in; what's stored inside keeps for a season or more.", stackSize: 1 },
   { id: "campfire", name: "Campfire", icon: "🔥", description: "A ring of fieldstone around a banked ember. The first cooking surface — burns sticks, roasts roots and greens.", stackSize: 1 },
   { id: "charcoal_pit", name: "Charcoal Pit", icon: "🔥", description: "A turf-covered pit that smolders logs into charcoal.", stackSize: 1 },
   { id: "clay_kiln", name: "Clay Kiln", icon: "🏺", description: "A cob-and-stone kiln. Fires bricks, smelts copper and tin, alloys bronze.", stackSize: 1 },

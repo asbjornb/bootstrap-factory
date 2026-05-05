@@ -9,6 +9,7 @@ import {
   buildRoom,
   canBuildRoom,
   canCraft,
+  chestPreserveFactor,
   chestSlotCap,
   chestSlotsUsed,
   craftAt,
@@ -279,13 +280,15 @@ function renderChestTile(cell: PlacedChest): HTMLElement {
   const it = ITEMS[cell.type]!;
   const cap = chestSlotCap(cell.type);
   const used = chestSlotsUsed(cell);
+  const preserve = chestPreserveFactor(cell.type);
   const isSelected = selectedInstanceId === cell.instanceId;
+  const titleSuffix = preserve > 1 ? ` — ×${preserve} shelf life` : "";
 
   return el(
     "div",
     {
       class: "room-tile chest-tile" + (isSelected ? " selected" : ""),
-      title: `${it.name} — ${used}/${cap} slots — click to open`,
+      title: `${it.name} — ${used}/${cap} slots${titleSuffix} — click to open`,
       onclick: () => selectCell(cell.instanceId),
     },
     [
@@ -560,11 +563,17 @@ function renderChestDetail(roomId: string, chest: PlacedChest): HTMLElement {
     })
     .sort((a, b) => ITEMS[a[0]]!.name.localeCompare(ITEMS[b[0]]!.name));
 
+  const preserve = chestPreserveFactor(chest.type);
+  const statusText =
+    preserve > 1
+      ? `${used} / ${cap} slots · ×${preserve} shelf life`
+      : `${used} / ${cap} slots`;
+
   return el("div", { class: "cell-detail chest-detail" }, [
     el("div", { class: "detail-head" }, [
       el("span", { class: "icon big" }, chestItem.icon),
       el("span", { class: "detail-title" }, chestItem.name),
-      el("span", { class: "detail-status small" }, `${used} / ${cap} slots`),
+      el("span", { class: "detail-status small" }, statusText),
       el(
         "button",
         {

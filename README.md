@@ -104,6 +104,8 @@ What you find depends on the season:
 
 Raw food spoils. The **drying rack** turns perishables into shelf-stable preserves at a small nutrition cost — preservation buys you time, not calories. The **campfire** is the other half: heat unlocks calories the raw form keeps to itself, so a roast root or a wilted handful of greens goes further than what you put on the embers.
 
+Once the kiln is up, **pottery** opens a second preservation track. Fire a clay jar to keep food cool, dark, and dry — anything stored inside lasts twice as long. Seal the lid with melted resin at the campfire and the keep doubles again: a pitched jar holds the autumn stockpile through to spring.
+
 Forage feeds you; **agriculture** is how you stop being at the mercy of the season. Build a tilled plot at the workbench, plant a seed in its sowing window, sleep through the wait, and come back to a harvest — wheat in summer, flax in summer, sunflowers in autumn. Mill grain into flour and bake bread on the campfire for the first food worth carrying that the season can't take from you. Sink flax stalks in a retting pit, spin the freed fibers to thread, and twist a length of strong cordage that subs in anywhere plain cordage was called for. Press sunflower heads in an oil press for oil and a heavy ration of seedcake. Leave a finished plot sitting too long and the harvest goes to seed — birds and sprouting take the rest.
 
 **Sleep** advances the world to dawn, ticks spoilage and machine progress, ripens crops, and resolves whatever background jobs finished overnight. Time you didn't spend doesn't roll over — use it or lose it. Stockpile in autumn or ration in winter; either way, the year is the rhythm you're working against.
@@ -125,6 +127,7 @@ Forage feeds you; **agriculture** is how you stop being at the mercy of the seas
 - Four seasons that change what foraging yields, with autumn the year's stockpiling window
 - Perishable raw food and lossy preservation — drying buys shelf life, not calories
 - Cooking that gains food value where preservation only saves it
+- Pottery vessels as a second preservation track — clay jars stretch shelf life, pitched jars stretch it further
 - Seasonal agriculture — tilled plots, season-gated planting, and a missed-harvest "go to seed" penalty
 - Crop chains for bread, sunflower oil, and stronger cordage from flax
 - Designed for players who like planning, spreadsheets, and "just one more recipe"

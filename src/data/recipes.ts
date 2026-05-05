@@ -525,6 +525,35 @@ const list: Recipe[] = [
     durationMs: 6000,
   },
 
+  // ---- clay kiln: pottery vessels ----
+  // A fired jar — cool, dark, lidded. Stretches the shelf life of anything
+  // stored inside it well past what a shelf or a wooden crate manages.
+  {
+    id: "fire_clay_jar",
+    machine: "clay_kiln",
+    inputs: [
+      { item: "clay_lump", qty: 3 },
+      { item: "charcoal", qty: 1 },
+    ],
+    outputs: [{ item: "clay_jar", qty: 1 }],
+    durationMs: 4000,
+  },
+
+  // ---- campfire: seal a jar ----
+  // Melt pine resin around the lid rim. The pitch sets airtight; what was
+  // a slow leak becomes a stoppered vessel. Long-haul preservation.
+  {
+    id: "seal_jar",
+    machine: "campfire",
+    inputs: [
+      { item: "clay_jar", qty: 1 },
+      { item: "resin", qty: 1 },
+      { item: "stick", qty: 1 },
+    ],
+    outputs: [{ item: "sealed_jar", qty: 1 }],
+    durationMs: 3000,
+  },
+
   // ---- bloomery ----
   {
     id: "smelt_iron",
