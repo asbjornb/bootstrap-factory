@@ -41,7 +41,6 @@ import type {
   Room,
 } from "../data/types";
 import { clear, el } from "./dom";
-import { selectItem } from "./recipe-index";
 import {
   applyTrash,
   isTrashMode,
@@ -54,7 +53,14 @@ const CHEST_TYPES = Object.keys(CHEST_SLOT_CAP);
 /** UI-only selection: which cell instance has its detail panel open. */
 let selectedInstanceId: string | null = null;
 
-export function mountRooms(root: HTMLElement): void {
+interface RoomsOptions {
+  onOpenItem: (id: ItemId) => void;
+}
+
+let openItemCallback: (id: ItemId) => void = () => {};
+
+export function mountRooms(root: HTMLElement, opts: RoomsOptions): void {
+  openItemCallback = opts.onOpenItem;
   const render = () => {
     const s = store.get();
     clear(root);
@@ -490,7 +496,7 @@ function renderInstanceRecipe(cell: PlacedMachine, r: Recipe): HTMLElement {
                 title: `Any ${i.tag} — ${detail}`,
                 onclick: (ev: Event) => {
                   ev.stopPropagation();
-                  if (first) selectItem(first.id);
+                  if (first) openItemCallback(first.id);
                 },
               },
               [
@@ -506,7 +512,7 @@ function renderInstanceRecipe(cell: PlacedMachine, r: Recipe): HTMLElement {
               title: `${ITEMS[i.item]!.name} — open in Recipe Index`,
               onclick: (ev: Event) => {
                 ev.stopPropagation();
-                selectItem(i.item);
+                openItemCallback(i.item);
               },
             },
             [

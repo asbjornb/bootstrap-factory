@@ -82,11 +82,16 @@ function buildShell(): void {
   app.appendChild(header);
   app.appendChild(main);
 
+  const openItemInRecipes = (id: Parameters<typeof selectItem>[0]) => {
+    selectItem(id);
+    recipesModal.open();
+  };
+
   mountTimebar(timebar);
   mountGather(gather.querySelector("#gather-mount") as HTMLElement);
   mountInventory(inventory);
-  mountRooms(rooms);
-  mountCraft(craft);
+  mountRooms(rooms, { onOpenItem: openItemInRecipes });
+  mountCraft(craft, { onOpenItem: openItemInRecipes });
 
   document.addEventListener("keydown", (ev) => {
     const target = ev.target as HTMLElement | null;
