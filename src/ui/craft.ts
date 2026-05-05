@@ -19,12 +19,17 @@ import {
   totalAvailableForTag,
 } from "../game/state";
 import { isTagInput } from "../data/types";
-import type { Machine, Recipe, RecipeInput } from "../data/types";
+import type { ItemId, Machine, Recipe, RecipeInput } from "../data/types";
 import type { MachineJob } from "../game/state";
 import { clear, el } from "./dom";
-import { selectItem, selectTag } from "./recipe-index";
 
-export function mountCraft(root: HTMLElement): void {
+interface CraftOptions {
+  onOpenItem: (id: ItemId) => void;
+  onOpenTag: (tag: string) => void;
+}
+
+export function mountCraft(root: HTMLElement, opts: CraftOptions): void {
+  const { onOpenItem, onOpenTag } = opts;
   const render = () => {
     const s = store.get();
     clear(root);
@@ -67,7 +72,7 @@ export function mountCraft(root: HTMLElement): void {
               el(
                 "div",
                 { class: "recipe-grid" },
-                pinnedRecipes.map((r) => recipeButton(r, true)),
+                pinnedRecipes.map((r) => recipeButton(r, true, onOpenItem, onOpenTag)),
               ),
             ])
           : null,
@@ -93,7 +98,7 @@ export function mountCraft(root: HTMLElement): void {
                   ? el(
                       "div",
                       { class: "recipe-grid" },
-                      g.recipes.map((r) => recipeButton(r)),
+                      g.recipes.map((r) => recipeButton(r, false, onOpenItem, onOpenTag)),
                     )
                   : null,
               ]),
@@ -160,7 +165,12 @@ function jobRow(j: MachineJob): HTMLElement {
   ]);
 }
 
-function recipeButton(r: Recipe, pinned = false): HTMLElement {
+function recipeButton(
+  r: Recipe,
+  pinned: boolean,
+  onOpenItem: (id: ItemId) => void,
+  onOpenTag: (tag: string) => void,
+): HTMLElement {
   const out = r.outputs[0]!;
   const outItem = ITEMS[out.item]!;
   const s = store.get();
@@ -233,7 +243,7 @@ function recipeButton(r: Recipe, pinned = false): HTMLElement {
                       : `${label} — any of: ${detail}`,
                   onclick: (ev: Event) => {
                     ev.stopPropagation();
-                    selectTag(i.tag);
+                    onOpenTag(i.tag);
                   },
                 },
                 [
@@ -254,7 +264,7 @@ function recipeButton(r: Recipe, pinned = false): HTMLElement {
                     : `${ITEMS[i.item]!.name} — open in Recipe Index`,
                 onclick: (ev: Event) => {
                   ev.stopPropagation();
-                  selectItem(i.item);
+                  onOpenItem(i.item);
                 },
               },
               [
