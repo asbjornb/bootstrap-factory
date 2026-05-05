@@ -56,6 +56,28 @@ export const ALL_QUESTS: Quest[] = [
     visible: () => true,
     done: (ctx) => ctx.has("clay_kiln"),
   },
+  {
+    id: "tilled_plot",
+    title: "Turn a plot",
+    description:
+      "Forage takes what the season gives. A bed of worked soil takes a seed in spring and gives back wheat by harvest — and one of those seeds for next year. Build a tilled plot at the workbench.",
+    kind: "progression",
+    benefit: "Unlocks planting wheat: a renewable food chain past forage.",
+    requires: ["tilled_plot"],
+    visible: () => true,
+    done: (ctx) => ctx.has("tilled_plot"),
+  },
+  {
+    id: "bake_bread",
+    title: "Bake the first loaf",
+    description:
+      "Wheat is gritty. Mill it to flour, take it to the campfire with a stick of fuel, and bake bread — the first food that travels and keeps without giving up its calories.",
+    kind: "utility",
+    benefit: "A long-lived, calorie-dense food for expeditions and lean weeks.",
+    requires: ["bread"],
+    visible: () => true,
+    done: (ctx) => ctx.has("bread"),
+  },
 ];
 
 export const QUESTS: Record<QuestId, Quest> = Object.fromEntries(

@@ -89,7 +89,7 @@ export interface GameState {
   seasonIndex: number;
 }
 
-const SCHEMA_VERSION = 15;
+const SCHEMA_VERSION = 16;
 
 /** Number of in-world days per season. 4 seasons make a year. */
 export const DAYS_PER_SEASON = 8;
@@ -666,10 +666,24 @@ export function jobForInstance(
 
 export interface CraftResult {
   ok: boolean;
-  reason?: "missing_inputs" | "missing_tool" | "machine_busy";
+  reason?: "missing_inputs" | "missing_tool" | "machine_busy" | "wrong_season";
+}
+
+export function inSeason(state: GameState, recipe: Recipe): boolean {
+  return !recipe.seasons || recipe.seasons.includes(state.seasonIndex);
 }
 
 export function hasInputsAndTool(state: GameState, recipe: Recipe): boolean {
+  if (!meetsToolReq(state, recipe.tool)) return false;
+  if (!inSeason(state, recipe)) return false;
+  for (const i of recipe.inputs) {
+    if (totalAvailableForInput(state, i) < i.qty) return false;
+  }
+  return true;
+}
+
+/** Same as hasInputsAndTool but ignoring the season check — used by UIs that show off-season recipes greyed out. */
+export function hasInputsAndToolIgnoringSeason(state: GameState, recipe: Recipe): boolean {
   if (!meetsToolReq(state, recipe.tool)) return false;
   for (const i of recipe.inputs) {
     if (totalAvailableForInput(state, i) < i.qty) return false;
@@ -679,6 +693,7 @@ export function hasInputsAndTool(state: GameState, recipe: Recipe): boolean {
 
 export function canCraft(state: GameState, recipe: Recipe): CraftResult {
   if (!meetsToolReq(state, recipe.tool)) return { ok: false, reason: "missing_tool" };
+  if (!inSeason(state, recipe)) return { ok: false, reason: "wrong_season" };
   for (const i of recipe.inputs) {
     if (totalAvailableForInput(state, i) < i.qty) return { ok: false, reason: "missing_inputs" };
   }
@@ -764,6 +779,10 @@ export function craftAt(instanceId: string, recipeId: RecipeId): CraftResult {
     }
     if (!meetsToolReq(s, recipe.tool)) {
       result = { ok: false, reason: "missing_tool" };
+      return;
+    }
+    if (!inSeason(s, recipe)) {
+      result = { ok: false, reason: "wrong_season" };
       return;
     }
     for (const i of recipe.inputs) {

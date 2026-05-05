@@ -50,6 +50,10 @@ const MIGRATIONS: Record<number, Migration> = {
   14: (s) => {
     renameItemId(s, "smoked_root", "dried_root");
   },
+  // v15 → v16: agriculture stage 1 — adds tilled_plot machine/item plus the
+  // wheat → flour → bread chain. Pure additive content; no save data needs
+  // rewriting.
+  15: (_s) => {},
   // v12 → v13: chests now track their own perishable batches. Old saves had
   // no per-chest tracking (chests acted as fridges). Seed each chest's
   // perishable contents with a single batch sized to the current count and
