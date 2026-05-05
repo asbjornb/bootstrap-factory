@@ -45,7 +45,7 @@ const list: GatherAction[] = [
       "Pack a ration and strike out for the further bramble-and-marsh country. A long day, but you come back with the basket full.",
     baseDurationMs: 14000,
     activeTime: 112,
-    provisions: [{ item: "dried_berries", qty: 1 }],
+    provisions: [{ tag: "ration", qty: 1 }],
     drops: [
       // Berry slot — tracks the season's dominant fruit. Spring/winter fall back to roots/bark below.
       { item: "bramble_berries", qty: [3, 6], chance: 1, seasons: [1] },

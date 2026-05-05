@@ -15,9 +15,10 @@ const list: Item[] = [
   { id: "pine_bark", name: "Pine Bark", icon: "🪵", description: "Strips of inner bark, peeled in winter when nothing else stirs. Tough and resinous, but it keeps a body going.", food: { satiatesMinutes: 20 } },
   { id: "frozen_tuber", name: "Frozen Tuber", icon: "🥶", description: "A root pried from frozen ground. Hard as wood until you thaw it, but full of stored sugars.", food: { satiatesMinutes: 50 } },
 
-  // preserved food (long shelf life, modest nutrition loss vs. fresh)
-  { id: "dried_berries", name: "Dried Berries", icon: "🍇", description: "Sun-and-rack dried. Keeps for a season — preserves the food, with a small loss of nourishment from the drying.", food: { satiatesMinutes: 80 }, stackSize: 32 },
-  { id: "dried_root", name: "Dried Root", icon: "🍠", description: "Sliced thin and racked in sun and wind until leathery. Road-ready and shelf-stable, with a small loss of nourishment from the drying.", food: { satiatesMinutes: 100 }, stackSize: 32 },
+  // preserved food (long shelf life, modest nutrition loss vs. fresh). Tagged
+  // "ration" so any of them can be packed for an expedition.
+  { id: "dried_berries", name: "Dried Berries", icon: "🍇", description: "Sun-and-rack dried. Keeps for a season — preserves the food, with a small loss of nourishment from the drying.", food: { satiatesMinutes: 80 }, stackSize: 32, tags: ["ration"] },
+  { id: "dried_root", name: "Dried Root", icon: "🍠", description: "Sliced thin and racked in sun and wind until leathery. Road-ready and shelf-stable, with a small loss of nourishment from the drying.", food: { satiatesMinutes: 100 }, stackSize: 32, tags: ["ration"] },
 
   // cooked food (campfire). Heat breaks down starches and lignin, freeing
   // calories the raw form locked away. Spoils slower than raw but isn't
@@ -35,12 +36,12 @@ const list: Item[] = [
   // agriculture — wheat chain
   { id: "wheat_grain", name: "Wheat Grain", icon: "🌾", description: "Threshed wheat. Gritty raw — milled to flour, baked to bread.", stackSize: 32 },
   { id: "flour", name: "Flour", icon: "🥣", description: "Stone-milled wheat. Lasts the winter on a shelf, but only becomes food once it meets a fire.", stackSize: 32 },
-  { id: "bread", name: "Bread", icon: "🍞", description: "Flour and a fire and a little patience. The first food worth carrying that the season can't take from you.", food: { satiatesMinutes: 110 }, spoilsAfter: 32 * 60, stackSize: 16 },
+  { id: "bread", name: "Bread", icon: "🍞", description: "Flour and a fire and a little patience. The first food worth carrying that the season can't take from you.", food: { satiatesMinutes: 110 }, spoilsAfter: 32 * 60, stackSize: 16, tags: ["ration"] },
 
   // agriculture — sunflower chain
   { id: "sunflower_head", name: "Sunflower Head", icon: "🌻", description: "A heavy disc dense with seeds. Press for oil; what's left over feeds you another day.", stackSize: 16 },
   { id: "sunflower_oil", name: "Sunflower Oil", icon: "🫙", description: "Pale gold and slow to pour. The first ingredient that doesn't come out of the ground or off a tree.", stackSize: 16 },
-  { id: "seedcake", name: "Seedcake", icon: "🟫", description: "Sunflower pulp left behind in the press. Mealy, oily, filling.", food: { satiatesMinutes: 60 }, stackSize: 32 },
+  { id: "seedcake", name: "Seedcake", icon: "🟫", description: "Sunflower pulp left behind in the press. Mealy, oily, filling.", food: { satiatesMinutes: 60 }, stackSize: 32, tags: ["ration"] },
 
   // agriculture — flax chain
   { id: "flax_seed", name: "Flax Seed", icon: "🌱", description: "Plant in spring. The stalks are the prize — straight fibers that twist into stronger cordage than wild brush.", stackSize: 32 },

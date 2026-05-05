@@ -178,8 +178,8 @@ export interface GatherAction {
   speedups?: GatherSpeedup[];
   /** In-world minutes spent doing this action. Derived from baseDurationMs at the global time scale unless set. */
   activeTime?: number;
-  /** Items consumed up-front before the action starts (rations for the trip). */
-  provisions?: Stack[];
+  /** Items consumed up-front before the action starts (rations for the trip). Tag inputs accept any item carrying the tag. */
+  provisions?: RecipeInput[];
 }
 
 /** A finite resource node found by exploring a biome. Charges deplete with each harvest. */
@@ -222,8 +222,8 @@ export interface Biome {
   outcomes: BiomeOutcome[];
   /** In-world minutes spent exploring. Derived from exploreDurationMs at the global time scale unless set. */
   activeTime?: number;
-  /** Items consumed up-front before the explore starts. */
-  provisions?: Stack[];
+  /** Items consumed up-front before the explore starts. Tag inputs accept any item carrying the tag. */
+  provisions?: RecipeInput[];
 }
 
 export type QuestId = string;

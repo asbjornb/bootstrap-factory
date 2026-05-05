@@ -26,7 +26,8 @@ import {
   wanderActiveTime,
 } from "../game/state";
 import { WANDER_DURATION_MS } from "../data/wander";
-import type { Biome, GatherAction, ResourceNode, Stack } from "../data/types";
+import { isTagInput } from "../data/types";
+import type { Biome, GatherAction, RecipeInput, ResourceNode } from "../data/types";
 import { clear, el } from "./dom";
 
 export function mountGather(root: HTMLElement): void {
@@ -350,7 +351,7 @@ function gateFor(
   dayOk: boolean,
   budgetOk: boolean,
   provOk: boolean,
-  provisions: Stack[] | undefined,
+  provisions: RecipeInput[] | undefined,
   busyOther: boolean,
   realDur: number,
 ): { title: string; reason: string | null } {
@@ -370,9 +371,7 @@ function gateFor(
     };
   }
   if (!provOk && provisions) {
-    const need = provisions
-      .map((p) => `${p.qty}× ${ITEMS[p.item]?.name ?? p.item}`)
-      .join(", ");
+    const need = provisions.map(provisionLabel).join(", ");
     return {
       title: `Pack rations first — needs ${need}`,
       reason: `Pack rations first — needs ${need}`,
@@ -384,16 +383,24 @@ function gateFor(
   };
 }
 
-function renderProvisions(provisions: Stack[]): HTMLElement {
+function provisionLabel(p: RecipeInput): string {
+  if (isTagInput(p)) return `${p.qty}× any ${p.tag}`;
+  return `${p.qty}× ${ITEMS[p.item]?.name ?? p.item}`;
+}
+
+function provisionIcon(p: RecipeInput): string {
+  if (isTagInput(p)) return "🥡";
+  return ITEMS[p.item]?.icon ?? "❓";
+}
+
+function renderProvisions(provisions: RecipeInput[]): HTMLElement {
   return el("p", { class: "small provisions" }, [
     el("span", {}, "Pack: "),
     ...provisions.flatMap((p, i) => {
-      const it = ITEMS[p.item];
-      const label = `${p.qty}× ${it?.name ?? p.item}`;
       const node = el(
         "span",
         { class: "provision-chip", title: "Consumed up-front when the action starts" },
-        [el("span", { class: "icon" }, it?.icon ?? "❓"), el("span", {}, label)],
+        [el("span", { class: "icon" }, provisionIcon(p)), el("span", {}, provisionLabel(p))],
       );
       return i === 0 ? [node] : [el("span", {}, ", "), node];
     }),
