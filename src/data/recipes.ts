@@ -627,3 +627,8 @@ export function recipesUsingAsTool(itemId: ItemId): Recipe[] {
     (r) => r.tool !== undefined && r.tool.type === tool.type && tool.tier >= r.tool.minTier,
   );
 }
+
+/** Recipes that are crafted at the given item (when the item is also a machine, e.g. campfire). */
+export function recipesUsingAsMachine(itemId: ItemId): Recipe[] {
+  return list.filter((r) => r.machine === itemId);
+}

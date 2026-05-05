@@ -6,6 +6,7 @@ import { nodesProducing } from "../data/nodes";
 import {
   recipesConsuming,
   recipesProducing,
+  recipesUsingAsMachine,
   recipesUsingAsTool,
 } from "../data/recipes";
 import { isPinned, SEASONS, store, togglePin } from "../game/state";
@@ -114,6 +115,7 @@ function renderDetail(): HTMLElement {
   const produced = recipesProducing(id);
   const consumed = recipesConsuming(id);
   const asTool = recipesUsingAsTool(id);
+  const asMachine = MACHINES[id] ? recipesUsingAsMachine(id) : [];
   const gatheredFrom = gatherActionsProducing(id);
   const harvestedFrom = nodesProducing(id);
   const owned = store.get().inventory[id] ?? 0;
@@ -148,14 +150,19 @@ function renderDetail(): HTMLElement {
     asTool.length > 0
       ? section(`Used as tool in (${asTool.length})`, asTool, id, "tool")
       : null,
+    asMachine.length > 0
+      ? section(`Crafted at this (${asMachine.length})`, asMachine, id, "machine")
+      : null,
   ]);
 }
+
+type RecipeMode = "produces" | "consumes" | "tool" | "machine";
 
 function section(
   title: string,
   recipes: Recipe[],
   focusItem: ItemId,
-  mode: "produces" | "consumes" | "tool",
+  mode: RecipeMode,
 ): HTMLElement {
   return el("div", { class: "ri-section" }, [
     el("h4", {}, title),
@@ -165,11 +172,12 @@ function section(
   ]);
 }
 
-function renderRecipeCard(r: Recipe, focus: ItemId, mode: "produces" | "consumes" | "tool"): HTMLElement {
+function renderRecipeCard(r: Recipe, focus: ItemId, mode: RecipeMode): HTMLElement {
   const m = MACHINES[r.machine]!;
   const pinned = isPinned(store.get(), r.id);
+  const machineFocused = mode === "machine" && r.machine === focus;
   return el("div", { class: "ri-recipe" }, [
-    el("div", { class: "ri-recipe-machine", title: m.name }, [
+    el("div", { class: "ri-recipe-machine" + (machineFocused ? " focus" : ""), title: m.name }, [
       el("span", { class: "icon" }, m.icon),
       el("span", { class: "small" }, m.name),
     ]),
@@ -309,7 +317,7 @@ function dropChip(d: DropEntry): HTMLElement {
 function inputChip(
   i: RecipeInput,
   focus: ItemId,
-  mode: "produces" | "consumes" | "tool",
+  mode: RecipeMode,
 ): HTMLElement {
   if (isTagInput(i)) {
     const matches = itemsWithTag(i.tag);

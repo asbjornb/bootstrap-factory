@@ -1222,6 +1222,9 @@ body.trash-armed .chest-row:hover {
   min-width: 56px;
   color: var(--muted);
 }
+.ri-recipe-machine.focus {
+  color: var(--focus);
+}
 .ri-recipe-stacks {
   display: flex;
   flex-wrap: wrap;
