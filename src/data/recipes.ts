@@ -59,6 +59,25 @@ const list: Recipe[] = [
     ],
     outputs: [{ item: "charcoal_pit", qty: 1 }],
   },
+  {
+    id: "bow_drill",
+    machine: "hand",
+    inputs: [
+      { item: "stick", qty: 2 },
+      { item: "cordage", qty: 1 },
+    ],
+    outputs: [{ item: "bow_drill", qty: 1 }],
+  },
+  {
+    id: "campfire",
+    machine: "hand",
+    inputs: [
+      { item: "fieldstone", qty: 4 },
+      { item: "stick", qty: 2 },
+      { item: "bow_drill", qty: 1 },
+    ],
+    outputs: [{ item: "campfire", qty: 1 }],
+  },
 
   // ---- workbench: flint tools ----
   {
@@ -252,6 +271,41 @@ const list: Recipe[] = [
     inputs: [{ item: "edible_root", qty: 2 }],
     outputs: [{ item: "dried_root", qty: 1 }],
     durationMs: 6000,
+  },
+
+  // ---- campfire ----
+  // Cooking returns more food value than the raw input because heat
+  // gelatinises starch and breaks cell walls — calories the gut couldn't
+  // reach before. Each cook burns one stick as fuel.
+  {
+    id: "roast_root",
+    machine: "campfire",
+    inputs: [
+      { item: "edible_root", qty: 1 },
+      { item: "stick", qty: 1 },
+    ],
+    outputs: [{ item: "roast_root", qty: 1 }],
+    durationMs: 3000,
+  },
+  {
+    id: "roast_tuber",
+    machine: "campfire",
+    inputs: [
+      { item: "frozen_tuber", qty: 1 },
+      { item: "stick", qty: 1 },
+    ],
+    outputs: [{ item: "roast_tuber", qty: 1 }],
+    durationMs: 3000,
+  },
+  {
+    id: "wilt_greens",
+    machine: "campfire",
+    inputs: [
+      { item: "spring_shoots", qty: 1 },
+      { item: "stick", qty: 1 },
+    ],
+    outputs: [{ item: "wilted_greens", qty: 1 }],
+    durationMs: 2000,
   },
 
   // ---- charcoal pit ----

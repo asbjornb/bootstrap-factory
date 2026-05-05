@@ -3,6 +3,7 @@ import type { Machine, MachineId } from "./types";
 const list: Machine[] = [
   { id: "hand", name: "By Hand", icon: "✋", description: "Simple recipes you can make with your bare hands." },
   { id: "workbench", name: "Workbench", icon: "🧰", description: "Bench-assembled recipes — tools, crates, larger machines." },
+  { id: "campfire", name: "Campfire", icon: "🔥", description: "An open fire ringed in stone. Roasts and boils early forage into hotter, richer meals." },
   { id: "charcoal_pit", name: "Charcoal Pit", icon: "🔥", description: "Smolders logs into charcoal, slowly." },
   { id: "clay_kiln", name: "Clay Kiln", icon: "🏺", description: "Fires bricks and crucibles, smelts copper and tin, alloys bronze." },
   { id: "bloomery", name: "Bloomery", icon: "🏭", description: "A refractory stack hot enough for iron." },
