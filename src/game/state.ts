@@ -89,7 +89,7 @@ export interface GameState {
   seasonIndex: number;
 }
 
-const SCHEMA_VERSION = 17;
+const SCHEMA_VERSION = 18;
 
 /** Number of in-world days per season. 4 seasons make a year. */
 export const DAYS_PER_SEASON = 8;
@@ -274,18 +274,18 @@ export function inventorySlotsUsed(state: GameState): number {
   return slotsUsedIn(state.inventory);
 }
 
-/** Highest carry-gear bonus the player owns. Bonuses don't stack — just the best. */
-export function bestCarryBonus(state: GameState): number {
-  let best = 0;
+/** Sum of carry-gear bonuses the player owns. A pouch and a pack stack. */
+export function totalCarryBonus(state: GameState): number {
+  let sum = 0;
   for (const id of Object.keys(state.inventory)) {
     const bonus = ITEMS[id]?.carryBonus;
-    if (bonus !== undefined && bonus > best) best = bonus;
+    if (bonus !== undefined) sum += bonus;
   }
-  return best;
+  return sum;
 }
 
 export function carryCap(state: GameState): number {
-  return BASE_CARRY_SLOTS + bestCarryBonus(state);
+  return BASE_CARRY_SLOTS + totalCarryBonus(state);
 }
 
 /**

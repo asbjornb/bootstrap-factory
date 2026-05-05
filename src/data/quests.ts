@@ -18,7 +18,7 @@ export const ALL_QUESTS: Quest[] = [
     description:
       "Pockets full, hands fuller. A few boards and a length of cordage make a belt with proper loops — room for the next handful of rocks.",
     kind: "utility",
-    benefit: "+4 inventory slots while carried.",
+    benefit: "+2 inventory slots while carried. Stacks with a haul pack.",
     requires: ["belt_pouch"],
     visible: () => true,
     done: (ctx) => ctx.has("belt_pouch"),

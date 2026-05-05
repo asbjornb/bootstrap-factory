@@ -59,6 +59,14 @@ const MIGRATIONS: Record<number, Migration> = {
   // tag for cross-substitution. Pure additive content; the new optional
   // PlacedMachine fields default to undefined on existing cells.
   16: (_s) => {},
+  // v17 → v18: belt_pouch + haul_pack now stack (sum of carry bonuses
+  // instead of best). Bonuses rebalanced to 2 / 6. The bronze_pack item is
+  // retired — it'll be replaced by a Pack Mule once domestication lands.
+  // Drop any existing bronze_pack from inventory, floor, and chest contents
+  // so the unknown id doesn't linger.
+  17: (s) => {
+    dropItemId(s, "bronze_pack");
+  },
   // v12 → v13: chests now track their own perishable batches. Old saves had
   // no per-chest tracking (chests acted as fridges). Seed each chest's
   // perishable contents with a single batch sized to the current count and
@@ -87,6 +95,28 @@ const MIGRATIONS: Record<number, Migration> = {
     }
   },
 };
+
+/** Strip every record-keyed entry for `id` from inventory, floor, and chests. */
+function dropItemId(s: any, id: string): void {
+  const dropMap = (m: any): void => {
+    if (!m || typeof m !== "object") return;
+    delete m[id];
+  };
+  dropMap(s.inventory);
+  dropMap(s.floor);
+  dropMap(s.perishables);
+  if (Array.isArray(s.rooms)) {
+    for (const r of s.rooms) {
+      if (!r || !Array.isArray(r.cells)) continue;
+      for (const c of r.cells) {
+        if (!c) continue;
+        dropMap(c.contents);
+        dropMap(c.perishables);
+        dropMap(c.output);
+      }
+    }
+  }
+}
 
 /** Move every record-keyed entry from `from` to `to`, summing on collision. */
 function renameItemId(s: any, from: string, to: string): void {
