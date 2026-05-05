@@ -128,9 +128,9 @@ function renderGatherCard(
       },
       [el("span", { class: "icon big" }, a.icon), el("span", {}, a.name)],
     ),
-    isThisActive
-      ? renderProgressBar(job!.startedAt, job!.endsAt)
-      : el("p", { class: "muted small" }, gate.subline),
+    isThisActive ? renderProgressBar(job!.startedAt, job!.endsAt) : null,
+    el("p", { class: "muted small" }, timeLine(dur, at)),
+    gate.reason ? el("p", { class: "small" }, gate.reason) : null,
     el("p", { class: "muted small" }, a.description ?? ""),
     autoEat.length > 0
       ? el(
@@ -193,9 +193,9 @@ function renderExploreCard(
         el("span", {}, `Explore ${biome.name}`),
       ],
     ),
-    isThisActive
-      ? renderProgressBar(job!.startedAt, job!.endsAt)
-      : el("p", { class: "muted small" }, gate.subline),
+    isThisActive ? renderProgressBar(job!.startedAt, job!.endsAt) : null,
+    el("p", { class: "muted small" }, timeLine(dur, at)),
+    gate.reason ? el("p", { class: "small" }, gate.reason) : null,
     el("p", { class: "muted small" }, biome.description ?? ""),
     biome.provisions ? renderProvisions(biome.provisions) : null,
   ]);
@@ -223,9 +223,9 @@ function renderWanderCard(
       },
       [el("span", { class: "icon big" }, "🧭"), el("span", {}, "Wander Further")],
     ),
-    isThisActive
-      ? renderProgressBar(job!.startedAt, job!.endsAt)
-      : el("p", { class: "muted small" }, gate.subline),
+    isThisActive ? renderProgressBar(job!.startedAt, job!.endsAt) : null,
+    el("p", { class: "muted small" }, timeLine(dur, at)),
+    gate.reason ? el("p", { class: "small" }, gate.reason) : null,
     el(
       "p",
       { class: "muted small" },
@@ -282,9 +282,12 @@ function renderNodeCard(
           : null,
       ],
     ),
-    isThisActive
-      ? renderProgressBar(job!.startedAt, job!.endsAt)
-      : el("p", { class: "muted small" }, `⏱ ${formatDuration(dur)}`),
+    isThisActive ? renderProgressBar(job!.startedAt, job!.endsAt) : null,
+    el(
+      "p",
+      { class: "muted small" },
+      `${timeLine(dur, at)} · ${charges} charge${charges === 1 ? "" : "s"} left`,
+    ),
     el("p", { class: "muted small" }, node.description ?? ""),
     !toolOk
       ? el(
@@ -338,6 +341,10 @@ function formatMinutes(min: number): string {
   return h % 1 === 0 ? `${h} h` : `${h.toFixed(1)} h`;
 }
 
+function timeLine(realDur: number, activeTime: number): string {
+  return `⏱ ${formatDuration(realDur)} · ${formatMinutes(activeTime)} in-world`;
+}
+
 function gateFor(
   activeTime: number,
   dayOk: boolean,
@@ -346,20 +353,20 @@ function gateFor(
   provisions: Stack[] | undefined,
   busyOther: boolean,
   realDur: number,
-): { title: string; subline: string } {
+): { title: string; reason: string | null } {
   if (busyOther) {
-    return { title: "Another action is in progress", subline: `⏱ ${formatDuration(realDur)}` };
+    return { title: "Another action is in progress", reason: "Another action is in progress" };
   }
   if (!dayOk) {
     return {
       title: `Not enough day-time left — needs ${formatMinutes(activeTime)}, sleep first`,
-      subline: `⏱ ${formatDuration(realDur)} · needs ${formatMinutes(activeTime)} day-time`,
+      reason: `Needs ${formatMinutes(activeTime)} day-time — sleep first`,
     };
   }
   if (!budgetOk) {
     return {
       title: `Not enough energy — needs ${formatMinutes(activeTime)}, eat first`,
-      subline: `⏱ ${formatDuration(realDur)} · needs ${formatMinutes(activeTime)} energy`,
+      reason: `Needs ${formatMinutes(activeTime)} energy — eat first`,
     };
   }
   if (!provOk && provisions) {
@@ -368,12 +375,12 @@ function gateFor(
       .join(", ");
     return {
       title: `Pack rations first — needs ${need}`,
-      subline: `⏱ ${formatDuration(realDur)} · needs rations`,
+      reason: `Pack rations first — needs ${need}`,
     };
   }
   return {
     title: `Takes ${formatDuration(realDur)} (${formatMinutes(activeTime)} in-world)`,
-    subline: `⏱ ${formatDuration(realDur)} · ${formatMinutes(activeTime)} in-world`,
+    reason: null,
   };
 }
 
