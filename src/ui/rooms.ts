@@ -55,12 +55,15 @@ let selectedInstanceId: string | null = null;
 
 interface RoomsOptions {
   onOpenItem: (id: ItemId) => void;
+  onOpenTag: (tag: string) => void;
 }
 
 let openItemCallback: (id: ItemId) => void = () => {};
+let openTagCallback: (tag: string) => void = () => {};
 
 export function mountRooms(root: HTMLElement, opts: RoomsOptions): void {
   openItemCallback = opts.onOpenItem;
+  openTagCallback = opts.onOpenTag;
   const render = () => {
     const s = store.get();
     clear(root);
@@ -496,7 +499,7 @@ function renderInstanceRecipe(cell: PlacedMachine, r: Recipe): HTMLElement {
                 title: `Any ${i.tag} — ${detail}`,
                 onclick: (ev: Event) => {
                   ev.stopPropagation();
-                  if (first) openItemCallback(first.id);
+                  openTagCallback(i.tag);
                 },
               },
               [

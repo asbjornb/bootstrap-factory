@@ -25,10 +25,11 @@ import { clear, el } from "./dom";
 
 interface CraftOptions {
   onOpenItem: (id: ItemId) => void;
+  onOpenTag: (tag: string) => void;
 }
 
 export function mountCraft(root: HTMLElement, opts: CraftOptions): void {
-  const { onOpenItem } = opts;
+  const { onOpenItem, onOpenTag } = opts;
   const render = () => {
     const s = store.get();
     clear(root);
@@ -71,7 +72,7 @@ export function mountCraft(root: HTMLElement, opts: CraftOptions): void {
               el(
                 "div",
                 { class: "recipe-grid" },
-                pinnedRecipes.map((r) => recipeButton(r, true, onOpenItem)),
+                pinnedRecipes.map((r) => recipeButton(r, true, onOpenItem, onOpenTag)),
               ),
             ])
           : null,
@@ -97,7 +98,7 @@ export function mountCraft(root: HTMLElement, opts: CraftOptions): void {
                   ? el(
                       "div",
                       { class: "recipe-grid" },
-                      g.recipes.map((r) => recipeButton(r, false, onOpenItem)),
+                      g.recipes.map((r) => recipeButton(r, false, onOpenItem, onOpenTag)),
                     )
                   : null,
               ]),
@@ -168,6 +169,7 @@ function recipeButton(
   r: Recipe,
   pinned: boolean,
   onOpenItem: (id: ItemId) => void,
+  onOpenTag: (tag: string) => void,
 ): HTMLElement {
   const out = r.outputs[0]!;
   const outItem = ITEMS[out.item]!;
@@ -241,7 +243,7 @@ function recipeButton(
                       : `${label} — any of: ${detail}`,
                   onclick: (ev: Event) => {
                     ev.stopPropagation();
-                    if (first) onOpenItem(first.id);
+                    onOpenTag(i.tag);
                   },
                 },
                 [

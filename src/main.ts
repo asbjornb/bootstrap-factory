@@ -6,7 +6,7 @@ import { mountGather } from "./ui/gather";
 import { mountInventory } from "./ui/inventory";
 import { createModal } from "./ui/modal";
 import { mountQuestbook } from "./ui/questbook";
-import { mountRecipeIndex, selectItem } from "./ui/recipe-index";
+import { mountRecipeIndex, selectItem, selectTag } from "./ui/recipe-index";
 import { mountRooms } from "./ui/rooms";
 import { mountTimebar } from "./ui/timebar";
 import { showToast, startMachineCraftedToasts } from "./ui/toast";
@@ -86,12 +86,16 @@ function buildShell(): void {
     selectItem(id);
     recipesModal.open();
   };
+  const openTagInRecipes = (tag: string) => {
+    selectTag(tag);
+    recipesModal.open();
+  };
 
   mountTimebar(timebar);
   mountGather(gather.querySelector("#gather-mount") as HTMLElement);
   mountInventory(inventory);
-  mountRooms(rooms, { onOpenItem: openItemInRecipes });
-  mountCraft(craft, { onOpenItem: openItemInRecipes });
+  mountRooms(rooms, { onOpenItem: openItemInRecipes, onOpenTag: openTagInRecipes });
+  mountCraft(craft, { onOpenItem: openItemInRecipes, onOpenTag: openTagInRecipes });
 
   document.addEventListener("keydown", (ev) => {
     const target = ev.target as HTMLElement | null;
