@@ -74,6 +74,13 @@ export interface Recipe {
    * that only make sense in a sowing window.
    */
   seasons?: number[];
+  /**
+   * Crop-only. If the player doesn't take the harvest within this many in-world
+   * days after the recipe finishes, every output that isn't the seed input is
+   * lost — only the seed (a single unit) remains. Birds and sprouting take the
+   * rest. Resolved at sleep transitions.
+   */
+  goToSeedDays?: number;
 }
 
 export interface Machine {
@@ -108,6 +115,14 @@ export interface PlacedMachine {
   output: Record<ItemId, number>;
   /** Active job running on this machine, if any. */
   jobId: string | null;
+  /**
+   * Crop-only. The game-minute past which an unclaimed harvest "goes to seed"
+   * and loses everything but the seed. Set when a recipe with goToSeedDays
+   * deposits to this cell; cleared when output is taken.
+   */
+  outputGoesToSeedAt?: number;
+  /** Crop-only. Item id of the seed this plot was sown with — what survives a missed harvest. */
+  outputSeedItem?: ItemId;
 }
 
 /**

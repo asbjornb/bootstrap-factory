@@ -95,48 +95,55 @@ player-facing loop, no new state shape.
   startable in spring (greyed-out with a "Plant in Spring" hint
   otherwise).
 
-### Stage 2 — Sunflower + oil press
+### Stage 2 — Sunflower + oil press ✅ shipped
 
-- [ ] `sunflower_head`, `sunflower_oil`, `seedcake` items.
-- [ ] `oil_press` machine (workbench-built; boards + cordage + bronze
-  ingot — first thing that *uses* bronze for something other than a
-  tool).
-- [ ] Plant Sunflower recipe on `tilled_plot`. Plants summer, harvests
-  autumn.
-- [ ] Oil press recipe: 4 sunflower heads → 1 oil + 2 seedcake.
+- [x] `sunflower_head`, `sunflower_oil`, `seedcake` items. Seedcake is
+  the food drop; oil and heads are non-food intermediates.
+- [x] `oil_press` machine (workbench-built; boards + cordage + 2 bronze
+  ingots — the first non-tool consumer of bronze).
+- [x] `plant_sunflower` recipe on `tilled_plot`. Summer-only sowing,
+  carries to autumn via the long `durationMs`.
+- [x] `press_oil` recipe: 4 sunflower heads → 1 oil + 2 seedcake.
 - [ ] Oil opens later: oil lamps (extend day?), frying (cooking upgrade
-  later), greasing bearings (automation later).
+  later), greasing bearings (automation later). Shipped without an
+  immediate consumer — see plan note.
 
-### Stage 3 — Flax + retting + strong cordage
+### Stage 3 — Flax + retting + strong cordage ✅ shipped
 
-- [ ] `flax_seed`, `flax_stalks`, `retted_flax`, `linen_thread`,
+- [x] `flax_seed`, `flax_stalks`, `retted_flax`, `linen_thread`,
   `strong_cordage` items.
-- [ ] `retting_pit` machine — clay-and-fieldstone build, water-themed.
-  Stalks → retted flax over a long timer.
-- [ ] Hand recipes: retted flax → linen thread; thread → strong cordage.
-- [ ] Tag `cordage` and `strong_cordage` with the same `cordage` tag;
-  migrate existing cordage-consuming recipes to take `{ tag: "cordage" }`
-  with a yield bonus when strong cordage is used (or just make strong
-  cordage a 1:2 substitute via crafting alias).
-- [ ] Plant Flax recipe on `tilled_plot`. Spring–summer cycle.
+- [x] `retting_pit` machine — fieldstone-and-daub build, water-themed.
+  2 stalks → 1 retted flax over a long timer.
+- [x] Hand recipes: 1 retted flax → 1 linen thread; 2 thread → 1
+  strong cordage.
+- [x] Tag both `cordage` and `strong_cordage` with the `cordage` tag;
+  migrate existing cordage-consuming recipes to `{ tag: "cordage" }`.
+  No yield bonus — strong cordage is a flat 1:1 substitute, with the
+  whole chain producing more cordage per cycle than wild fiber.
+- [x] `plant_flax` recipe on `tilled_plot`. Spring sowing.
 
 ### Stage 4 — Seasonal failure + neglect
 
 - [x] Plots planted out-of-season simply refuse the recipe (UI gating).
   Shipped with stage 1 via `Recipe.seasons`.
-- [ ] Plots that miss their harvest window by N days "go to seed" —
-  yield drops to seeds only, no grain/heads/stalks. No fail state, just
-  lost effort.
+- [x] Plots that miss their harvest window by 2 in-world days "go to
+  seed" — output is replaced by 1 seed of whatever was sown, with a
+  toast on the next sleep. No fail state, just lost effort. Implemented
+  via `Recipe.goToSeedDays` + `outputGoesToSeedAt` on `PlacedMachine`,
+  resolved at sleep transitions.
 - [ ] Optional: weather/drought events that can be mitigated by watering
   (pulls in pottery jug from the pottery line — cross-feature hook).
 
-### Stage 5 — Quest book wiring
+### Stage 5 — Quest book wiring ✅ shipped
 
 - [x] `tilled_plot` quest ("Turn a plot — wheat in the soil beats berries
   in the brush").
 - [x] `bake_bread` quest (introduces the flour → bread chain).
-- [ ] `strong_cordage` quest (introduces flax retting).
-- [ ] `oil_press` quest (introduces sunflower oil and bronze-as-machine).
+- [x] `strong_cordage` quest (introduces flax retting). Visible after
+  the `tilled_plot` quest is complete.
+- [x] `oil_press` quest (introduces sunflower oil and bronze-as-machine).
+  Visible after the `clay_kiln` quest is complete (since the press needs
+  bronze).
 
 ## Open questions
 

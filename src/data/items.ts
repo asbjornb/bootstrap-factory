@@ -37,6 +37,18 @@ const list: Item[] = [
   { id: "flour", name: "Flour", icon: "🥣", description: "Stone-milled wheat. Lasts the winter on a shelf, but only becomes food once it meets a fire.", stackSize: 32 },
   { id: "bread", name: "Bread", icon: "🍞", description: "Flour and a fire and a little patience. The first food worth carrying that the season can't take from you.", food: { satiatesMinutes: 110 }, spoilsAfter: 32 * 60, stackSize: 16 },
 
+  // agriculture — sunflower chain
+  { id: "sunflower_head", name: "Sunflower Head", icon: "🌻", description: "A heavy disc dense with seeds. Press for oil; what's left over feeds you another day.", stackSize: 16 },
+  { id: "sunflower_oil", name: "Sunflower Oil", icon: "🫙", description: "Pale gold and slow to pour. The first ingredient that doesn't come out of the ground or off a tree.", stackSize: 16 },
+  { id: "seedcake", name: "Seedcake", icon: "🟫", description: "Sunflower pulp left behind in the press. Mealy, oily, filling.", food: { satiatesMinutes: 60 }, stackSize: 32 },
+
+  // agriculture — flax chain
+  { id: "flax_seed", name: "Flax Seed", icon: "🌱", description: "Plant in spring. The stalks are the prize — straight fibers that twist into stronger cordage than wild brush.", stackSize: 32 },
+  { id: "flax_stalks", name: "Flax Stalks", icon: "🌾", description: "Bundled stems pulled at harvest. Useless until the retting pit softens the bast away from the woody core.", stackSize: 32 },
+  { id: "retted_flax", name: "Retted Flax", icon: "🪶", description: "Long pale fibers, water-rotted free of their stems. Spins clean to thread.", stackSize: 32 },
+  { id: "linen_thread", name: "Linen Thread", icon: "🧵", description: "Tight-spun flax. Thin enough to weave, strong enough to twist.", stackSize: 32 },
+  { id: "strong_cordage", name: "Strong Cordage", icon: "🪢", description: "Plied linen rope. Holds where plant-fiber twist parts, and one length goes where two of the rough kind used to.", tags: ["cordage"] },
+
   // quarry
   { id: "rubble", name: "Rubble", icon: "🪨", description: "Loose chips and broken rock. The bones of cob walls." },
   { id: "fieldstone", name: "Fieldstone", icon: "🗿", description: "Solid hand-sized blocks. Stacks into hearths and kilns." },
@@ -49,7 +61,7 @@ const list: Item[] = [
   // intermediates
   { id: "board", name: "Board", icon: "🟫", description: "Hand-split from a log. Construction stock." },
   { id: "haft", name: "Haft", icon: "➖", description: "A shaped wooden handle. Lashed to tool heads." },
-  { id: "cordage", name: "Cordage", icon: "🪢", description: "Twisted plant fiber. Lashes hafts to heads, holds crates together." },
+  { id: "cordage", name: "Cordage", icon: "🪢", description: "Twisted plant fiber. Lashes hafts to heads, holds crates together.", tags: ["cordage"] },
   { id: "bow_drill", name: "Bow Drill", icon: "🏹", description: "A bowed cord, a spindle, a hearth board. Spin it long enough and a coal blooms from nothing. Good for one fire.", stackSize: 1 },
   { id: "charcoal", name: "Charcoal", icon: "🌑", description: "Wood baked anaerobic. Burns clean and hot enough for copper and bronze." },
   { id: "daub", name: "Daub", icon: "🟫", description: "Clay, fiber and loam mashed together. Sets hard when fired." },
@@ -89,6 +101,8 @@ const list: Item[] = [
   { id: "bloomery", name: "Bloomery", icon: "🏭", description: "A refractory stack hot enough to coax iron out of ore.", stackSize: 1 },
   { id: "drying_rack", name: "Drying Rack", icon: "🪵", description: "Frame and lashings strung in the sun and breeze. Turns berries and roots into food that keeps.", stackSize: 1 },
   { id: "tilled_plot", name: "Tilled Plot", icon: "🟫", description: "A bed of turned soil staked out for one planting. Crops grow in season; sleep through the wait and come back to a harvest.", stackSize: 1 },
+  { id: "oil_press", name: "Oil Press", icon: "🫒", description: "A bronze-bound screw and a stone bed. Crushes sunflower heads until the oil weeps clear.", stackSize: 1 },
+  { id: "retting_pit", name: "Retting Pit", icon: "🪣", description: "A clay-lined hollow held shallow with water. Soaks flax stalks until rot lets go of the fiber.", stackSize: 1 },
 ];
 
 export const ITEMS: Record<ItemId, Item> = Object.fromEntries(list.map((i) => [i.id, i]));

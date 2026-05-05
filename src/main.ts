@@ -1,5 +1,5 @@
 import { ITEMS } from "./data/items";
-import { load, onSpoiled, reset, save, startTickLoop, store } from "./game/state";
+import { load, onGoToSeed, onSpoiled, reset, save, startTickLoop, store } from "./game/state";
 import { el } from "./ui/dom";
 import { mountCraft } from "./ui/craft";
 import { mountGather } from "./ui/gather";
@@ -112,6 +112,10 @@ function start(): void {
   onSpoiled((ids) => {
     const names = ids.map((id) => ITEMS[id]?.name ?? id).join(", ");
     showToast(`Spoiled: ${names}. Build a drying rack to preserve food.`, "🪰");
+  });
+  onGoToSeed((ids) => {
+    const names = ids.map((id) => ITEMS[id]?.name ?? id).join(", ");
+    showToast(`Plot went to seed: ${names}. Take harvests within two days.`, "🌾");
   });
   // Best-effort: persist on every state change.
   store.subscribe(() => save());

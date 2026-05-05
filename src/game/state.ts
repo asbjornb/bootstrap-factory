@@ -89,7 +89,7 @@ export interface GameState {
   seasonIndex: number;
 }
 
-const SCHEMA_VERSION = 16;
+const SCHEMA_VERSION = 17;
 
 /** Number of in-world days per season. 4 seasons make a year. */
 export const DAYS_PER_SEASON = 8;
@@ -708,11 +708,26 @@ function newJobId(): string {
 }
 
 /** Add a recipe's outputs into a placed machine's output buffer. */
-function depositOutputsToInstance(cell: PlacedMachine, recipe: Recipe): void {
+function depositOutputsToInstance(
+  state: GameState,
+  cell: PlacedMachine,
+  recipe: Recipe,
+): void {
   for (const o of recipe.outputs) {
     cell.output[o.item] = (cell.output[o.item] ?? 0) + o.qty;
     if (MACHINES[o.item]) {
       // Tracked at the state level — handled in tickJobs / craftAt callers via applyRecipeOutputs.
+    }
+  }
+  // Plot recipes set a deadline: leave the harvest sitting too long and the
+  // produce is lost — only the seed remains. The seed is the recipe's
+  // first input (every plant_* recipe sows from one seed item).
+  if (recipe.goToSeedDays !== undefined) {
+    const seedInput = recipe.inputs[0];
+    const seedItem = seedInput && !isTagInput(seedInput) ? seedInput.item : undefined;
+    if (seedItem) {
+      cell.outputGoesToSeedAt = gameMinutes(state) + recipe.goToSeedDays * state.dayLength;
+      cell.outputSeedItem = seedItem;
     }
   }
 }
@@ -797,7 +812,7 @@ export function craftAt(instanceId: string, recipeId: RecipeId): CraftResult {
     }
     const dur = recipe.durationMs ?? 0;
     if (dur <= 0) {
-      depositOutputsToInstance(found.cell, recipe);
+      depositOutputsToInstance(s, found.cell, recipe);
       for (const o of recipe.outputs) {
         if (MACHINES[o.item]) s.everBuilt[o.item] = true;
       }
@@ -833,6 +848,12 @@ export function takeMachineOutput(instanceId: string, itemId?: ItemId): boolean 
       add(s, id, qty);
       ok = true;
     }
+    // Once the buffer is empty, the plot's go-to-seed deadline doesn't
+    // apply — clear it so the next planting starts fresh.
+    if (Object.values(found.cell.output).every((q) => q <= 0)) {
+      delete found.cell.outputGoesToSeedAt;
+      delete found.cell.outputSeedItem;
+    }
   });
   return ok;
 }
@@ -855,7 +876,7 @@ export function tickJobs(now: number = gameNow()): boolean {
       if (j.instanceId) {
         const found = findMachineInstance(draft, j.instanceId);
         if (found) {
-          depositOutputsToInstance(found.cell, r);
+          depositOutputsToInstance(draft, found.cell, r);
           for (const o of r.outputs) {
             if (MACHINES[o.item]) draft.everBuilt[o.item] = true;
           }
@@ -1312,12 +1333,49 @@ export function forageAutoEatPreview(s: GameState): { item: ItemId; qty: number 
 }
 
 /**
+ * Walk every placed machine and convert any harvest whose go-to-seed deadline
+ * has passed: keep one seed, lose the rest. Returns the seed ids that were
+ * salvaged, so the UI can flag the loss.
+ */
+function applyGoToSeed(state: GameState): ItemId[] {
+  const now = gameMinutes(state);
+  const lost: ItemId[] = [];
+  for (const r of state.rooms) {
+    for (const cell of r.cells) {
+      if (cell.kind !== "machine") continue;
+      const due = cell.outputGoesToSeedAt;
+      if (due === undefined || due > now) continue;
+      const seed = cell.outputSeedItem;
+      const hadOutput = Object.values(cell.output).some((q) => q > 0);
+      if (hadOutput && seed) {
+        cell.output = { [seed]: 1 };
+        lost.push(seed);
+      }
+      delete cell.outputGoesToSeedAt;
+      delete cell.outputSeedItem;
+    }
+  }
+  return lost;
+}
+
+const goToSeedListeners = new Set<(ids: ItemId[]) => void>();
+export function onGoToSeed(fn: (ids: ItemId[]) => void): () => void {
+  goToSeedListeners.add(fn);
+  return () => goToSeedListeners.delete(fn);
+}
+function reportGoToSeed(ids: ItemId[]): void {
+  if (ids.length === 0) return;
+  for (const fn of goToSeedListeners) fn(ids);
+}
+
+/**
  * Sleep until dawn. Resets the world clock, bumps the day, and fast-forwards
  * any in-flight machine jobs by the slept real-time gap so they look like
  * they ran while the player rested. Sleep itself costs no food.
  */
 export function sleep(): boolean {
   let ok = false;
+  let wentToSeed: ItemId[] = [];
   store.update((s) => {
     if (s.actionJob) return;
     const sleptMinutes = s.dayLength - s.worldClock;
@@ -1340,9 +1398,11 @@ export function sleep(): boolean {
     s.seasonIndex = Math.floor((s.dayNumber - 1) / DAYS_PER_SEASON) % SEASONS.length;
     const expired = tickSpoilage(s);
     if (expired.length > 0) reportSpoiled(expired);
+    wentToSeed = applyGoToSeed(s);
     ok = true;
   });
   if (ok) tickJobs();
+  if (wentToSeed.length > 0) reportGoToSeed(wentToSeed);
   return ok;
 }
 
