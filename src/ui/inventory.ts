@@ -3,11 +3,14 @@ import {
   carryCap,
   eat,
   gameMinutes,
+  getLastTrashed,
   inventorySlotsUsed,
   pickUpAllFromFloor,
   pickUpFromFloor,
+  restoreLastTrashed,
   save,
   store,
+  subscribeLastTrashed,
 } from "../game/state";
 import type { ItemId } from "../data/types";
 import { clear, el } from "./dom";
@@ -109,6 +112,33 @@ export function mountInventory(root: HTMLElement): void {
     );
     wireTrashTarget(trashZone);
 
+    const lastTrashed = getLastTrashed();
+    const undoBtn = lastTrashed
+      ? (() => {
+          const it = ITEMS[lastTrashed.itemId]!;
+          const where =
+            lastTrashed.source === "inventory"
+              ? "inventory"
+              : lastTrashed.source === "floor"
+                ? "floor"
+                : "chest";
+          return el(
+            "button",
+            {
+              class: "trash-undo small",
+              title: `Put ${lastTrashed.qty}× ${it.name} back in your ${where}`,
+              onclick: () => {
+                if (restoreLastTrashed()) save();
+              },
+            },
+            [
+              el("span", { class: "icon" }, "↩"),
+              el("span", {}, `Undo: ${lastTrashed.qty}× ${it.name}`),
+            ],
+          );
+        })()
+      : null;
+
     const totals = new Map<ItemId, number>(entries as [ItemId, number][]);
     const fills = explodeToSlots(entries as [ItemId, number][]);
 
@@ -153,6 +183,7 @@ export function mountInventory(root: HTMLElement): void {
             `${used} / ${cap} slots`,
           ),
           trashZone,
+          undoBtn,
         ]),
         grid,
         pantry,
@@ -187,6 +218,7 @@ export function mountInventory(root: HTMLElement): void {
   render();
   store.subscribe(render);
   subscribeTrashMode(render);
+  subscribeLastTrashed(render);
 }
 
 function renderPantry(

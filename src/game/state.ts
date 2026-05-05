@@ -1486,43 +1486,163 @@ export function pickUpFromFloor(id: ItemId): void {
 
 // ---- trash ----
 
+/**
+ * Snapshot of the most recently discarded stack so the player can undo a
+ * fat-finger trash. Only the latest trash is restorable; the next trash
+ * (or a successful restore) clears it. Not persisted across reloads.
+ */
+export type TrashSnapshot =
+  | {
+      source: "inventory";
+      itemId: ItemId;
+      qty: number;
+      perishables: PerishableBatch[];
+    }
+  | {
+      source: "floor";
+      itemId: ItemId;
+      qty: number;
+      perishables: PerishableBatch[];
+    }
+  | {
+      source: "chest";
+      itemId: ItemId;
+      qty: number;
+      perishables: PerishableBatch[];
+      roomId: string;
+      chestId: string;
+    };
+
+let lastTrashed: TrashSnapshot | null = null;
+const lastTrashedListeners = new Set<(s: TrashSnapshot | null) => void>();
+
+function setLastTrashed(snap: TrashSnapshot | null): void {
+  lastTrashed = snap;
+  for (const cb of lastTrashedListeners) cb(snap);
+}
+
+export function getLastTrashed(): TrashSnapshot | null {
+  return lastTrashed;
+}
+
+export function subscribeLastTrashed(
+  cb: (s: TrashSnapshot | null) => void,
+): () => void {
+  lastTrashedListeners.add(cb);
+  return () => lastTrashedListeners.delete(cb);
+}
+
+export function clearLastTrashed(): void {
+  if (lastTrashed !== null) setLastTrashed(null);
+}
+
 /** Discard the entire stack of an item from inventory. */
 export function trashFromInventory(id: ItemId): boolean {
-  let ok = false;
+  let snap: TrashSnapshot | null = null;
   store.update((s) => {
     const had = s.inventory[id] ?? 0;
     if (had <= 0) return;
     delete s.inventory[id];
-    consumePerishable(s, id, had);
-    ok = true;
+    const taken = consumePerishable(s, id, had);
+    snap = { source: "inventory", itemId: id, qty: had, perishables: taken };
   });
-  return ok;
+  if (snap) setLastTrashed(snap);
+  return snap !== null;
 }
 
 /** Discard the entire stack of an item from the floor pile. */
 export function trashFromFloor(id: ItemId): boolean {
-  let ok = false;
+  let snap: TrashSnapshot | null = null;
   store.update((s) => {
     const had = s.floor[id] ?? 0;
     if (had <= 0) return;
     delete s.floor[id];
-    consumePerishable(s, id, had);
-    ok = true;
+    const taken = consumePerishable(s, id, had);
+    snap = { source: "floor", itemId: id, qty: had, perishables: taken };
   });
-  return ok;
+  if (snap) setLastTrashed(snap);
+  return snap !== null;
 }
 
 /** Discard the entire stack of an item from a placed chest. */
 export function trashFromChest(roomId: string, instanceId: string, id: ItemId): boolean {
-  let ok = false;
+  let snap: TrashSnapshot | null = null;
   store.update((s) => {
     const found = findChestInstance(s, instanceId);
     if (!found || found.roomId !== roomId) return;
-    if ((found.cell.contents[id] ?? 0) <= 0) return;
+    const had = found.cell.contents[id] ?? 0;
+    if (had <= 0) return;
+    const taken = found.cell.perishables[id]
+      ? found.cell.perishables[id]!.map((b) => ({ ...b }))
+      : [];
     delete found.cell.contents[id];
     delete found.cell.perishables[id];
-    ok = true;
+    snap = {
+      source: "chest",
+      itemId: id,
+      qty: had,
+      perishables: taken,
+      roomId,
+      chestId: instanceId,
+    };
   });
+  if (snap) setLastTrashed(snap);
+  return snap !== null;
+}
+
+/**
+ * Put the most recently trashed stack back where it came from. Bypasses
+ * carry/chest capacity since the items fit a moment ago. Fails if the
+ * source chest has since been picked up. Clears the snapshot on success.
+ */
+export function restoreLastTrashed(): boolean {
+  const snap = lastTrashed;
+  if (!snap) return false;
+  let ok = false;
+  store.update((s) => {
+    if (snap.source === "inventory") {
+      s.inventory[snap.itemId] = (s.inventory[snap.itemId] ?? 0) + snap.qty;
+      if (snap.perishables.length > 0) {
+        s.perishables[snap.itemId] = mergeBatches(
+          s.perishables[snap.itemId] ?? [],
+          snap.perishables.map((b) => ({ ...b })),
+        );
+      }
+      ok = true;
+    } else if (snap.source === "floor") {
+      s.floor[snap.itemId] = (s.floor[snap.itemId] ?? 0) + snap.qty;
+      if (snap.perishables.length > 0) {
+        s.perishables[snap.itemId] = mergeBatches(
+          s.perishables[snap.itemId] ?? [],
+          snap.perishables.map((b) => ({ ...b })),
+        );
+      }
+      ok = true;
+    } else {
+      const found = findChestInstance(s, snap.chestId);
+      if (found && found.roomId === snap.roomId) {
+        found.cell.contents[snap.itemId] =
+          (found.cell.contents[snap.itemId] ?? 0) + snap.qty;
+        if (snap.perishables.length > 0) {
+          found.cell.perishables[snap.itemId] = mergeBatches(
+            found.cell.perishables[snap.itemId] ?? [],
+            snap.perishables.map((b) => ({ ...b })),
+          );
+        }
+      } else {
+        // Chest is gone — drop it on the floor instead.
+        s.floor[snap.itemId] = (s.floor[snap.itemId] ?? 0) + snap.qty;
+        if (snap.perishables.length > 0) {
+          s.perishables[snap.itemId] = mergeBatches(
+            s.perishables[snap.itemId] ?? [],
+            snap.perishables.map((b) => ({ ...b })),
+          );
+        }
+      }
+      ok = true;
+    }
+  });
+  if (ok) setLastTrashed(null);
   return ok;
 }
 
@@ -1815,6 +1935,7 @@ const SAVE_KEY = "bootstrap-factory:save:v1";
 export { SCHEMA_VERSION, SAVE_KEY };
 
 export function load(): void {
+  setLastTrashed(null);
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) {
@@ -1901,6 +2022,7 @@ export function save(): void {
 export function reset(): void {
   pauseDriftMs = 0;
   lastSampledAt = Date.now();
+  setLastTrashed(null);
   store.set(emptyState());
   save();
 }
