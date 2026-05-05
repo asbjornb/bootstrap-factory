@@ -1620,14 +1620,24 @@ export function restoreLastTrashed(): boolean {
       ok = true;
     } else {
       const found = findChestInstance(s, snap.chestId);
-      if (!found || found.roomId !== snap.roomId) return;
-      found.cell.contents[snap.itemId] =
-        (found.cell.contents[snap.itemId] ?? 0) + snap.qty;
-      if (snap.perishables.length > 0) {
-        found.cell.perishables[snap.itemId] = mergeBatches(
-          found.cell.perishables[snap.itemId] ?? [],
-          snap.perishables.map((b) => ({ ...b })),
-        );
+      if (found && found.roomId === snap.roomId) {
+        found.cell.contents[snap.itemId] =
+          (found.cell.contents[snap.itemId] ?? 0) + snap.qty;
+        if (snap.perishables.length > 0) {
+          found.cell.perishables[snap.itemId] = mergeBatches(
+            found.cell.perishables[snap.itemId] ?? [],
+            snap.perishables.map((b) => ({ ...b })),
+          );
+        }
+      } else {
+        // Chest is gone — drop it on the floor instead.
+        s.floor[snap.itemId] = (s.floor[snap.itemId] ?? 0) + snap.qty;
+        if (snap.perishables.length > 0) {
+          s.perishables[snap.itemId] = mergeBatches(
+            s.perishables[snap.itemId] ?? [],
+            snap.perishables.map((b) => ({ ...b })),
+          );
+        }
       }
       ok = true;
     }
