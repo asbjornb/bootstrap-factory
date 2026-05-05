@@ -13,10 +13,14 @@ import { isTagInput } from "../data/types";
 import type { DropEntry, GatherAction, ItemId, Recipe, RecipeInput, ResourceNode } from "../data/types";
 import { clear, el } from "./dom";
 
+type Selection =
+  | { kind: "item"; id: ItemId }
+  | { kind: "tag"; tag: string };
+
 interface IndexState {
   query: string;
-  selected: ItemId | null;
-  history: ItemId[]; // back-stack
+  selected: Selection | null;
+  history: Selection[]; // back-stack
 }
 
 const state: IndexState = { query: "", selected: null, history: [] };
@@ -26,10 +30,26 @@ function notify(): void {
   for (const l of listeners) l();
 }
 
-export function selectItem(id: ItemId): void {
-  if (state.selected && state.selected !== id) state.history.push(state.selected);
-  state.selected = id;
+function sameSelection(a: Selection, b: Selection): boolean {
+  if (a.kind === "item" && b.kind === "item") return a.id === b.id;
+  if (a.kind === "tag" && b.kind === "tag") return a.tag === b.tag;
+  return false;
+}
+
+function select(next: Selection): void {
+  if (state.selected && !sameSelection(state.selected, next)) {
+    state.history.push(state.selected);
+  }
+  state.selected = next;
   notify();
+}
+
+export function selectItem(id: ItemId): void {
+  select({ kind: "item", id });
+}
+
+export function selectTag(tag: string): void {
+  select({ kind: "tag", tag });
 }
 
 function back(): void {
@@ -85,10 +105,12 @@ function renderItemList(): HTMLElement {
       ? [el("li", { class: "muted small" }, "No matches.")]
       : items.map((i) => {
           const owned = store.get().inventory[i.id] ?? 0;
+          const isSelected =
+            state.selected?.kind === "item" && state.selected.id === i.id;
           return el(
             "li",
             {
-              class: "ri-item" + (state.selected === i.id ? " selected" : ""),
+              class: "ri-item" + (isSelected ? " selected" : ""),
               onclick: () => selectItem(i.id),
             },
             [
@@ -109,7 +131,11 @@ function renderDetail(): HTMLElement {
       "Pick an item on the left to see its recipes, what it's used for, and (if it's a tool) what it unlocks.",
     );
   }
-  const id = state.selected;
+  if (state.selected.kind === "tag") return renderTagDetail(state.selected.tag);
+  return renderItemDetail(state.selected.id);
+}
+
+function renderItemDetail(id: ItemId): HTMLElement {
   const it = ITEMS[id]!;
   const produced = recipesProducing(id);
   const consumed = recipesConsuming(id);
@@ -117,6 +143,7 @@ function renderDetail(): HTMLElement {
   const gatheredFrom = gatherActionsProducing(id);
   const harvestedFrom = nodesProducing(id);
   const owned = store.get().inventory[id] ?? 0;
+  const focus: Focus = { kind: "item", id };
 
   return el("div", { class: "ri-detail" }, [
     el("div", { class: "ri-detail-head" }, [
@@ -143,29 +170,130 @@ function renderDetail(): HTMLElement {
     harvestedFrom.length > 0
       ? nodeSection(`Harvested from (${harvestedFrom.length})`, harvestedFrom, id)
       : null,
-    section(`Recipes (${produced.length})`, produced, id, "produces"),
-    section(`Used in (${consumed.length})`, consumed, id, "consumes"),
+    section(`Recipes (${produced.length})`, produced, focus, "produces"),
+    section(`Used in (${consumed.length})`, consumed, focus, "consumes"),
     asTool.length > 0
-      ? section(`Used as tool in (${asTool.length})`, asTool, id, "tool")
+      ? section(`Used as tool in (${asTool.length})`, asTool, focus, "tool")
       : null,
   ]);
+}
+
+function renderTagDetail(tag: string): HTMLElement {
+  const matches = itemsWithTag(tag);
+  const focus: Focus = { kind: "tag", tag };
+
+  const producedSeen = new Set<string>();
+  const produced: Recipe[] = [];
+  const gatheredSeen = new Set<string>();
+  const gathered: GatherAction[] = [];
+  const harvestedSeen = new Set<string>();
+  const harvested: ResourceNode[] = [];
+  for (const it of matches) {
+    for (const r of recipesProducing(it.id)) {
+      if (!producedSeen.has(r.id)) {
+        producedSeen.add(r.id);
+        produced.push(r);
+      }
+    }
+    for (const a of gatherActionsProducing(it.id)) {
+      if (!gatheredSeen.has(a.id)) {
+        gatheredSeen.add(a.id);
+        gathered.push(a);
+      }
+    }
+    for (const n of nodesProducing(it.id)) {
+      if (!harvestedSeen.has(n.id)) {
+        harvestedSeen.add(n.id);
+        harvested.push(n);
+      }
+    }
+  }
+  // Recipes consuming the tag: any recipe with a TagInput for this tag,
+  // or a literal item input that carries this tag. Use the first matching
+  // item to query (recipesConsuming already follows tag inputs), and merge.
+  const consumedSeen = new Set<string>();
+  const consumed: Recipe[] = [];
+  for (const it of matches) {
+    for (const r of recipesConsuming(it.id)) {
+      if (!consumedSeen.has(r.id)) {
+        consumedSeen.add(r.id);
+        consumed.push(r);
+      }
+    }
+  }
+
+  const head = el("div", { class: "ri-detail-head" }, [
+    state.history.length > 0
+      ? el("button", { class: "back-btn", onclick: back, title: "Back" }, "←")
+      : null,
+    el("span", { class: "icon huge" }, matches[0]?.icon ?? "🏷️"),
+    el("div", {}, [
+      el("h3", {}, `Any ${tag}`),
+      el(
+        "p",
+        { class: "muted small" },
+        `A recipe asks for any item with the "${tag}" tag. Any of these will satisfy it:`,
+      ),
+      el(
+        "div",
+        { class: "ri-tag-members" },
+        matches.length === 0
+          ? [el("span", { class: "muted small" }, "No items carry this tag.")]
+          : matches.map((m) => stackChip(m.id, 0, false, { hideQty: true })),
+      ),
+    ]),
+  ]);
+
+  return el("div", { class: "ri-detail" }, [
+    head,
+    gathered.length > 0
+      ? gatherSection(
+          `Gathered from (${gathered.length})`,
+          gathered,
+          (drop) => matches.some((m) => m.id === drop),
+        )
+      : null,
+    harvested.length > 0
+      ? nodeSection(
+          `Harvested from (${harvested.length})`,
+          harvested,
+          (drop) => matches.some((m) => m.id === drop),
+        )
+      : null,
+    section(`Recipes producing any ${tag} (${produced.length})`, produced, focus, "produces"),
+    section(`Used in (${consumed.length})`, consumed, focus, "consumes"),
+  ]);
+}
+
+type Focus =
+  | { kind: "item"; id: ItemId }
+  | { kind: "tag"; tag: string };
+
+function focusMatchesItem(focus: Focus, id: ItemId): boolean {
+  if (focus.kind === "item") return focus.id === id;
+  return ITEMS[id]?.tags?.includes(focus.tag) ?? false;
+}
+
+function focusMatchesTag(focus: Focus, tag: string): boolean {
+  if (focus.kind === "tag") return focus.tag === tag;
+  return ITEMS[focus.id]?.tags?.includes(tag) ?? false;
 }
 
 function section(
   title: string,
   recipes: Recipe[],
-  focusItem: ItemId,
+  focus: Focus,
   mode: "produces" | "consumes" | "tool",
 ): HTMLElement {
   return el("div", { class: "ri-section" }, [
     el("h4", {}, title),
     recipes.length === 0
       ? el("p", { class: "muted small" }, "—")
-      : el("div", { class: "recipe-list" }, recipes.map((r) => renderRecipeCard(r, focusItem, mode))),
+      : el("div", { class: "recipe-list" }, recipes.map((r) => renderRecipeCard(r, focus, mode))),
   ]);
 }
 
-function renderRecipeCard(r: Recipe, focus: ItemId, mode: "produces" | "consumes" | "tool"): HTMLElement {
+function renderRecipeCard(r: Recipe, focus: Focus, mode: "produces" | "consumes" | "tool"): HTMLElement {
   const m = MACHINES[r.machine]!;
   const pinned = isPinned(store.get(), r.id);
   return el("div", { class: "ri-recipe" }, [
@@ -179,7 +307,9 @@ function renderRecipeCard(r: Recipe, focus: ItemId, mode: "produces" | "consumes
       [
         ...r.inputs.map((i) => inputChip(i, focus, mode)),
         el("span", { class: "arrow" }, "→"),
-        ...r.outputs.map((s) => stackChip(s.item, s.qty, s.item === focus && mode === "produces")),
+        ...r.outputs.map((s) =>
+          stackChip(s.item, s.qty, mode === "produces" && focusMatchesItem(focus, s.item)),
+        ),
       ],
     ),
     el(
@@ -205,23 +335,30 @@ function renderRecipeCard(r: Recipe, focus: ItemId, mode: "produces" | "consumes
   ]);
 }
 
+type DropMatcher = ItemId | ((drop: ItemId) => boolean);
+
+function dropPredicate(m: DropMatcher): (drop: ItemId) => boolean {
+  return typeof m === "function" ? m : (d) => d === m;
+}
+
 function gatherSection(
   title: string,
   actions: GatherAction[],
-  focusItem: ItemId,
+  match: DropMatcher,
 ): HTMLElement {
+  const pred = dropPredicate(match);
   return el("div", { class: "ri-section" }, [
     el("h4", {}, title),
     el(
       "div",
       { class: "recipe-list" },
-      actions.map((a) => renderGatherCard(a, focusItem)),
+      actions.map((a) => renderGatherCard(a, pred)),
     ),
   ]);
 }
 
-function renderGatherCard(a: GatherAction, focus: ItemId): HTMLElement {
-  const drops = a.drops.filter((d) => d.item === focus);
+function renderGatherCard(a: GatherAction, pred: (drop: ItemId) => boolean): HTMLElement {
+  const drops = a.drops.filter((d) => pred(d.item));
   return el("div", { class: "ri-recipe" }, [
     el("div", { class: "ri-recipe-machine", title: a.name }, [
       el("span", { class: "icon" }, a.icon),
@@ -238,20 +375,21 @@ function renderGatherCard(a: GatherAction, focus: ItemId): HTMLElement {
 function nodeSection(
   title: string,
   nodes: ResourceNode[],
-  focusItem: ItemId,
+  match: DropMatcher,
 ): HTMLElement {
+  const pred = dropPredicate(match);
   return el("div", { class: "ri-section" }, [
     el("h4", {}, title),
     el(
       "div",
       { class: "recipe-list" },
-      nodes.map((n) => renderNodeCard(n, focusItem)),
+      nodes.map((n) => renderNodeCard(n, pred)),
     ),
   ]);
 }
 
-function renderNodeCard(n: ResourceNode, focus: ItemId): HTMLElement {
-  const drops = n.drops.filter((d) => d.item === focus);
+function renderNodeCard(n: ResourceNode, pred: (drop: ItemId) => boolean): HTMLElement {
+  const drops = n.drops.filter((d) => pred(d.item));
   const biome = BIOMES[n.biome];
   const sub = biome ? `Found by exploring ${biome.name}` : "";
   return el("div", { class: "ri-recipe" }, [
@@ -308,20 +446,20 @@ function dropChip(d: DropEntry): HTMLElement {
 
 function inputChip(
   i: RecipeInput,
-  focus: ItemId,
+  focus: Focus,
   mode: "produces" | "consumes" | "tool",
 ): HTMLElement {
   if (isTagInput(i)) {
     const matches = itemsWithTag(i.tag);
     const first = matches[0];
-    const focused = mode === "consumes" && matches.some((m) => m.id === focus);
+    const focused = mode === "consumes" && focusMatchesTag(focus, i.tag);
     const detail = matches.map((m) => m.name).join(", ");
     return el(
       "button",
       {
         class: "stack-chip tag-chip" + (focused ? " focus" : ""),
         title: `Any ${i.tag} — ${detail}`,
-        onclick: () => { if (first) selectItem(first.id); },
+        onclick: () => selectTag(i.tag),
       },
       [
         el("span", { class: "icon" }, first?.icon ?? "•"),
@@ -329,10 +467,15 @@ function inputChip(
       ],
     );
   }
-  return stackChip(i.item, i.qty, i.item === focus && mode === "consumes");
+  return stackChip(i.item, i.qty, mode === "consumes" && focusMatchesItem(focus, i.item));
 }
 
-function stackChip(id: ItemId, qty: number, focused: boolean): HTMLElement {
+function stackChip(
+  id: ItemId,
+  qty: number,
+  focused: boolean,
+  opts: { hideQty?: boolean } = {},
+): HTMLElement {
   const it = ITEMS[id]!;
   return el(
     "button",
@@ -341,6 +484,9 @@ function stackChip(id: ItemId, qty: number, focused: boolean): HTMLElement {
       title: `${it.name} — open`,
       onclick: () => selectItem(id),
     },
-    [el("span", { class: "icon" }, it.icon), el("span", {}, ` ${qty} ${it.name}`)],
+    [
+      el("span", { class: "icon" }, it.icon),
+      el("span", {}, opts.hideQty ? ` ${it.name}` : ` ${qty} ${it.name}`),
+    ],
   );
 }

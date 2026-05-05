@@ -22,7 +22,7 @@ import { isTagInput } from "../data/types";
 import type { Machine, Recipe, RecipeInput } from "../data/types";
 import type { MachineJob } from "../game/state";
 import { clear, el } from "./dom";
-import { selectItem } from "./recipe-index";
+import { selectItem, selectTag } from "./recipe-index";
 
 export function mountCraft(root: HTMLElement): void {
   const render = () => {
@@ -233,7 +233,7 @@ function recipeButton(r: Recipe, pinned = false): HTMLElement {
                       : `${label} — any of: ${detail}`,
                   onclick: (ev: Event) => {
                     ev.stopPropagation();
-                    if (first) selectItem(first.id);
+                    selectTag(i.tag);
                   },
                 },
                 [
