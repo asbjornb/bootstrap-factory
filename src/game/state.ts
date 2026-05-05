@@ -110,7 +110,24 @@ export const BASE_CARRY_SLOTS = 8;
 export const CHEST_SLOT_CAP: Record<ItemId, number> = {
   crate: 16,
   bound_crate: 32,
+  clay_jar: 8,
+  sealed_jar: 12,
 };
+
+/**
+ * Spoilage multiplier applied to perishables stored in this chest type.
+ * A factor of 2 means a stack with 30 minutes of remaining shelf life
+ * will keep for 60 minutes inside; on withdrawal the remaining shelf
+ * life is scaled back down so the round-trip is neutral.
+ */
+export const CHEST_PRESERVE_FACTOR: Record<ItemId, number> = {
+  clay_jar: 2,
+  sealed_jar: 4,
+};
+
+export function chestPreserveFactor(type: ItemId): number {
+  return CHEST_PRESERVE_FACTOR[type] ?? 1;
+}
 
 export const ROOM_BUILD_COST: Stack[] = [{ item: "board", qty: 25 }];
 export const ROOM_BUILD_TOOL: ToolRequirement = { type: "shovel", minTier: 1 };
@@ -337,6 +354,25 @@ function consumePerishable(
   amount: number,
 ): PerishableBatch[] {
   return consumeFromBatches(state.perishables, id, amount);
+}
+
+/**
+ * Multiply each batch's *remaining* shelf life (expiresAt − now) by `factor`
+ * and return a fresh batch list. Used by preserving chests on deposit
+ * (factor > 1) and on withdrawal (1 / factor) so a round trip is neutral.
+ * Already-expired batches pass through untouched — they should rot promptly.
+ */
+function scaleBatchRemaining(
+  batches: PerishableBatch[],
+  now: number,
+  factor: number,
+): PerishableBatch[] {
+  if (factor === 1 || batches.length === 0) return batches;
+  return batches.map((b) => {
+    const remaining = b.expiresAt - now;
+    if (remaining <= 0) return { ...b };
+    return { qty: b.qty, expiresAt: now + remaining * factor };
+  });
 }
 
 /** Insert `incoming` batches into `target` keeping the list sorted oldest-first. */
@@ -1722,12 +1758,16 @@ export function depositToChest(
     chest.contents[itemId] = currentQty + move;
     s.inventory[itemId] = have - move;
     if (s.inventory[itemId]! <= 0) delete s.inventory[itemId];
-    // Carry the freshness batches with the items so chests aren't a fridge.
+    // Carry the freshness batches with the items so chests aren't a fridge,
+    // but if the chest has a preservation factor (pottery vessels), stretch
+    // each batch's remaining shelf life by that factor on the way in.
     const taken = consumePerishable(s, itemId, move);
     if (taken.length > 0) {
+      const factor = chestPreserveFactor(chest.type);
+      const adjusted = scaleBatchRemaining(taken, gameMinutes(s), factor);
       chest.perishables[itemId] = mergeBatches(
         chest.perishables[itemId] ?? [],
-        taken,
+        adjusted,
       );
     }
     ok = true;
@@ -1752,13 +1792,16 @@ export function withdrawFromChest(
     delete found.cell.perishables[itemId];
     // add() pushes a fresh batch — for perishable items we drop that and
     // restore the original batches we just lifted out of the chest, so
-    // freshness is preserved across the round trip.
+    // freshness is preserved across the round trip. Preservation factor
+    // gets reversed on the way out so a deposit-then-withdraw is neutral.
     add(s, itemId, have);
     if (chestBatches && chestBatches.length > 0) {
       const fresh = s.perishables[itemId];
       if (fresh && fresh.length > 0) fresh.pop();
+      const factor = chestPreserveFactor(found.cell.type);
+      const adjusted = scaleBatchRemaining(chestBatches, gameMinutes(s), 1 / factor);
       const remaining = s.perishables[itemId] ?? [];
-      s.perishables[itemId] = mergeBatches(remaining, chestBatches);
+      s.perishables[itemId] = mergeBatches(remaining, adjusted);
     }
     ok = true;
   });

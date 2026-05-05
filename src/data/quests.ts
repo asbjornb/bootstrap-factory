@@ -90,6 +90,28 @@ export const ALL_QUESTS: Quest[] = [
     done: (ctx) => ctx.has("oil_press"),
   },
   {
+    id: "clay_jar",
+    title: "Throw a clay jar",
+    description:
+      "A shelf is honest about what it can do for food. A lidded earthen jar, fired in the kiln, isn't — cool and dark and dry, it stretches the keeping of anything you put inside.",
+    kind: "utility",
+    benefit: "Unlocks the clay jar — a small storage chest that doubles the shelf life of perishables stored inside.",
+    requires: ["clay_jar"],
+    visible: (ctx) => ctx.completed("clay_kiln"),
+    done: (ctx) => ctx.has("clay_jar"),
+  },
+  {
+    id: "sealed_jar",
+    title: "Pitch a jar shut",
+    description:
+      "A jar with a loose lid still breathes. Melt resin around the rim at the campfire and the seam closes — what's inside keeps for a season or more.",
+    kind: "utility",
+    benefit: "Unlocks the pitched jar — larger and quadruples shelf life. Long-haul preservation for the autumn stockpile.",
+    requires: ["sealed_jar"],
+    visible: (ctx) => ctx.completed("clay_jar"),
+    done: (ctx) => ctx.has("sealed_jar"),
+  },
+  {
     id: "strong_cordage",
     title: "Twist a length of strong cordage",
     description:
