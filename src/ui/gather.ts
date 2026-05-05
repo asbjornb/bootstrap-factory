@@ -10,6 +10,7 @@ import {
   exploreBiome,
   fitsInDay,
   FLOOR_GATHER_ID,
+  forageAutoEatPreview,
   gather,
   gatherActiveTime,
   gatherDuration,
@@ -114,6 +115,7 @@ function renderGatherCard(
   const budgetOk = canAfford(s, at, isFloor);
   const provOk = hasProvisions(s, a.provisions);
   const gate = gateFor(at, dayOk, budgetOk, provOk, a.provisions, busy && !isThisActive, dur);
+  const autoEat = isFloor ? forageAutoEatPreview(s) : [];
   return el("div", { class: "gather-card" }, [
     el(
       "button",
@@ -129,6 +131,15 @@ function renderGatherCard(
       ? renderProgressBar(job!.startedAt, job!.endsAt)
       : el("p", { class: "muted small" }, gate.subline),
     el("p", { class: "muted small" }, a.description ?? ""),
+    autoEat.length > 0
+      ? el(
+          "p",
+          { class: "small", title: "Foraging on an empty budget eats your cheapest food first" },
+          `Auto-eats: ${autoEat
+            .map((e) => `${e.qty}× ${ITEMS[e.item]?.name ?? e.item}`)
+            .join(", ")}`,
+        )
+      : null,
     a.provisions ? renderProvisions(a.provisions) : null,
     isSeasonal
       ? el(

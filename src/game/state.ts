@@ -1050,6 +1050,12 @@ export function gather(actionId: GatherId): ActionResult {
       result = { ok: false, reason: "no_daytime" };
       return;
     }
+    // Forage Nearby auto-eats the cheapest food in inventory before running,
+    // so players can't dodge the food loop by spam-foraging on an empty
+    // budget. If inventory is empty too, the floor stays free.
+    if (isFloor && s.timeBudget < at) {
+      autoEatToCover(s, at);
+    }
     if (!canAfford(s, at, isFloor)) {
       result = { ok: false, reason: "no_budget" };
       return;
@@ -1189,18 +1195,83 @@ export function wander(): ActionResult {
 
 /** Eat one unit of a food item from inventory. Refunds time-budget, capped at dayLength. */
 export function eat(itemId: ItemId): boolean {
-  const item: Item | undefined = ITEMS[itemId];
-  if (!item?.food) return false;
   let ok = false;
   store.update((s) => {
-    if ((s.inventory[itemId] ?? 0) <= 0) return;
-    s.inventory[itemId] = s.inventory[itemId]! - 1;
-    if (s.inventory[itemId]! <= 0) delete s.inventory[itemId];
-    consumePerishable(s, itemId, 1);
-    s.timeBudget = Math.min(s.dayLength, s.timeBudget + item.food!.satiatesMinutes);
-    ok = true;
+    ok = eatOne(s, itemId);
   });
   return ok;
+}
+
+function eatOne(s: GameState, itemId: ItemId): boolean {
+  const item: Item | undefined = ITEMS[itemId];
+  if (!item?.food) return false;
+  if ((s.inventory[itemId] ?? 0) <= 0) return false;
+  s.inventory[itemId] = s.inventory[itemId]! - 1;
+  if (s.inventory[itemId]! <= 0) delete s.inventory[itemId];
+  consumePerishable(s, itemId, 1);
+  s.timeBudget = Math.min(s.dayLength, s.timeBudget + item.food.satiatesMinutes);
+  return true;
+}
+
+/** Lowest-satiation food currently in the player's inventory, or null. */
+function cheapestFoodInInventory(s: GameState): ItemId | null {
+  let bestId: ItemId | null = null;
+  let bestM = Infinity;
+  for (const [id, qty] of Object.entries(s.inventory)) {
+    if ((qty ?? 0) <= 0) continue;
+    const food = ITEMS[id]?.food;
+    if (!food) continue;
+    if (food.satiatesMinutes < bestM) {
+      bestM = food.satiatesMinutes;
+      bestId = id;
+    }
+  }
+  return bestId;
+}
+
+/**
+ * Top up the player's time-budget by auto-eating their cheapest food until
+ * `needed` minutes are covered, or no food remains. Without this, the player
+ * could spam Forage Nearby forever to skip eating entirely.
+ */
+function autoEatToCover(s: GameState, needed: number): void {
+  while (s.timeBudget < needed) {
+    const id = cheapestFoodInInventory(s);
+    if (!id) return;
+    if (!eatOne(s, id)) return;
+  }
+}
+
+/**
+ * Pure preview of which items Forage Nearby would auto-consume right now.
+ * Returns an empty list if the player already has enough budget or no food.
+ */
+export function forageAutoEatPreview(s: GameState): { item: ItemId; qty: number }[] {
+  const action = GATHER_ACTIONS[FLOOR_GATHER_ID];
+  if (!action) return [];
+  const needed = gatherActiveTime(action);
+  if (s.timeBudget >= needed) return [];
+  let budget = s.timeBudget;
+  const inv: Record<ItemId, number> = { ...s.inventory };
+  const eaten: Record<ItemId, number> = {};
+  while (budget < needed) {
+    let bestId: ItemId | null = null;
+    let bestM = Infinity;
+    for (const [id, qty] of Object.entries(inv)) {
+      if ((qty ?? 0) <= 0) continue;
+      const food = ITEMS[id]?.food;
+      if (!food) continue;
+      if (food.satiatesMinutes < bestM) {
+        bestM = food.satiatesMinutes;
+        bestId = id;
+      }
+    }
+    if (!bestId) break;
+    inv[bestId] = (inv[bestId] ?? 0) - 1;
+    eaten[bestId] = (eaten[bestId] ?? 0) + 1;
+    budget = Math.min(s.dayLength, budget + bestM);
+  }
+  return Object.entries(eaten).map(([item, qty]) => ({ item, qty }));
 }
 
 /**
