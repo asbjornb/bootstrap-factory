@@ -102,7 +102,7 @@ What you find depends on the season:
 - **Autumn** — elderberries and a flush of late roots. The stockpiling window. Dry what you can.
 - **Winter** — pine bark and frozen tubers. Sustenance only. Hope you put up enough food.
 
-Raw food spoils. The **drying rack** and **smoker** turn perishables into shelf-stable preserves at a small nutrition cost — preservation buys you time, not calories. Cooking, when it lands, will be the path to *gaining* food value.
+Raw food spoils. The **drying rack** turns perishables into shelf-stable preserves at a small nutrition cost — preservation buys you time, not calories. Cooking, when it lands, will be the path to *gaining* food value.
 
 **Sleep** advances the world to dawn, ticks spoilage and machine progress, and resolves whatever background jobs finished overnight. Time you didn't spend doesn't roll over — use it or lose it. Stockpile in autumn or ration in winter; either way, the year is the rhythm you're working against.
 

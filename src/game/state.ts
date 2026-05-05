@@ -89,7 +89,7 @@ export interface GameState {
   seasonIndex: number;
 }
 
-const SCHEMA_VERSION = 14;
+const SCHEMA_VERSION = 15;
 
 /** Number of in-world days per season. 4 seasons make a year. */
 export const DAYS_PER_SEASON = 8;

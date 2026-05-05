@@ -29,7 +29,7 @@ export const ALL_QUESTS: Quest[] = [
     description:
       "Berries spoil within a day; roots not much longer. Lash sticks and cordage into an open-air rack and turn raw forage into food that travels.",
     kind: "utility",
-    benefit: "Unlocks dried berries and smoked roots — preserved food for long expeditions.",
+    benefit: "Unlocks dried berries and dried roots — preserved food for long expeditions.",
     requires: ["drying_rack"],
     visible: () => true,
     done: (ctx) => ctx.has("drying_rack"),

@@ -59,7 +59,7 @@ free so the loop is never bricked.
 - Day = 16 active hours. First-day food budget ≈ 6–8h.
 - Fresh berry ≈ 30min food. Preservation is roughly nutrition-neutral
   (with a small drying loss): dried berries ≈ 80min for 3 fresh
-  berries (~11% loss), smoked root ≈ 100min for 2 fresh roots
+  berries (~11% loss), dried root ≈ 100min for 2 fresh roots
   (~17% loss). Preservation buys shelf life, not extra food.
 - Cooking (boil/bake, future stage) is the path to *gaining* food
   value, not preservation.
@@ -119,8 +119,8 @@ free so the loop is never bricked.
 - Add `spoilsAfter: minutes` to perishable food items. Track per-stack
   spoilage timer (probably as separate inventory entries keyed by
   spawn time, or a "freshness" countdown on the stack).
-- Drying rack and smoker recipes: `raw_berries → dried_berries`,
-  `raw_fish → smoked_fish`. Preserved foods have larger
+- Drying rack recipes: `raw_berries → dried_berries`,
+  `edible_root → dried_root`. Preserved foods have larger
   `satiatesMinutes` and effectively no spoilage.
 - Sleep / world-clock advance ticks spoilage. Spoiled food is
   destroyed (or downgraded to compost) silently with a toast.

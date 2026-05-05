@@ -44,6 +44,12 @@ const MIGRATIONS: Record<number, Migration> = {
   13: (s) => {
     renameItemId(s, "berries", "bramble_berries");
   },
+  // v14 → v15: drying-rack recipe reworked from "smoked_root" (charcoal +
+  // root, thematically wrong on a sun rack) to plain "dried_root". Rename
+  // the item wherever it shows up.
+  14: (s) => {
+    renameItemId(s, "smoked_root", "dried_root");
+  },
   // v12 → v13: chests now track their own perishable batches. Old saves had
   // no per-chest tracking (chests acted as fridges). Seed each chest's
   // perishable contents with a single batch sized to the current count and

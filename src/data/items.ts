@@ -17,7 +17,7 @@ const list: Item[] = [
 
   // preserved food (long shelf life, modest nutrition loss vs. fresh)
   { id: "dried_berries", name: "Dried Berries", icon: "🍇", description: "Sun-and-rack dried. Keeps for a season — preserves the food, with a small loss of nourishment from the drying.", food: { satiatesMinutes: 80 }, stackSize: 32 },
-  { id: "smoked_root", name: "Smoked Root", icon: "🍠", description: "Slow-smoked over a low fire. Road-ready and shelf-stable; the heat costs a little of the food value.", food: { satiatesMinutes: 100 }, stackSize: 32 },
+  { id: "dried_root", name: "Dried Root", icon: "🍠", description: "Sliced thin and racked in sun and wind until leathery. Road-ready and shelf-stable, with a small loss of nourishment from the drying.", food: { satiatesMinutes: 100 }, stackSize: 32 },
 
   // soil
   { id: "loam", name: "Loam", icon: "🟤", description: "Dark crumbly soil. Binds clay into daub." },
