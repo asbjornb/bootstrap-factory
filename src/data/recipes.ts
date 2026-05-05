@@ -247,13 +247,10 @@ const list: Recipe[] = [
     durationMs: 5000,
   },
   {
-    id: "smoke_root",
+    id: "dry_root",
     machine: "drying_rack",
-    inputs: [
-      { item: "edible_root", qty: 2 },
-      { item: "charcoal", qty: 1 },
-    ],
-    outputs: [{ item: "smoked_root", qty: 1 }],
+    inputs: [{ item: "edible_root", qty: 2 }],
+    outputs: [{ item: "dried_root", qty: 1 }],
     durationMs: 6000,
   },
 
