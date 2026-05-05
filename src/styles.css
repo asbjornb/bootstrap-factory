@@ -1195,6 +1195,12 @@ body.trash-armed .chest-row:hover {
   border: 1px solid var(--border);
   color: var(--accent);
 }
+.ri-tag-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
 
 .ri-section {
   margin-top: 6px;

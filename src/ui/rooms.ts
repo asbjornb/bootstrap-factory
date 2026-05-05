@@ -41,7 +41,7 @@ import type {
   Room,
 } from "../data/types";
 import { clear, el } from "./dom";
-import { selectItem } from "./recipe-index";
+import { selectItem, selectTag } from "./recipe-index";
 import {
   applyTrash,
   isTrashMode,
@@ -490,7 +490,7 @@ function renderInstanceRecipe(cell: PlacedMachine, r: Recipe): HTMLElement {
                 title: `Any ${i.tag} — ${detail}`,
                 onclick: (ev: Event) => {
                   ev.stopPropagation();
-                  if (first) selectItem(first.id);
+                  selectTag(i.tag);
                 },
               },
               [
