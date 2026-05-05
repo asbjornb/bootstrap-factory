@@ -8,13 +8,14 @@ const SEASON_ICON: Record<string, string> = {
   Winter: "❄️",
 };
 
-/** Format minutes as a coarse "h" reading per the spec ("don't show raw minutes"). */
+/** Format minutes as "Xh Ym" (omits the zero part). */
 function formatHours(minutes: number): string {
-  if (minutes <= 0) return "0 h";
-  const h = minutes / 60;
-  if (h < 1) return "<1 h";
-  if (h < 10) return `${h.toFixed(1).replace(/\.0$/, "")} h`;
-  return `${Math.round(h)} h`;
+  const total = Math.max(0, Math.round(minutes));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
 }
 
 export function mountTimebar(root: HTMLElement): void {
