@@ -74,63 +74,69 @@ ratio/yield. Implemented via a `cordage` item tag, mirroring how
 
 ## Stages
 
-### Stage 1 — Tilled plot + wheat loop
+### Stage 1 — Tilled plot + wheat loop ✅ shipped
 
-- Add `tilled_plot` item + workbench recipe (boards + flint shovel
+Implementation note: rather than a bespoke `plots: PlotState[]` slice,
+the tilled plot is a placeable machine and `plant_wheat` is a recipe
+with a long `durationMs` that ticks on the same clock as kilns. Same
+player-facing loop, no new state shape.
+
+- [x] Add `tilled_plot` item + workbench recipe (boards + flint shovel
   required as tool, like `crate`).
-- Add `wheat_grain`, `flour`, `bread` items. Bread is a food item
+- [x] Add `wheat_grain`, `flour`, `bread` items. Bread is a food item
   (`satiatesMinutes`, `spoilsAfter`).
-- Add a `Plant Wheat` recipe on `tilled_plot` that consumes 1
-  `wheat_seed` and produces nothing immediately — instead it kicks
-  off a per-plot growth job tracked in state.
-- Harvest action returns 2–3 `wheat_grain` + 1–2 `wheat_seed`.
-- Hand recipe: 2 grain → 1 flour (mortar-and-pestle feel; later
+- [x] Add a `Plant Wheat` recipe on `tilled_plot` that consumes
+  `wheat_seed` and runs on the machine clock until harvest.
+- [x] Harvest returns `wheat_grain` + a returned `wheat_seed`.
+- [x] Hand recipe: grain → flour (mortar-and-pestle feel; later
   superseded by a millstone).
-- Campfire recipe: 1 flour + 1 stick → 1 bread.
-- Schema bump: `plots: PlotState[]` on GameState (plot id, planted
-  crop, plantedAt worldMinute, ready flag).
+- [x] Campfire recipe: flour + stick → bread.
+- [x] Season gating: `Recipe.seasons` so `plant_wheat` is only
+  startable in spring (greyed-out with a "Plant in Spring" hint
+  otherwise).
 
 ### Stage 2 — Sunflower + oil press
 
-- `sunflower_head`, `sunflower_oil`, `seedcake` items.
-- `oil_press` machine (workbench-built; boards + cordage + bronze
+- [ ] `sunflower_head`, `sunflower_oil`, `seedcake` items.
+- [ ] `oil_press` machine (workbench-built; boards + cordage + bronze
   ingot — first thing that *uses* bronze for something other than a
   tool).
-- Plant Sunflower recipe on `tilled_plot`. Plants summer, harvests
+- [ ] Plant Sunflower recipe on `tilled_plot`. Plants summer, harvests
   autumn.
-- Oil press recipe: 4 sunflower heads → 1 oil + 2 seedcake.
-- Oil opens later: oil lamps (extend day?), frying (cooking upgrade
+- [ ] Oil press recipe: 4 sunflower heads → 1 oil + 2 seedcake.
+- [ ] Oil opens later: oil lamps (extend day?), frying (cooking upgrade
   later), greasing bearings (automation later).
 
 ### Stage 3 — Flax + retting + strong cordage
 
-- `flax_seed`, `flax_stalks`, `retted_flax`, `linen_thread`,
+- [ ] `flax_seed`, `flax_stalks`, `retted_flax`, `linen_thread`,
   `strong_cordage` items.
-- `retting_pit` machine — clay-and-fieldstone build, water-themed.
+- [ ] `retting_pit` machine — clay-and-fieldstone build, water-themed.
   Stalks → retted flax over a long timer.
-- Hand recipes: retted flax → linen thread; thread → strong cordage.
-- Tag `cordage` and `strong_cordage` with the same `cordage` tag;
+- [ ] Hand recipes: retted flax → linen thread; thread → strong cordage.
+- [ ] Tag `cordage` and `strong_cordage` with the same `cordage` tag;
   migrate existing cordage-consuming recipes to take `{ tag: "cordage" }`
   with a yield bonus when strong cordage is used (or just make strong
   cordage a 1:2 substitute via crafting alias).
-- Plant Flax recipe on `tilled_plot`. Spring–summer cycle.
+- [ ] Plant Flax recipe on `tilled_plot`. Spring–summer cycle.
 
 ### Stage 4 — Seasonal failure + neglect
 
-- Plots planted out-of-season simply refuse the recipe (UI gating).
-- Plots that miss their harvest window by N days "go to seed" — yield
-  drops to seeds only, no grain/heads/stalks. No fail state, just lost
-  effort.
-- Optional: weather/drought events that can be mitigated by watering
+- [x] Plots planted out-of-season simply refuse the recipe (UI gating).
+  Shipped with stage 1 via `Recipe.seasons`.
+- [ ] Plots that miss their harvest window by N days "go to seed" —
+  yield drops to seeds only, no grain/heads/stalks. No fail state, just
+  lost effort.
+- [ ] Optional: weather/drought events that can be mitigated by watering
   (pulls in pottery jug from the pottery line — cross-feature hook).
 
 ### Stage 5 — Quest book wiring
 
-- `tilled_plot` quest ("Turn a plot — wheat in the soil beats berries
+- [x] `tilled_plot` quest ("Turn a plot — wheat in the soil beats berries
   in the brush").
-- `bake_bread` quest (introduces the flour → bread chain).
-- `strong_cordage` quest (introduces flax retting).
-- `oil_press` quest (introduces sunflower oil and bronze-as-machine).
+- [x] `bake_bread` quest (introduces the flour → bread chain).
+- [ ] `strong_cordage` quest (introduces flax retting).
+- [ ] `oil_press` quest (introduces sunflower oil and bronze-as-machine).
 
 ## Open questions
 
