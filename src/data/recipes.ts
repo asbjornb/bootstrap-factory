@@ -588,18 +588,6 @@ const list: Recipe[] = [
     tool: { type: "axe", minTier: 1 },
     durationMs: 2500,
   },
-  {
-    id: "bronze_pack",
-    machine: "workbench",
-    inputs: [
-      { item: "board", qty: 4 },
-      { tag: "cordage", qty: 6 },
-      { item: "bronze_ingot", qty: 4 },
-    ],
-    outputs: [{ item: "bronze_pack", qty: 1 }],
-    tool: { type: "axe", minTier: 2 },
-    durationMs: 4000,
-  },
 ];
 
 export const RECIPES: Record<RecipeId, Recipe> = Object.fromEntries(list.map((r) => [r.id, r]));

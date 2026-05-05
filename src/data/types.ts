@@ -21,7 +21,7 @@ export interface Item {
   tool?: { type: ToolType; tier: number };
   /** Max units in one inventory slot. Default 64. Tools/machines/chests use 1. */
   stackSize?: number;
-  /** Owning this item adds to the player's carry capacity. Highest single bonus applies (does not stack). */
+  /** Owning this item adds to the player's carry capacity. Bonuses stack across all owned carry-gear items. */
   carryBonus?: number;
   /** If set, this item can be eaten to refund time-budget minutes. */
   food?: { satiatesMinutes: number };

@@ -86,10 +86,9 @@ const list: Item[] = [
   { id: "iron_axe", name: "Iron Axe", icon: "🪓", description: "Heavy. Splits a log in two strokes.", tool: { type: "axe", tier: 4 }, stackSize: 1 },
   { id: "iron_pick", name: "Iron Pick", icon: "⛏️", description: "Cleaves stone in fewer strokes and turns up more iron and coal per swing.", tool: { type: "pickaxe", tier: 4 }, stackSize: 1 },
 
-  // carry gear — owning the item buffs your inventory cap (highest bonus wins)
-  { id: "belt_pouch", name: "Belt Pouch", icon: "🎒", description: "A simple belt with loops and pouches. Carry a little more.", stackSize: 1, carryBonus: 4 },
-  { id: "haul_pack", name: "Haul Pack", icon: "🎒", description: "Boards and cordage shaped into a proper pack. Hauls a respectable load.", stackSize: 1, carryBonus: 8 },
-  { id: "bronze_pack", name: "Bronze-Frame Pack", icon: "🎒", description: "Reinforced frame, deeper pockets. The hauler's choice.", stackSize: 1, carryBonus: 12 },
+  // carry gear — owning the item buffs your inventory cap (bonuses stack across worn items)
+  { id: "belt_pouch", name: "Belt Pouch", icon: "🎒", description: "A simple belt with loops and pouches. Carry a little more.", stackSize: 1, carryBonus: 2 },
+  { id: "haul_pack", name: "Haul Pack", icon: "🎒", description: "Boards and cordage shaped into a proper pack. Hauls a respectable load — pairs well with a belt pouch.", stackSize: 1, carryBonus: 6 },
 
   // workshop blocks (also act as machine "slots" via inventory count)
   { id: "workbench", name: "Workbench", icon: "🧰", description: "A bench for non-trivial hand assembly.", stackSize: 1 },
