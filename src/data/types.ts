@@ -23,6 +23,8 @@ export interface Item {
   stackSize?: number;
   /** Owning this item adds to the player's carry capacity. Bonuses stack across all owned carry-gear items. */
   carryBonus?: number;
+  /** If set, recipes producing this item are hidden from the crafts list once the player owns one anywhere. */
+  oneTime?: boolean;
   /** If set, this item can be eaten to refund time-budget minutes. */
   food?: { satiatesMinutes: number };
   /**
@@ -247,8 +249,10 @@ export interface Quest {
   benefit: string;
   /** Items the player needs to obtain or build to complete the quest. Shown as chips that open the recipe index. */
   requires?: ItemId[];
-  /** Quest is shown (as active) when this returns true and it isn't completed yet. */
-  visible: (ctx: QuestContext) => boolean;
+  /** Other quests that must be completed before this one unlocks. Drives both visibility and tree layout. */
+  prereq?: QuestId[];
+  /** Optional extra visibility predicate, ANDed with `prereq` completion. Defaults to always-visible. */
+  visible?: (ctx: QuestContext) => boolean;
   /** Quest is checked off when this returns true. */
   done: (ctx: QuestContext) => boolean;
 }

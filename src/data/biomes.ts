@@ -1,4 +1,6 @@
-import type { Biome, BiomeId } from "./types";
+import { ITEMS } from "./items";
+import { isTagInput } from "./types";
+import type { Biome, BiomeId, ItemId } from "./types";
 
 const list: Biome[] = [
   {
@@ -159,3 +161,22 @@ export const BIOMES: Record<BiomeId, Biome> = Object.fromEntries(
   list.map((b) => [b.id, b]),
 );
 export const ALL_BIOMES: Biome[] = list;
+
+/** Biomes whose explore provisions accept the given tag. */
+export function biomesRequiringTag(tag: string): Biome[] {
+  return list.filter((b) =>
+    b.provisions?.some((p) =>
+      isTagInput(p) ? p.tag === tag : ITEMS[p.item]?.tags?.includes(tag),
+    ),
+  );
+}
+
+/** Biomes whose explore provisions accept the given item. */
+export function biomesRequiringItem(itemId: ItemId): Biome[] {
+  const tags = ITEMS[itemId]?.tags ?? [];
+  return list.filter((b) =>
+    b.provisions?.some((p) =>
+      isTagInput(p) ? tags.includes(p.tag) : p.item === itemId,
+    ),
+  );
+}

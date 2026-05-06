@@ -610,16 +610,43 @@ export function ownedToolTier(
   return best;
 }
 
+/** Total qty of an item across inventory, floor, and chests. */
+export function ownedQty(state: GameState, itemId: ItemId): number {
+  return (
+    (state.inventory[itemId] ?? 0) +
+    (state.floor[itemId] ?? 0) +
+    state.rooms.reduce(
+      (n, r) =>
+        n +
+        r.cells.reduce(
+          (m, c) => m + (c.kind === "chest" ? (c.contents[itemId] ?? 0) : 0),
+          0,
+        ),
+      0,
+    )
+  );
+}
+
 /**
- * True if every output of the recipe is a tool item the player already owns
- * (anywhere) at the same or higher tier. Hides redundant tool crafts.
+ * True if every output of the recipe is already owned in a way that makes
+ * re-crafting pointless: a tool the player already has at equal/higher tier,
+ * or a one-time item the player already owns. Hides redundant crafts.
  */
-export function producesObsoleteTool(state: GameState, recipe: Recipe): boolean {
+export function producesObsoleteCraft(state: GameState, recipe: Recipe): boolean {
   if (recipe.outputs.length === 0) return false;
   for (const out of recipe.outputs) {
-    const tool = ITEMS[out.item]?.tool;
-    if (!tool) return false;
-    if (ownedToolTier(state, tool.type) < tool.tier) return false;
+    const item = ITEMS[out.item];
+    if (!item) return false;
+    const tool = item.tool;
+    if (tool) {
+      if (ownedToolTier(state, tool.type) < tool.tier) return false;
+      continue;
+    }
+    if (item.oneTime) {
+      if (ownedQty(state, out.item) <= 0) return false;
+      continue;
+    }
+    return false;
   }
   return true;
 }
@@ -1769,26 +1796,58 @@ export function questContext(state: GameState): import("../data/types").QuestCon
   };
 }
 
+function questUnlocked(q: (typeof ALL_QUESTS)[number], ctx: import("../data/types").QuestContext): boolean {
+  for (const p of q.prereq ?? []) if (!ctx.completed(p)) return false;
+  return q.visible ? q.visible(ctx) : true;
+}
+
 /** Mark any visible quest whose `done` predicate now holds. Mutates the draft. */
 function evaluateQuests(draft: GameState): void {
   const ctx = questContext(draft);
   const already = new Set(draft.completedQuests);
   for (const q of ALL_QUESTS) {
     if (already.has(q.id)) continue;
-    if (!q.visible(ctx)) continue;
+    if (!questUnlocked(q, ctx)) continue;
     if (q.done(ctx)) draft.completedQuests.push(q.id);
   }
 }
 
-export function questsForDisplay(state: GameState): {
-  active: typeof ALL_QUESTS;
-  completed: typeof ALL_QUESTS;
-} {
+export type QuestStatus = "done" | "active" | "locked";
+
+export interface QuestNode {
+  quest: (typeof ALL_QUESTS)[number];
+  status: QuestStatus;
+  /** Longest path from a root, used as the column index in the tree view. */
+  depth: number;
+  /** Index in `ALL_QUESTS`, used as a stable secondary sort key. */
+  order: number;
+}
+
+/** Returns every quest with computed status and tree depth, ordered by ALL_QUESTS. */
+export function questsForTree(state: GameState): QuestNode[] {
   const ctx = questContext(state);
   const completedSet = new Set(state.completedQuests);
-  const active = ALL_QUESTS.filter((q) => !completedSet.has(q.id) && q.visible(ctx));
-  const completed = ALL_QUESTS.filter((q) => completedSet.has(q.id));
-  return { active, completed };
+  const depthCache = new Map<string, number>();
+  const depthOf = (id: string): number => {
+    const cached = depthCache.get(id);
+    if (cached !== undefined) return cached;
+    const q = ALL_QUESTS.find((x) => x.id === id);
+    if (!q || !q.prereq || q.prereq.length === 0) {
+      depthCache.set(id, 0);
+      return 0;
+    }
+    let d = 0;
+    for (const p of q.prereq) d = Math.max(d, depthOf(p) + 1);
+    depthCache.set(id, d);
+    return d;
+  };
+  return ALL_QUESTS.map((q, i) => {
+    let status: QuestStatus;
+    if (completedSet.has(q.id)) status = "done";
+    else if (questUnlocked(q, ctx)) status = "active";
+    else status = "locked";
+    return { quest: q, status, depth: depthOf(q.id), order: i };
+  });
 }
 
 // ---- pinned recipes ----

@@ -9,7 +9,6 @@ export const ALL_QUESTS: Quest[] = [
     kind: "utility",
     benefit: "Faster soil turning and a real shot at clay.",
     requires: ["flint_shovel"],
-    visible: () => true,
     done: (ctx) => ctx.has("flint_shovel"),
   },
   {
@@ -20,8 +19,18 @@ export const ALL_QUESTS: Quest[] = [
     kind: "utility",
     benefit: "+2 inventory slots while carried. Stacks with a haul pack.",
     requires: ["belt_pouch"],
-    visible: () => true,
     done: (ctx) => ctx.has("belt_pouch"),
+  },
+  {
+    id: "haul_pack",
+    title: "Lash up a haul pack",
+    description:
+      "A pouch keeps a handful, but the trip back from the outcrop wants more. Take an axe to a few boards, ply in a length of cordage, and shoulder a proper pack — the kind that carries a day's haul in one trip.",
+    kind: "utility",
+    benefit: "+6 inventory slots while carried. Stacks with the belt pouch.",
+    requires: ["haul_pack"],
+    prereq: ["belt_pouch"],
+    done: (ctx) => ctx.has("haul_pack"),
   },
   {
     id: "campfire",
@@ -31,7 +40,6 @@ export const ALL_QUESTS: Quest[] = [
     kind: "utility",
     benefit: "Unlocks roasting roots, tubers, and greens — meaningfully more food per harvest.",
     requires: ["campfire"],
-    visible: () => true,
     done: (ctx) => ctx.has("campfire"),
   },
   {
@@ -66,7 +74,6 @@ export const ALL_QUESTS: Quest[] = [
     kind: "utility",
     benefit: "Unlocks dried berries and dried roots — preserved food for long expeditions.",
     requires: ["drying_rack"],
-    visible: () => true,
     done: (ctx) => ctx.has("drying_rack"),
   },
   {
@@ -77,7 +84,6 @@ export const ALL_QUESTS: Quest[] = [
     kind: "progression",
     benefit: "Unlocks fired bricks, crucibles, and copper/tin/bronze smelting.",
     requires: ["clay_kiln"],
-    visible: () => true,
     done: (ctx) => ctx.has("clay_kiln"),
   },
   {
@@ -88,7 +94,6 @@ export const ALL_QUESTS: Quest[] = [
     kind: "progression",
     benefit: "Unlocks planting wheat: a renewable food chain past forage.",
     requires: ["tilled_plot"],
-    visible: () => true,
     done: (ctx) => ctx.has("tilled_plot"),
   },
   {
@@ -99,7 +104,6 @@ export const ALL_QUESTS: Quest[] = [
     kind: "utility",
     benefit: "A long-lived, calorie-dense food for expeditions and lean weeks.",
     requires: ["bread"],
-    visible: () => true,
     done: (ctx) => ctx.has("bread"),
   },
   {
@@ -110,7 +114,7 @@ export const ALL_QUESTS: Quest[] = [
     kind: "progression",
     benefit: "Unlocks sunflower oil and seedcake — the first products that aren't pulled from the ground or off a tree.",
     requires: ["oil_press"],
-    visible: (ctx) => ctx.completed("clay_kiln"),
+    prereq: ["clay_kiln"],
     done: (ctx) => ctx.has("oil_press"),
   },
   {
@@ -121,7 +125,7 @@ export const ALL_QUESTS: Quest[] = [
     kind: "utility",
     benefit: "Unlocks the clay jar — a small storage chest that doubles the shelf life of perishables stored inside.",
     requires: ["clay_jar"],
-    visible: (ctx) => ctx.completed("clay_kiln"),
+    prereq: ["clay_kiln"],
     done: (ctx) => ctx.has("clay_jar"),
   },
   {
@@ -132,7 +136,7 @@ export const ALL_QUESTS: Quest[] = [
     kind: "utility",
     benefit: "Unlocks the pitched jar — larger and quadruples shelf life. Long-haul preservation for the autumn stockpile.",
     requires: ["sealed_jar"],
-    visible: (ctx) => ctx.completed("clay_jar"),
+    prereq: ["clay_jar"],
     done: (ctx) => ctx.has("sealed_jar"),
   },
   {
@@ -143,7 +147,7 @@ export const ALL_QUESTS: Quest[] = [
     kind: "progression",
     benefit: "Stronger cordage — substitutes anywhere plain cordage is called for, and a meaningfully better return per cycle than wild fiber.",
     requires: ["strong_cordage"],
-    visible: (ctx) => ctx.completed("tilled_plot"),
+    prereq: ["tilled_plot"],
     done: (ctx) => ctx.has("strong_cordage"),
   },
 ];

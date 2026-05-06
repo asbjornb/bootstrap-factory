@@ -97,8 +97,8 @@ const list: Item[] = [
   { id: "flint_spear", name: "Flint Spear", icon: "🔱", description: "A long shaft, a knapped point, and a length of cordage holding them together. Hold it to stalk game in the brush.", tool: { type: "spear", tier: 1 }, stackSize: 1 },
 
   // carry gear — owning the item buffs your inventory cap (bonuses stack across worn items)
-  { id: "belt_pouch", name: "Belt Pouch", icon: "🎒", description: "A simple belt with loops and pouches. Carry a little more.", stackSize: 1, carryBonus: 2 },
-  { id: "haul_pack", name: "Haul Pack", icon: "🎒", description: "Boards and cordage shaped into a proper pack. Hauls a respectable load — pairs well with a belt pouch.", stackSize: 1, carryBonus: 6 },
+  { id: "belt_pouch", name: "Belt Pouch", icon: "🎒", description: "A simple belt with loops and pouches. Carry a little more.", stackSize: 1, carryBonus: 2, oneTime: true },
+  { id: "haul_pack", name: "Haul Pack", icon: "🎒", description: "Boards and cordage shaped into a proper pack. Hauls a respectable load — pairs well with a belt pouch.", stackSize: 1, carryBonus: 6, oneTime: true },
 
   // workshop blocks (also act as machine "slots" via inventory count)
   { id: "workbench", name: "Workbench", icon: "🧰", description: "A bench for non-trivial hand assembly.", stackSize: 1 },
@@ -118,6 +118,9 @@ const list: Item[] = [
 
 export const ITEMS: Record<ItemId, Item> = Object.fromEntries(list.map((i) => [i.id, i]));
 export const ALL_ITEMS: Item[] = list;
+export const ALL_TAGS: string[] = Array.from(
+  new Set(list.flatMap((i) => i.tags ?? [])),
+).sort();
 
 export function item(id: ItemId): Item {
   const it = ITEMS[id];

@@ -78,7 +78,7 @@ const list: ResourceNode[] = [
     icon: "⛰️",
     biome: "foothills",
     description:
-      "A rocky face poking through the loam. You only pocket what you know what to do with — rubble and flint at first, ores once you have somewhere to smelt them. Better picks chip stone faster and pull more from each swing.",
+      "A rocky face poking through the loam. Better picks chip stone faster and bite richer pieces from each swing.",
     baseDurationMs: 6000,
     speedups: [
       { type: "pickaxe", minTier: 1, durationMs: 4000 },
