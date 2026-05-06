@@ -14,7 +14,6 @@ import {
   gameNow,
   gather,
   gatherActiveTime,
-  gatherDuration,
   harvestNode,
   hasProvisions,
   hasUndiscoveredBiomes,
@@ -25,9 +24,8 @@ import {
   wander,
   wanderActiveTime,
 } from "../game/state";
-import { WANDER_DURATION_MS } from "../data/wander";
 import { isTagInput } from "../data/types";
-import type { Biome, GatherAction, RecipeInput, ResourceNode } from "../data/types";
+import type { Biome, GatherAction, ItemId, RecipeInput, ResourceNode } from "../data/types";
 import { clear, el } from "./dom";
 
 export function mountGather(root: HTMLElement): void {
@@ -92,30 +90,23 @@ function renderGatherCard(
 ): HTMLElement {
   const inSeason = (d: typeof a.drops[number]): boolean =>
     !d.seasons || d.seasons.includes(s.seasonIndex);
-  const toolLocked = new Set<string>();
-  const machineLocked = new Map<string, Set<string>>();
-  const available: string[] = [];
-  const seasonalDrops: string[] = [];
-  const isSeasonal = a.drops.some((d) => d.seasons && d.seasons.length < 4);
+  const toolLocked = new Set<ItemId>();
+  const machineLocked = new Map<string, Set<ItemId>>();
+  const available: ItemId[] = [];
   for (const d of a.drops) {
     if (!inSeason(d)) continue;
-    const itemName = ITEMS[d.item]!.name;
     const machineGate = d.requiresMachineEverBuilt;
     const machineMissing = !!machineGate && !s.everBuilt[machineGate];
     if (machineMissing) {
       if (!machineLocked.has(machineGate!)) machineLocked.set(machineGate!, new Set());
-      machineLocked.get(machineGate!)!.add(itemName);
-    } else if (d.requiresTool && bestToolTier(s, d.requiresTool.type) < d.requiresTool.minTier) {
-      toolLocked.add(itemName);
-      if (!available.includes(itemName)) available.push(itemName);
-    } else {
-      if (!available.includes(itemName)) available.push(itemName);
+      machineLocked.get(machineGate!)!.add(d.item);
+      continue;
     }
-    if (isSeasonal && !seasonalDrops.includes(itemName) && !machineMissing) {
-      seasonalDrops.push(itemName);
+    if (d.requiresTool && bestToolTier(s, d.requiresTool.type) < d.requiresTool.minTier) {
+      toolLocked.add(d.item);
     }
+    if (!available.includes(d.item)) available.push(d.item);
   }
-  const dur = gatherDuration(s, a);
   const isThisActive = job?.kind === "gather" && job.gatherId === a.id;
   const at = gatherActiveTime(a);
   const isFloor = a.id === FLOOR_GATHER_ID;
@@ -123,55 +114,54 @@ function renderGatherCard(
   const dayOk = fitsInDay(s, at);
   const budgetOk = canAfford(s, at, isFloor);
   const provOk = hasProvisions(s, a.provisions);
-  const gate = gateFor(at, dayOk, budgetOk, provOk, a.provisions, busy && !isThisActive, dur, toolOk, a.requiresTool);
+  const disabled = busy || !toolOk || !dayOk || !budgetOk || !provOk;
   const autoEat = isFloor ? forageAutoEatPreview(s) : [];
+
+  const title = buildTitle([
+    a.description,
+    available.length > 0
+      ? `Drops: ${available.map((id) => ITEMS[id]?.name ?? id).join(", ")}.`
+      : null,
+    toolLocked.size > 0
+      ? `Better tools could yield more: ${[...toolLocked].map((id) => ITEMS[id]?.name ?? id).join(", ")}.`
+      : null,
+    ...[...machineLocked.entries()].map(
+      ([m, ids]) =>
+        `Build a ${MACHINES[m]?.name ?? m} to start collecting: ${[...ids].map((id) => ITEMS[id]?.name ?? id).join(", ")}.`,
+    ),
+    autoEat.length > 0
+      ? `Auto-eats on empty: ${autoEat.map((e) => `${e.qty}× ${ITEMS[e.item]?.name ?? e.item}`).join(", ")}`
+      : null,
+    a.provisions ? `Pack: ${a.provisions.map(provisionLabel).join(", ")}` : null,
+    gateReason(at, dayOk, budgetOk, provOk, busy && !isThisActive, toolOk, a.requiresTool),
+  ]);
+
   return el("div", { class: "gather-card" }, [
     el(
       "button",
       {
         class: "gather-btn",
-        disabled: busy || !toolOk || !dayOk || !budgetOk || !provOk,
-        title: gate.reason ? gate.title : (a.description ?? gate.title),
+        disabled,
+        title,
         onclick: (ev: Event) => flashThen(ev, () => gather(a.id)),
       },
-      [el("span", { class: "icon big" }, a.icon), el("span", {}, a.name)],
+      [
+        el("span", { class: "icon" }, a.icon),
+        el("span", { class: "gather-name" }, a.name),
+        el("span", { class: "gather-time" }, `⏱ ${formatMinutes(at)}`),
+        renderDropIcons(available, toolLocked),
+        renderWarns({
+          toolOk,
+          toolReq: a.requiresTool,
+          dayOk,
+          budgetOk,
+          activeTime: at,
+          provOk,
+          provisions: a.provisions,
+        }),
+      ],
     ),
     isThisActive ? renderProgressBar(job!.startedAt, job!.endsAt) : null,
-    el("p", { class: "muted small" }, timeLine(dur, at)),
-    gate.reason ? el("p", { class: "small" }, gate.reason) : null,
-    autoEat.length > 0
-      ? el(
-          "p",
-          { class: "small", title: "Foraging on an empty budget eats your cheapest food first" },
-          `Auto-eats: ${autoEat
-            .map((e) => `${e.qty}× ${ITEMS[e.item]?.name ?? e.item}`)
-            .join(", ")}`,
-        )
-      : null,
-    a.provisions ? renderProvisions(a.provisions) : null,
-    isSeasonal
-      ? el(
-          "p",
-          { class: "small season-drops" },
-          `This season: ${seasonalDrops.length > 0 ? seasonalDrops.join(", ") : "nothing's in reach"}.`,
-        )
-      : available.length > 0
-        ? el("p", { class: "small" }, `Drops: ${available.join(", ")}.`)
-        : null,
-    ...Array.from(machineLocked.entries()).map(([machineId, items]) =>
-      el(
-        "p",
-        { class: "small" },
-        `Build a ${MACHINES[machineId]?.name ?? machineId} to start collecting: ${Array.from(items).join(", ")}.`,
-      ),
-    ),
-    toolLocked.size > 0
-      ? el(
-          "p",
-          { class: "small" },
-          `Better tools could yield more: ${Array.from(toolLocked).join(", ")}.`,
-        )
-      : null,
   ]);
 }
 
@@ -181,31 +171,41 @@ function renderExploreCard(
   busy: boolean,
   job: ReturnType<typeof store.get>["actionJob"],
 ): HTMLElement {
-  const dur = biome.exploreDurationMs;
   const isThisActive = job?.kind === "explore" && job.biomeId === biome.id;
   const at = biomeActiveTime(biome);
   const dayOk = fitsInDay(s, at);
   const budgetOk = canAfford(s, at, false);
   const provOk = hasProvisions(s, biome.provisions);
-  const gate = gateFor(at, dayOk, budgetOk, provOk, biome.provisions, busy && !isThisActive, dur);
+  const disabled = busy || !dayOk || !budgetOk || !provOk;
+  const title = buildTitle([
+    biome.description,
+    biome.provisions ? `Pack: ${biome.provisions.map(provisionLabel).join(", ")}` : null,
+    gateReason(at, dayOk, budgetOk, provOk, busy && !isThisActive, true, undefined),
+  ]);
   return el("div", { class: "gather-card explore-card" }, [
     el(
       "button",
       {
         class: "gather-btn",
-        disabled: busy || !dayOk || !budgetOk || !provOk,
-        title: gate.reason ? gate.title : (biome.description ?? gate.title),
+        disabled,
+        title,
         onclick: (ev: Event) => flashThen(ev, () => exploreBiome(biome.id)),
       },
       [
-        el("span", { class: "icon big" }, biome.icon),
-        el("span", {}, `Explore ${biome.name}`),
+        el("span", { class: "icon" }, biome.icon),
+        el("span", { class: "gather-name" }, `Explore ${biome.name}`),
+        el("span", { class: "gather-time" }, `⏱ ${formatMinutes(at)}`),
+        renderWarns({
+          toolOk: true,
+          dayOk,
+          budgetOk,
+          activeTime: at,
+          provOk,
+          provisions: biome.provisions,
+        }),
       ],
     ),
     isThisActive ? renderProgressBar(job!.startedAt, job!.endsAt) : null,
-    el("p", { class: "muted small" }, timeLine(dur, at)),
-    gate.reason ? el("p", { class: "small" }, gate.reason) : null,
-    biome.provisions ? renderProvisions(biome.provisions) : null,
   ]);
 }
 
@@ -214,27 +214,40 @@ function renderWanderCard(
   busy: boolean,
   job: ReturnType<typeof store.get>["actionJob"],
 ): HTMLElement {
-  const dur = WANDER_DURATION_MS;
   const isThisActive = job?.kind === "wander";
   const at = wanderActiveTime();
   const dayOk = fitsInDay(s, at);
   const budgetOk = canAfford(s, at, false);
-  const gate = gateFor(at, dayOk, budgetOk, true, undefined, busy && !isThisActive, dur);
   const flavor = "Strike out beyond the familiar woods. There must be other places worth knowing.";
+  const disabled = busy || !dayOk || !budgetOk;
+  const title = buildTitle([
+    flavor,
+    gateReason(at, dayOk, budgetOk, true, busy && !isThisActive, true, undefined),
+  ]);
   return el("div", { class: "gather-card explore-card" }, [
     el(
       "button",
       {
         class: "gather-btn",
-        disabled: busy || !dayOk || !budgetOk,
-        title: gate.reason ? gate.title : flavor,
+        disabled,
+        title,
         onclick: (ev: Event) => flashThen(ev, () => wander()),
       },
-      [el("span", { class: "icon big" }, "🧭"), el("span", {}, "Wander Further")],
+      [
+        el("span", { class: "icon" }, "🧭"),
+        el("span", { class: "gather-name" }, "Wander Further"),
+        el("span", { class: "gather-time" }, `⏱ ${formatMinutes(at)}`),
+        renderWarns({
+          toolOk: true,
+          dayOk,
+          budgetOk,
+          activeTime: at,
+          provOk: true,
+          provisions: undefined,
+        }),
+      ],
     ),
     isThisActive ? renderProgressBar(job!.startedAt, job!.endsAt) : null,
-    el("p", { class: "muted small" }, timeLine(dur, at)),
-    gate.reason ? el("p", { class: "small" }, gate.reason) : null,
   ]);
 }
 
@@ -252,34 +265,38 @@ function renderNodeCard(
   const dayOk = fitsInDay(s, at);
   const budgetOk = canAfford(s, at, false);
   const disabled = busy || !toolOk || !dayOk || !budgetOk;
-  const gateTitle = !toolOk
-    ? `Needs ${node.requiresTool!.type} (tier ≥ ${node.requiresTool!.minTier})`
-    : !dayOk
-      ? `Not enough day-time left — needs ${formatMinutes(at)}, sleep first`
-      : !budgetOk
-        ? `Not enough energy — needs ${formatMinutes(at)}, eat first`
-        : busy && !isThisActive
-          ? "Another action is in progress"
-          : null;
-  const title = gateTitle ?? node.description ?? `Takes ${formatDuration(dur)} (${formatMinutes(at)} in-world)`;
 
-  const toolLocked = new Set<string>();
-  const machineLocked = new Map<string, Set<string>>();
-  const available: string[] = [];
+  const toolLocked = new Set<ItemId>();
+  const machineLocked = new Map<string, Set<ItemId>>();
+  const available: ItemId[] = [];
   for (const d of node.drops) {
-    const itemName = ITEMS[d.item]!.name;
     const machineGate = d.requiresMachineEverBuilt;
     const machineMissing = !!machineGate && !s.everBuilt[machineGate];
     if (machineMissing) {
       if (!machineLocked.has(machineGate!)) machineLocked.set(machineGate!, new Set());
-      machineLocked.get(machineGate!)!.add(itemName);
+      machineLocked.get(machineGate!)!.add(d.item);
       continue;
     }
     if (d.requiresTool && bestToolTier(s, d.requiresTool.type) < d.requiresTool.minTier) {
-      toolLocked.add(itemName);
+      toolLocked.add(d.item);
     }
-    if (!available.includes(itemName)) available.push(itemName);
+    if (!available.includes(d.item)) available.push(d.item);
   }
+
+  const title = buildTitle([
+    node.description ?? `Takes ${formatDuration(dur)} (${formatMinutes(at)} in-world)`,
+    available.length > 0
+      ? `Drops: ${available.map((id) => ITEMS[id]?.name ?? id).join(", ")}.`
+      : null,
+    toolLocked.size > 0
+      ? `Better tools could yield more: ${[...toolLocked].map((id) => ITEMS[id]?.name ?? id).join(", ")}.`
+      : null,
+    ...[...machineLocked.entries()].map(
+      ([m, ids]) =>
+        `Build a ${MACHINES[m]?.name ?? m} to start collecting: ${[...ids].map((id) => ITEMS[id]?.name ?? id).join(", ")}.`,
+    ),
+    gateReason(at, dayOk, budgetOk, true, busy && !isThisActive, toolOk, node.requiresTool),
+  ]);
 
   return el("div", { class: "gather-card node-card" }, [
     el(
@@ -291,44 +308,89 @@ function renderNodeCard(
         onclick: (ev: Event) => flashThen(ev, () => harvestNode(node.id)),
       },
       [
-        el("span", { class: "icon big" }, node.icon),
-        el("span", {}, node.name),
+        el("span", { class: "icon" }, node.icon),
+        el("span", { class: "gather-name" }, node.name),
+        el("span", { class: "gather-time" }, `⏱ ${formatMinutes(at)}`),
+        renderDropIcons(available, toolLocked),
         charges > 0
-          ? el("span", { class: "node-charges", title: "Charges left" }, `×${charges}`)
+          ? el("span", { class: "node-charges", title: `${charges} charges left` }, `×${charges}`)
           : null,
+        renderWarns({
+          toolOk,
+          toolReq: node.requiresTool,
+          dayOk,
+          budgetOk,
+          activeTime: at,
+          provOk: true,
+          provisions: undefined,
+        }),
       ],
     ),
     isThisActive ? renderProgressBar(job!.startedAt, job!.endsAt) : null,
-    el(
-      "p",
-      { class: "muted small" },
-      `${timeLine(dur, at)} · ${charges} charge${charges === 1 ? "" : "s"} left`,
-    ),
-    !toolOk
-      ? el(
-          "p",
-          { class: "small" },
-          `Needs ${node.requiresTool!.type} (tier ≥ ${node.requiresTool!.minTier}).`,
-        )
-      : null,
-    available.length > 0
-      ? el("p", { class: "small" }, `Drops: ${available.join(", ")}.`)
-      : null,
-    ...Array.from(machineLocked.entries()).map(([machineId, items]) =>
-      el(
-        "p",
-        { class: "small" },
-        `Build a ${MACHINES[machineId]?.name ?? machineId} to start collecting: ${Array.from(items).join(", ")}.`,
-      ),
-    ),
-    toolLocked.size > 0
-      ? el(
-          "p",
-          { class: "small" },
-          `Better tools could yield more: ${Array.from(toolLocked).join(", ")}.`,
-        )
-      : null,
   ]);
+}
+
+function renderDropIcons(available: ItemId[], toolLocked: Set<ItemId>): HTMLElement | null {
+  if (available.length === 0) return null;
+  return el(
+    "span",
+    { class: "gather-drops" },
+    available.map((id) => {
+      const item = ITEMS[id];
+      const locked = toolLocked.has(id);
+      return el(
+        "span",
+        {
+          class: locked ? "drop-icon locked" : "drop-icon",
+          title: locked
+            ? `${item?.name ?? id} (better tool yields more)`
+            : item?.name ?? id,
+        },
+        item?.icon ?? "❓",
+      );
+    }),
+  );
+}
+
+interface WarnContext {
+  toolOk: boolean;
+  toolReq?: { type: string; minTier: number };
+  dayOk: boolean;
+  budgetOk: boolean;
+  activeTime: number;
+  provOk: boolean;
+  provisions?: RecipeInput[];
+}
+
+function renderWarns(c: WarnContext): HTMLElement | null {
+  const icons: HTMLElement[] = [];
+  if (!c.toolOk && c.toolReq) {
+    icons.push(
+      warnIcon("⚒️", `Needs ${c.toolReq.type} (tier ≥ ${c.toolReq.minTier})`),
+    );
+  }
+  if (!c.dayOk) {
+    icons.push(warnIcon("💤", `Needs ${formatMinutes(c.activeTime)} day-time — sleep first`));
+  }
+  if (!c.budgetOk) {
+    icons.push(warnIcon("🍞", `Needs ${formatMinutes(c.activeTime)} energy — eat first`));
+  }
+  if (c.provisions) {
+    const label = `Pack: ${c.provisions.map(provisionLabel).join(", ")}`;
+    icons.push(
+      el(
+        "span",
+        { class: c.provOk ? "warn-icon prov-ok" : "warn-icon", title: label },
+        "🥡",
+      ),
+    );
+  }
+  if (icons.length === 0) return null;
+  return el("span", { class: "gather-warns" }, icons);
+}
+
+function warnIcon(icon: string, title: string): HTMLElement {
+  return el("span", { class: "warn-icon", title }, icon);
 }
 
 function renderProgressBar(startedAt: number, endsAt: number): HTMLElement {
@@ -366,75 +428,28 @@ function formatMinutes(min: number): string {
   return h % 1 === 0 ? `${h} h` : `${h.toFixed(1)} h`;
 }
 
-function timeLine(realDur: number, activeTime: number): string {
-  return `⏱ ${formatDuration(realDur)} · ${formatMinutes(activeTime)} in-world`;
+function buildTitle(parts: (string | null | undefined)[]): string {
+  return parts.filter((p): p is string => !!p).join("\n");
 }
 
-function gateFor(
+function gateReason(
   activeTime: number,
   dayOk: boolean,
   budgetOk: boolean,
   provOk: boolean,
-  provisions: RecipeInput[] | undefined,
   busyOther: boolean,
-  realDur: number,
-  toolOk: boolean = true,
-  toolReq?: { type: string; minTier: number },
-): { title: string; reason: string | null } {
-  if (busyOther) {
-    return { title: "Another action is in progress", reason: "Another action is in progress" };
-  }
-  if (!toolOk && toolReq) {
-    return {
-      title: `Needs ${toolReq.type} (tier ≥ ${toolReq.minTier})`,
-      reason: `Needs ${toolReq.type} (tier ≥ ${toolReq.minTier})`,
-    };
-  }
-  if (!dayOk) {
-    return {
-      title: `Not enough day-time left — needs ${formatMinutes(activeTime)}, sleep first`,
-      reason: `Needs ${formatMinutes(activeTime)} day-time — sleep first`,
-    };
-  }
-  if (!budgetOk) {
-    return {
-      title: `Not enough energy — needs ${formatMinutes(activeTime)}, eat first`,
-      reason: `Needs ${formatMinutes(activeTime)} energy — eat first`,
-    };
-  }
-  if (!provOk && provisions) {
-    const need = provisions.map(provisionLabel).join(", ");
-    return {
-      title: `Pack rations first — needs ${need}`,
-      reason: `Pack rations first — needs ${need}`,
-    };
-  }
-  return {
-    title: `Takes ${formatDuration(realDur)} (${formatMinutes(activeTime)} in-world)`,
-    reason: null,
-  };
+  toolOk: boolean,
+  toolReq: { type: string; minTier: number } | undefined,
+): string | null {
+  if (busyOther) return "Another action is in progress";
+  if (!toolOk && toolReq) return `Needs ${toolReq.type} (tier ≥ ${toolReq.minTier})`;
+  if (!dayOk) return `Needs ${formatMinutes(activeTime)} day-time — sleep first`;
+  if (!budgetOk) return `Needs ${formatMinutes(activeTime)} energy — eat first`;
+  if (!provOk) return `Pack rations first`;
+  return null;
 }
 
 function provisionLabel(p: RecipeInput): string {
   if (isTagInput(p)) return `${p.qty}× any ${p.tag}`;
   return `${p.qty}× ${ITEMS[p.item]?.name ?? p.item}`;
-}
-
-function provisionIcon(p: RecipeInput): string {
-  if (isTagInput(p)) return "🥡";
-  return ITEMS[p.item]?.icon ?? "❓";
-}
-
-function renderProvisions(provisions: RecipeInput[]): HTMLElement {
-  return el("p", { class: "small provisions" }, [
-    el("span", {}, "Pack: "),
-    ...provisions.flatMap((p, i) => {
-      const node = el(
-        "span",
-        { class: "provision-chip", title: "Consumed up-front when the action starts" },
-        [el("span", { class: "icon" }, provisionIcon(p)), el("span", {}, provisionLabel(p))],
-      );
-      return i === 0 ? [node] : [el("span", {}, ", "), node];
-    }),
-  ]);
 }
