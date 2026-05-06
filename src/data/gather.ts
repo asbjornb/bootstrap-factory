@@ -15,11 +15,14 @@ const list: GatherAction[] = [
       "Walk the edges of camp turning over leaves and stripping low brambles. Slow but always available — what's in the basket depends on the season.",
     baseDurationMs: 6000,
     activeTime: 48,
-    // Per-season balance targets (food-min per 48-min cycle):
-    //   spring ~60 (lean, ~80% time = self-sustain)
-    //   summer ~72 (~67%)
-    //   autumn ~96 (~50% — abundance, time to stockpile)
-    //   winter ~54 (~89% — sustenance only, save your preserves)
+    // Per-season balance targets — raw food-min per 48-min cycle. Pre-fire,
+    // raw roots are weak (50) — eaten if the day's been hard but mostly
+    // stockpiled for the campfire, where roast_root jumps to 100. Eggs are
+    // the hidden bonus that makes a slow day still pay.
+    //   spring ~63 (lean, but bird_egg picks up some slack)
+    //   summer ~77 (berries + eggs)
+    //   autumn ~81 raw / ~125 with fire (abundance, stockpile and cook)
+    //   winter ~58 (sustenance — save your preserves)
     drops: [
       // Spring
       { item: "spring_shoots", qty: [1, 2], chance: 0.8, seasons: [0] },
@@ -37,6 +40,13 @@ const list: GatherAction[] = [
       { item: "pine_bark", qty: [1, 2], chance: 0.8, seasons: [3] },
       { item: "frozen_tuber", qty: [1, 1], chance: 0.6, seasons: [3] },
       { item: "plant_fiber", qty: [1, 1], chance: 0.15, seasons: [3] },
+      // Year-round bonuses. Eggs are the standout pre-fire calorie source —
+      // peak in nesting season, scarce in the cold months. The odd stick
+      // off the brushline makes the campfire viable without a dedicated
+      // stick run, but stays well below what forest actions return.
+      { item: "bird_egg", qty: [1, 1], chance: 0.2, seasons: [0, 1] },
+      { item: "bird_egg", qty: [1, 1], chance: 0.1, seasons: [2, 3] },
+      { item: "stick", qty: [1, 1], chance: 0.3 },
     ],
   },
   {
@@ -63,30 +73,6 @@ const list: GatherAction[] = [
       // Incidental forage on the way back.
       { item: "stick", qty: [1, 2], chance: 0.5 },
       { item: "plant_fiber", qty: [1, 1], chance: 0.3 },
-    ],
-  },
-  {
-    id: "distant_foray",
-    name: "Distant Foray",
-    icon: "🥾",
-    description:
-      "Pack a ration and strike out for the further bramble-and-marsh country. A long day, but you come back with the basket full.",
-    baseDurationMs: 14000,
-    activeTime: 112,
-    provisions: [{ tag: "ration", qty: 1 }],
-    drops: [
-      // Berry slot — tracks the season's dominant fruit. Spring/winter fall back to roots/bark below.
-      { item: "bramble_berries", qty: [3, 6], chance: 1, seasons: [1] },
-      { item: "elderberries", qty: [3, 6], chance: 1, seasons: [2] },
-      { item: "spring_shoots", qty: [3, 6], chance: 0.9, seasons: [0] },
-      { item: "pine_bark", qty: [3, 6], chance: 0.9, seasons: [3] },
-      // Roots — soft autumn ground digs best, frozen winter ground worst.
-      { item: "edible_root", qty: [2, 4], chance: 0.9, seasons: [0, 1, 2] },
-      { item: "frozen_tuber", qty: [1, 3], chance: 0.7, seasons: [3] },
-      // Year-round materials
-      { item: "plant_fiber", qty: [2, 4], chance: 0.7 },
-      { item: "stick", qty: [2, 4], chance: 0.6 },
-      { item: "resin", qty: [1, 1], chance: 0.15 },
     ],
   },
 ];

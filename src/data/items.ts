@@ -11,7 +11,8 @@ const list: Item[] = [
   { id: "bramble_berries", name: "Bramble Berries", icon: "🫐", description: "A handful of summer brambles. Sweet and bursting — eat soon, they don't keep.", food: { satiatesMinutes: 30 }, spoilsAfter: 12 * 60, tags: ["berry"] },
   { id: "elderberries", name: "Elderberries", icon: "🍇", description: "Dark autumn clusters. A little tart, a little astringent, but they hold a few days longer than the summer fruit.", food: { satiatesMinutes: 30 }, spoilsAfter: 16 * 60, tags: ["berry"] },
   { id: "spring_shoots", name: "Spring Shoots", icon: "🌱", description: "Tender new greens pushed up after the thaw. Bitter but filling, and the first real food of the year.", food: { satiatesMinutes: 20 }, spoilsAfter: 8 * 60 },
-  { id: "edible_root", name: "Edible Root", icon: "🥕", description: "A stubby tuber pulled from the soil. Earthy. Filling.", food: { satiatesMinutes: 60 }, spoilsAfter: 32 * 60 },
+  { id: "edible_root", name: "Edible Root", icon: "🥕", description: "A stubby tuber pulled from the soil. Tough and starchy raw — the gut barely cracks it. Heat is what makes a meal of it.", food: { satiatesMinutes: 50 }, spoilsAfter: 32 * 60 },
+  { id: "bird_egg", name: "Bird Egg", icon: "🥚", description: "A clutch lifted from a low nest. A real handful of calories with no work to extract them — the kind of thing you stop and look for.", food: { satiatesMinutes: 45 }, spoilsAfter: 24 * 60, stackSize: 16 },
   { id: "pine_bark", name: "Pine Bark", icon: "🪵", description: "Strips of inner bark, peeled in winter when nothing else stirs. Tough and resinous, but it keeps a body going.", food: { satiatesMinutes: 20 } },
   { id: "frozen_tuber", name: "Frozen Tuber", icon: "🥶", description: "A root pried from frozen ground. Hard as wood until you thaw it, but full of stored sugars.", food: { satiatesMinutes: 50 } },
 
@@ -23,9 +24,9 @@ const list: Item[] = [
   // cooked food (campfire). Heat breaks down starches and lignin, freeing
   // calories the raw form locked away. Spoils slower than raw but isn't
   // shelf-stable — drying is still the preservation track.
-  { id: "roast_root", name: "Roast Root", icon: "🍠", description: "A root buried in coals until the skin blackens and the heart goes sweet. Heat unlocks calories the raw tuber kept to itself.", food: { satiatesMinutes: 80 }, spoilsAfter: 64 * 60 },
+  { id: "roast_root", name: "Roast Root", icon: "🍠", description: "A root buried in coals until the skin blackens and the heart goes sweet. Heat unlocks calories the raw tuber kept to itself.", food: { satiatesMinutes: 100 }, spoilsAfter: 64 * 60 },
   { id: "roast_tuber", name: "Roast Tuber", icon: "🥔", description: "A frozen tuber thawed and roasted on the embers. The cold-stored sugars caramelise; what was a chore to chew turns into a meal.", food: { satiatesMinutes: 70 } },
-  { id: "wilted_greens", name: "Wilted Greens", icon: "🥬", description: "Spring shoots passed through the smoke until limp. Heat tames the bitterness and breaks the cell walls; a handful goes further than it has any right to.", food: { satiatesMinutes: 28 }, spoilsAfter: 16 * 60 },
+  { id: "cooked_egg", name: "Cooked Egg", icon: "🍳", description: "Heat sets the white and the yolk. Filling, and the cooked albumen unlocks more of the protein than the raw form gives up.", food: { satiatesMinutes: 70 }, spoilsAfter: 32 * 60, stackSize: 16 },
 
   // hunting — raw and prepared meat. Raw meat is a poor eat on its own; the
   // payoff is in cooking, where heat unlocks the calories the gut can't reach
