@@ -94,20 +94,26 @@ function renderGatherCard(
     !d.seasons || d.seasons.includes(s.seasonIndex);
   const toolLocked = new Set<string>();
   const machineLocked = new Map<string, Set<string>>();
+  const available: string[] = [];
   const seasonalDrops: string[] = [];
   const isSeasonal = a.drops.some((d) => d.seasons && d.seasons.length < 4);
   for (const d of a.drops) {
     if (!inSeason(d)) continue;
     const itemName = ITEMS[d.item]!.name;
-    if (d.requiresTool && bestToolTier(s, d.requiresTool.type) < d.requiresTool.minTier) {
+    const machineGate = d.requiresMachineEverBuilt;
+    const machineMissing = !!machineGate && !s.everBuilt[machineGate];
+    if (machineMissing) {
+      if (!machineLocked.has(machineGate!)) machineLocked.set(machineGate!, new Set());
+      machineLocked.get(machineGate!)!.add(itemName);
+    } else if (d.requiresTool && bestToolTier(s, d.requiresTool.type) < d.requiresTool.minTier) {
       toolLocked.add(itemName);
+      if (!available.includes(itemName)) available.push(itemName);
+    } else {
+      if (!available.includes(itemName)) available.push(itemName);
     }
-    const gate = d.requiresMachineEverBuilt;
-    if (gate && !s.everBuilt[gate]) {
-      if (!machineLocked.has(gate)) machineLocked.set(gate, new Set());
-      machineLocked.get(gate)!.add(itemName);
+    if (isSeasonal && !seasonalDrops.includes(itemName) && !machineMissing) {
+      seasonalDrops.push(itemName);
     }
-    if (isSeasonal && !seasonalDrops.includes(itemName)) seasonalDrops.push(itemName);
   }
   const dur = gatherDuration(s, a);
   const isThisActive = job?.kind === "gather" && job.gatherId === a.id;
@@ -124,7 +130,7 @@ function renderGatherCard(
       {
         class: "gather-btn",
         disabled: busy || !dayOk || !budgetOk || !provOk,
-        title: gate.title,
+        title: gate.reason ? gate.title : (a.description ?? gate.title),
         onclick: (ev: Event) => flashThen(ev, () => gather(a.id)),
       },
       [el("span", { class: "icon big" }, a.icon), el("span", {}, a.name)],
@@ -132,7 +138,6 @@ function renderGatherCard(
     isThisActive ? renderProgressBar(job!.startedAt, job!.endsAt) : null,
     el("p", { class: "muted small" }, timeLine(dur, at)),
     gate.reason ? el("p", { class: "small" }, gate.reason) : null,
-    el("p", { class: "muted small" }, a.description ?? ""),
     autoEat.length > 0
       ? el(
           "p",
@@ -149,12 +154,14 @@ function renderGatherCard(
           { class: "small season-drops" },
           `This season: ${seasonalDrops.length > 0 ? seasonalDrops.join(", ") : "nothing's in reach"}.`,
         )
-      : null,
+      : available.length > 0
+        ? el("p", { class: "small" }, `Drops: ${available.join(", ")}.`)
+        : null,
     ...Array.from(machineLocked.entries()).map(([machineId, items]) =>
       el(
         "p",
         { class: "small" },
-        `Build a ${MACHINES[machineId]?.name ?? machineId} and you'll start collecting: ${Array.from(items).join(", ")}.`,
+        `Build a ${MACHINES[machineId]?.name ?? machineId} to start collecting: ${Array.from(items).join(", ")}.`,
       ),
     ),
     toolLocked.size > 0
@@ -186,7 +193,7 @@ function renderExploreCard(
       {
         class: "gather-btn",
         disabled: busy || !dayOk || !budgetOk || !provOk,
-        title: gate.title,
+        title: gate.reason ? gate.title : (biome.description ?? gate.title),
         onclick: (ev: Event) => flashThen(ev, () => exploreBiome(biome.id)),
       },
       [
@@ -197,7 +204,6 @@ function renderExploreCard(
     isThisActive ? renderProgressBar(job!.startedAt, job!.endsAt) : null,
     el("p", { class: "muted small" }, timeLine(dur, at)),
     gate.reason ? el("p", { class: "small" }, gate.reason) : null,
-    el("p", { class: "muted small" }, biome.description ?? ""),
     biome.provisions ? renderProvisions(biome.provisions) : null,
   ]);
 }
@@ -213,13 +219,14 @@ function renderWanderCard(
   const dayOk = fitsInDay(s, at);
   const budgetOk = canAfford(s, at, false);
   const gate = gateFor(at, dayOk, budgetOk, true, undefined, busy && !isThisActive, dur);
+  const flavor = "Strike out beyond the familiar woods. There must be other places worth knowing.";
   return el("div", { class: "gather-card explore-card" }, [
     el(
       "button",
       {
         class: "gather-btn",
         disabled: busy || !dayOk || !budgetOk,
-        title: gate.title,
+        title: gate.reason ? gate.title : flavor,
         onclick: (ev: Event) => flashThen(ev, () => wander()),
       },
       [el("span", { class: "icon big" }, "🧭"), el("span", {}, "Wander Further")],
@@ -227,11 +234,6 @@ function renderWanderCard(
     isThisActive ? renderProgressBar(job!.startedAt, job!.endsAt) : null,
     el("p", { class: "muted small" }, timeLine(dur, at)),
     gate.reason ? el("p", { class: "small" }, gate.reason) : null,
-    el(
-      "p",
-      { class: "muted small" },
-      "Strike out beyond the familiar woods. There must be other places worth knowing.",
-    ),
   ]);
 }
 
@@ -249,7 +251,7 @@ function renderNodeCard(
   const dayOk = fitsInDay(s, at);
   const budgetOk = canAfford(s, at, false);
   const disabled = busy || !toolOk || !dayOk || !budgetOk;
-  const title = !toolOk
+  const gateTitle = !toolOk
     ? `Needs ${node.requiresTool!.type} (tier ≥ ${node.requiresTool!.minTier})`
     : !dayOk
       ? `Not enough day-time left — needs ${formatMinutes(at)}, sleep first`
@@ -257,13 +259,25 @@ function renderNodeCard(
         ? `Not enough energy — needs ${formatMinutes(at)}, eat first`
         : busy && !isThisActive
           ? "Another action is in progress"
-          : `Takes ${formatDuration(dur)} (${formatMinutes(at)} in-world) · ${charges} charge${charges === 1 ? "" : "s"} left`;
+          : null;
+  const title = gateTitle ?? node.description ?? `Takes ${formatDuration(dur)} (${formatMinutes(at)} in-world)`;
 
   const toolLocked = new Set<string>();
+  const machineLocked = new Map<string, Set<string>>();
+  const available: string[] = [];
   for (const d of node.drops) {
-    if (d.requiresTool && bestToolTier(s, d.requiresTool.type) < d.requiresTool.minTier) {
-      toolLocked.add(ITEMS[d.item]!.name);
+    const itemName = ITEMS[d.item]!.name;
+    const machineGate = d.requiresMachineEverBuilt;
+    const machineMissing = !!machineGate && !s.everBuilt[machineGate];
+    if (machineMissing) {
+      if (!machineLocked.has(machineGate!)) machineLocked.set(machineGate!, new Set());
+      machineLocked.get(machineGate!)!.add(itemName);
+      continue;
     }
+    if (d.requiresTool && bestToolTier(s, d.requiresTool.type) < d.requiresTool.minTier) {
+      toolLocked.add(itemName);
+    }
+    if (!available.includes(itemName)) available.push(itemName);
   }
 
   return el("div", { class: "gather-card node-card" }, [
@@ -289,7 +303,6 @@ function renderNodeCard(
       { class: "muted small" },
       `${timeLine(dur, at)} · ${charges} charge${charges === 1 ? "" : "s"} left`,
     ),
-    el("p", { class: "muted small" }, node.description ?? ""),
     !toolOk
       ? el(
           "p",
@@ -297,6 +310,16 @@ function renderNodeCard(
           `Needs ${node.requiresTool!.type} (tier ≥ ${node.requiresTool!.minTier}).`,
         )
       : null,
+    available.length > 0
+      ? el("p", { class: "small" }, `Drops: ${available.join(", ")}.`)
+      : null,
+    ...Array.from(machineLocked.entries()).map(([machineId, items]) =>
+      el(
+        "p",
+        { class: "small" },
+        `Build a ${MACHINES[machineId]?.name ?? machineId} to start collecting: ${Array.from(items).join(", ")}.`,
+      ),
+    ),
     toolLocked.size > 0
       ? el(
           "p",
