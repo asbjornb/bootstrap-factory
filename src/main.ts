@@ -11,6 +11,15 @@ import { mountRooms } from "./ui/rooms";
 import { mountTimebar } from "./ui/timebar";
 import { showToast, startMachineCraftedToasts } from "./ui/toast";
 
+type TabId = "gather" | "workshop" | "rooms";
+
+interface TabDef {
+  id: TabId;
+  label: string;
+  icon: string;
+  mount: HTMLElement;
+}
+
 function buildShell(): void {
   const app = document.getElementById("app")!;
   app.innerHTML = "";
@@ -27,60 +36,92 @@ function buildShell(): void {
     },
   });
 
-  const recipesBtn = el(
-    "button",
-    {
-      class: "header-btn",
-      title: "Open recipe index (R)",
-      onclick: () => recipesModal.open(),
-    },
-    "📖 Recipes",
-  );
+  // Top bar: title · timebar (day/season/time/stamina/sleep) · icon actions
+  const timebarSlot = el("div", { class: "topbar-timebar" });
 
-  const questbookBtn = el(
-    "button",
-    {
-      class: "header-btn",
-      title: "Open questbook (Q)",
-      onclick: () => questbookModal.open(),
-    },
-    "📜 Quests",
-  );
+  const iconBtn = (icon: string, title: string, onclick: () => void) =>
+    el("button", { class: "topbar-icon", title, onclick }, icon);
 
-  const header = el("header", { class: "app-header" }, [
-    el("h1", {}, "Bootstrap Factory"),
-    questbookBtn,
-    recipesBtn,
-    el(
-      "button",
-      {
-        class: "reset-btn",
-        title: "Wipe save and start over",
-        onclick: () => {
-          if (confirm("Reset all progress?")) reset();
+  const menu = el("details", { class: "topbar-menu" }, [
+    el("summary", { class: "topbar-icon", title: "More" }, "⋯"),
+    el("div", { class: "topbar-menu-items" }, [
+      el(
+        "button",
+        {
+          class: "menu-item danger",
+          onclick: (ev: Event) => {
+            (ev.currentTarget as HTMLElement).closest("details")?.removeAttribute("open");
+            if (confirm("Reset all progress?")) reset();
+          },
         },
-      },
-      "Reset",
-    ),
+        "Reset progress",
+      ),
+    ]),
   ]);
 
-  const gather = el("section", { id: "gather", class: "col col-left" });
-  const middle = el("section", { id: "middle", class: "col col-mid" });
+  const topbar = el("header", { class: "topbar" }, [
+    el("div", { class: "topbar-title" }, "Bootstrap Factory"),
+    timebarSlot,
+    el("div", { class: "topbar-actions" }, [
+      iconBtn("📜", "Quests (Q)", () => questbookModal.open()),
+      iconBtn("📖", "Recipe index (R)", () => recipesModal.open()),
+      menu,
+    ]),
+  ]);
 
-  const inventory = el("div");
-  const timebar = el("div", { id: "timebar-mount" });
-  gather.appendChild(timebar);
-  gather.appendChild(el("div", { id: "gather-mount" }));
-  gather.appendChild(inventory);
+  // Main shell: left inventory rail + tabbed main area
+  const inventoryMount = el("div", { id: "inventory-mount" });
 
-  const rooms = el("div", { id: "rooms-mount" });
-  const craft = el("div", { id: "craft-mount" });
-  middle.appendChild(rooms);
-  middle.appendChild(craft);
+  const gatherMount = el("div", { id: "gather-mount", class: "tab-pane" });
+  const craftMount = el("div", { id: "craft-mount", class: "tab-pane" });
+  const roomsMount = el("div", { id: "rooms-mount", class: "tab-pane" });
 
-  const main = el("main", { class: "app-grid" }, [gather, middle]);
-  app.appendChild(header);
-  app.appendChild(main);
+  const tabs: TabDef[] = [
+    { id: "gather", label: "Gather", icon: "🌿", mount: gatherMount },
+    { id: "workshop", label: "Workshop", icon: "🔨", mount: craftMount },
+    { id: "rooms", label: "Rooms", icon: "🏠", mount: roomsMount },
+  ];
+
+  const tabButtons: Record<TabId, HTMLButtonElement> = {} as Record<TabId, HTMLButtonElement>;
+  let activeTab: TabId = "gather";
+  const setTab = (id: TabId) => {
+    activeTab = id;
+    for (const t of tabs) {
+      const isActive = t.id === id;
+      t.mount.classList.toggle("active", isActive);
+      tabButtons[t.id].classList.toggle("active", isActive);
+      tabButtons[t.id].setAttribute("aria-selected", isActive ? "true" : "false");
+    }
+  };
+
+  const tabStrip = el(
+    "nav",
+    { class: "tab-strip", role: "tablist" },
+    tabs.map((t) => {
+      const btn = el(
+        "button",
+        {
+          class: "tab",
+          role: "tab",
+          title: t.label,
+          onclick: () => setTab(t.id),
+        },
+        [el("span", { class: "tab-icon" }, t.icon), el("span", { class: "tab-label" }, t.label)],
+      );
+      tabButtons[t.id] = btn;
+      return btn;
+    }),
+  );
+
+  const rail = el("aside", { class: "rail" }, [inventoryMount]);
+  const mainArea = el("section", { class: "main-area" }, [
+    tabStrip,
+    el("div", { class: "tab-panes" }, [gatherMount, craftMount, roomsMount]),
+  ]);
+  const shell = el("main", { class: "app-shell" }, [rail, mainArea]);
+
+  app.appendChild(topbar);
+  app.appendChild(shell);
 
   const openItemInRecipes = (id: Parameters<typeof selectItem>[0]) => {
     selectItem(id);
@@ -91,11 +132,13 @@ function buildShell(): void {
     recipesModal.open();
   };
 
-  mountTimebar(timebar);
-  mountGather(gather.querySelector("#gather-mount") as HTMLElement);
-  mountInventory(inventory);
-  mountRooms(rooms, { onOpenItem: openItemInRecipes, onOpenTag: openTagInRecipes });
-  mountCraft(craft, { onOpenItem: openItemInRecipes, onOpenTag: openTagInRecipes });
+  mountTimebar(timebarSlot);
+  mountInventory(inventoryMount);
+  mountGather(gatherMount);
+  mountCraft(craftMount, { onOpenItem: openItemInRecipes, onOpenTag: openTagInRecipes });
+  mountRooms(roomsMount, { onOpenItem: openItemInRecipes, onOpenTag: openTagInRecipes });
+
+  setTab(activeTab);
 
   document.addEventListener("keydown", (ev) => {
     const target = ev.target as HTMLElement | null;
