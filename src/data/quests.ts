@@ -24,6 +24,17 @@ export const ALL_QUESTS: Quest[] = [
     done: (ctx) => ctx.has("belt_pouch"),
   },
   {
+    id: "haul_pack",
+    title: "Lash up a haul pack",
+    description:
+      "A pouch keeps a handful, but the trip back from the outcrop wants more. Take an axe to a few boards, ply in a length of cordage, and shoulder a proper pack — the kind that carries a day's haul in one trip.",
+    kind: "utility",
+    benefit: "+6 inventory slots while carried. Stacks with the belt pouch.",
+    requires: ["haul_pack"],
+    visible: (ctx) => ctx.completed("belt_pouch"),
+    done: (ctx) => ctx.has("haul_pack"),
+  },
+  {
     id: "campfire",
     title: "Light a campfire",
     description:

@@ -24,7 +24,7 @@ import {
   pickupMachine,
   placeChest,
   placeMachine,
-  producesObsoleteTool,
+  producesObsoleteCraft,
   renameRoom,
   save,
   SEASONS,
@@ -323,7 +323,7 @@ function renderMachineDetail(cell: PlacedMachine): HTMLElement {
     (r) =>
       r.machine === cell.machineId &&
       (hasInputsAndTool(s, r) || (r.seasons && hasInputsAndToolIgnoringSeason(s, r))) &&
-      !producesObsoleteTool(s, r),
+      !producesObsoleteCraft(s, r),
   );
 
   const canPickup =
