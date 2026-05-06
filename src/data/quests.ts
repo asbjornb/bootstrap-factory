@@ -43,6 +43,30 @@ export const ALL_QUESTS: Quest[] = [
     done: (ctx) => ctx.has("campfire"),
   },
   {
+    id: "flint_spear",
+    title: "Knap a flint spear",
+    description:
+      "Forage feeds you a handful at a time. A spear feeds you the whole afternoon. Knap a flint point, lash it to a long shaft, and a new option opens up: stalking game in the brush.",
+    kind: "progression",
+    benefit:
+      "Unlocks Stalk Game — a long, miss-prone hunting trip that returns raw meat (and hides) when it lands.",
+    requires: ["flint_spear"],
+    visible: () => true,
+    done: (ctx) => ctx.has("flint_spear"),
+  },
+  {
+    id: "cook_meat",
+    title: "Cook a kill",
+    description:
+      "Raw meat is barely food — your gut can't crack it. The campfire does. Bring a slab of raw meat and a stick of fuel to the fire and you'll see what cooking is actually worth.",
+    kind: "utility",
+    benefit:
+      "Cooked meat has roughly three and a half times the food value of raw — the cooking payoff that roots and greens only hint at.",
+    requires: ["cooked_meat"],
+    visible: (ctx) => ctx.completed("flint_spear") && ctx.completed("campfire"),
+    done: (ctx) => ctx.has("cooked_meat"),
+  },
+  {
     id: "drying_rack",
     title: "Raise a drying rack",
     description:

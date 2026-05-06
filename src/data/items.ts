@@ -27,6 +27,14 @@ const list: Item[] = [
   { id: "roast_tuber", name: "Roast Tuber", icon: "🥔", description: "A frozen tuber thawed and roasted on the embers. The cold-stored sugars caramelise; what was a chore to chew turns into a meal.", food: { satiatesMinutes: 70 } },
   { id: "wilted_greens", name: "Wilted Greens", icon: "🥬", description: "Spring shoots passed through the smoke until limp. Heat tames the bitterness and breaks the cell walls; a handful goes further than it has any right to.", food: { satiatesMinutes: 28 }, spoilsAfter: 16 * 60 },
 
+  // hunting — raw and prepared meat. Raw meat is a poor eat on its own; the
+  // payoff is in cooking, where heat unlocks the calories the gut can't reach
+  // raw. Jerky is the travel form — most of the food value of cooked, kept.
+  { id: "raw_meat", name: "Raw Meat", icon: "🥩", description: "A bloody slab off the day's kill. Filling raw, but the gut barely cracks it — heat is what makes a meal of it.", food: { satiatesMinutes: 40 }, spoilsAfter: 10 * 60, stackSize: 16 },
+  { id: "cooked_meat", name: "Cooked Meat", icon: "🍖", description: "Charred outside, hot through. Heat breaks the muscle and frees calories the raw cut hoarded — a kill goes a long way once it's been on the embers.", food: { satiatesMinutes: 140 }, spoilsAfter: 48 * 60, stackSize: 16 },
+  { id: "jerky", name: "Jerky", icon: "🥓", description: "Strips dried hard on the rack. Most of the meat's calories, none of its weight or rot — the ration that travels furthest.", food: { satiatesMinutes: 110 }, stackSize: 32, tags: ["ration"] },
+  { id: "hide", name: "Hide", icon: "🟫", description: "A green hide pulled off the carcass. Stiff and unfinished — leather is a job for later, but you stash it for the day you can work it.", stackSize: 16 },
+
   // soil
   { id: "loam", name: "Loam", icon: "🟤", description: "Dark crumbly soil. Binds clay into daub." },
   { id: "clay_lump", name: "Clay Lump", icon: "🟫", description: "Wet, plastic clay. Fires into bricks." },
@@ -86,6 +94,7 @@ const list: Item[] = [
   { id: "bronze_pick", name: "Bronze Pick", icon: "⛏️", description: "Heavier swing, bigger chips. Pulls richer copper and tin from the same outcrop.", tool: { type: "pickaxe", tier: 3 }, stackSize: 1 },
   { id: "iron_axe", name: "Iron Axe", icon: "🪓", description: "Heavy. Splits a log in two strokes.", tool: { type: "axe", tier: 4 }, stackSize: 1 },
   { id: "iron_pick", name: "Iron Pick", icon: "⛏️", description: "Cleaves stone in fewer strokes and turns up more iron and coal per swing.", tool: { type: "pickaxe", tier: 4 }, stackSize: 1 },
+  { id: "flint_spear", name: "Flint Spear", icon: "🔱", description: "A long shaft, a knapped point, and a length of cordage holding them together. Hold it to stalk game in the brush.", tool: { type: "spear", tier: 1 }, stackSize: 1 },
 
   // carry gear — owning the item buffs your inventory cap (bonuses stack across worn items)
   { id: "belt_pouch", name: "Belt Pouch", icon: "🎒", description: "A simple belt with loops and pouches. Carry a little more.", stackSize: 1, carryBonus: 2, oneTime: true },
