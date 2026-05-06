@@ -1,6 +1,10 @@
-import { BIOMES } from "../data/biomes";
-import { gatherActionsProducing } from "../data/gather";
-import { ALL_ITEMS, ITEMS, itemsWithTag } from "../data/items";
+import { BIOMES, biomesRequiringItem, biomesRequiringTag } from "../data/biomes";
+import {
+  gatherActionsProducing,
+  gatherActionsRequiringItem,
+  gatherActionsRequiringTag,
+} from "../data/gather";
+import { ALL_ITEMS, ALL_TAGS, ITEMS, itemsWithTag } from "../data/items";
 import { MACHINES } from "../data/machines";
 import { nodesProducing } from "../data/nodes";
 import {
@@ -11,7 +15,7 @@ import {
 } from "../data/recipes";
 import { isPinned, SEASONS, store, togglePin } from "../game/state";
 import { isTagInput } from "../data/types";
-import type { DropEntry, GatherAction, ItemId, Recipe, RecipeInput, ResourceNode } from "../data/types";
+import type { Biome, DropEntry, GatherAction, ItemId, Recipe, RecipeInput, ResourceNode } from "../data/types";
 import { clear, el } from "./dom";
 
 type Selection =
@@ -97,30 +101,51 @@ function renderItemList(): HTMLElement {
       !q ||
       i.name.toLowerCase().includes(q) ||
       i.id.includes(q) ||
-      (i.description ?? "").toLowerCase().includes(q),
+      (i.description ?? "").toLowerCase().includes(q) ||
+      (i.tags ?? []).some((t) => t.toLowerCase().includes(q)),
   );
+  const tags = q ? ALL_TAGS.filter((t) => t.toLowerCase().includes(q)) : [];
+
+  const tagEls = tags.map((tag) => {
+    const isSelected = state.selected?.kind === "tag" && state.selected.tag === tag;
+    const sample = itemsWithTag(tag)[0];
+    return el(
+      "li",
+      {
+        class: "ri-item ri-item-tag" + (isSelected ? " selected" : ""),
+        onclick: () => selectTag(tag),
+      },
+      [
+        el("span", { class: "icon" }, sample?.icon ?? "🏷️"),
+        el("span", { class: "name" }, `Any ${tag}`),
+        el("span", { class: "qty muted small" }, "tag"),
+      ],
+    );
+  });
+
+  const itemEls = items.map((i) => {
+    const owned = store.get().inventory[i.id] ?? 0;
+    const isSelected =
+      state.selected?.kind === "item" && state.selected.id === i.id;
+    return el(
+      "li",
+      {
+        class: "ri-item" + (isSelected ? " selected" : ""),
+        onclick: () => selectItem(i.id),
+      },
+      [
+        el("span", { class: "icon" }, i.icon),
+        el("span", { class: "name" }, i.name),
+        owned > 0 ? el("span", { class: "qty" }, String(owned)) : null,
+      ],
+    );
+  });
+
+  const empty = tagEls.length === 0 && itemEls.length === 0;
   return el(
     "ul",
     { class: "ri-item-list" },
-    items.length === 0
-      ? [el("li", { class: "muted small" }, "No matches.")]
-      : items.map((i) => {
-          const owned = store.get().inventory[i.id] ?? 0;
-          const isSelected =
-            state.selected?.kind === "item" && state.selected.id === i.id;
-          return el(
-            "li",
-            {
-              class: "ri-item" + (isSelected ? " selected" : ""),
-              onclick: () => selectItem(i.id),
-            },
-            [
-              el("span", { class: "icon" }, i.icon),
-              el("span", { class: "name" }, i.name),
-              owned > 0 ? el("span", { class: "qty" }, String(owned)) : null,
-            ],
-          );
-        }),
+    empty ? [el("li", { class: "muted small" }, "No matches.")] : [...tagEls, ...itemEls],
   );
 }
 
@@ -144,6 +169,8 @@ function renderItemDetail(id: ItemId): HTMLElement {
   const asMachine = MACHINES[id] ? recipesUsingAsMachine(id) : [];
   const gatheredFrom = gatherActionsProducing(id);
   const harvestedFrom = nodesProducing(id);
+  const packedFor = gatherActionsRequiringItem(id);
+  const exploredFor = biomesRequiringItem(id);
   const owned = store.get().inventory[id] ?? 0;
   const focus: Focus = { kind: "item", id };
 
@@ -174,6 +201,7 @@ function renderItemDetail(id: ItemId): HTMLElement {
       : null,
     section(`Recipes (${produced.length})`, produced, focus, "produces"),
     section(`Used in (${consumed.length})`, consumed, focus, "consumes"),
+    provisionsSection(packedFor, exploredFor, focus),
     asTool.length > 0
       ? section(`Used as tool in (${asTool.length})`, asTool, focus, "tool")
       : null,
@@ -249,6 +277,9 @@ function renderTagDetail(tag: string): HTMLElement {
     ]),
   ]);
 
+  const packedFor = gatherActionsRequiringTag(tag);
+  const exploredFor = biomesRequiringTag(tag);
+
   return el("div", { class: "ri-detail" }, [
     head,
     gathered.length > 0
@@ -267,6 +298,7 @@ function renderTagDetail(tag: string): HTMLElement {
       : null,
     section(`Recipes producing any ${tag} (${produced.length})`, produced, focus, "produces"),
     section(`Used in (${consumed.length})`, consumed, focus, "consumes"),
+    provisionsSection(packedFor, exploredFor, focus),
   ]);
 }
 
@@ -376,6 +408,49 @@ function renderGatherCard(a: GatherAction, pred: (drop: ItemId) => boolean): HTM
       "div",
       { class: "ri-recipe-stacks" },
       drops.map((d) => dropChip(d)),
+    ),
+  ]);
+}
+
+function provisionsSection(
+  gathers: GatherAction[],
+  biomes: Biome[],
+  focus: Focus,
+): HTMLElement | null {
+  const total = gathers.length + biomes.length;
+  if (total === 0) return null;
+  return el("div", { class: "ri-section" }, [
+    el("h4", {}, `Packed for (${total})`),
+    el(
+      "div",
+      { class: "recipe-list" },
+      [
+        ...gathers.map((g) =>
+          renderProvisionCard(g.icon, g.name, g.provisions ?? [], focus),
+        ),
+        ...biomes.map((b) =>
+          renderProvisionCard(b.icon, `Explore ${b.name}`, b.provisions ?? [], focus),
+        ),
+      ],
+    ),
+  ]);
+}
+
+function renderProvisionCard(
+  icon: string,
+  name: string,
+  provisions: RecipeInput[],
+  focus: Focus,
+): HTMLElement {
+  return el("div", { class: "ri-recipe" }, [
+    el("div", { class: "ri-recipe-machine", title: name }, [
+      el("span", { class: "icon" }, icon),
+      el("span", { class: "small" }, name),
+    ]),
+    el(
+      "div",
+      { class: "ri-recipe-stacks" },
+      provisions.map((p) => inputChip(p, focus, "consumes")),
     ),
   ]);
 }

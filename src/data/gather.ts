@@ -1,3 +1,5 @@
+import { ITEMS } from "./items";
+import { isTagInput } from "./types";
 import type { GatherAction, GatherId, ItemId } from "./types";
 
 // Always-on gather actions with no node and no charges. The "Forage
@@ -71,4 +73,29 @@ export const ALL_GATHER_ACTIONS: GatherAction[] = list;
 /** All gather actions that can drop the given item. */
 export function gatherActionsProducing(itemId: ItemId): GatherAction[] {
   return list.filter((g) => g.drops.some((d) => d.item === itemId));
+}
+
+/**
+ * Gather actions whose provisions accept the given tag — either directly
+ * (TagInput on this tag) or via a Stack provision whose item carries the tag.
+ */
+export function gatherActionsRequiringTag(tag: string): GatherAction[] {
+  return list.filter((g) =>
+    g.provisions?.some((p) =>
+      isTagInput(p) ? p.tag === tag : ITEMS[p.item]?.tags?.includes(tag),
+    ),
+  );
+}
+
+/**
+ * Gather actions whose provisions accept the given item — either as a direct
+ * Stack input or via a TagInput matching one of the item's tags.
+ */
+export function gatherActionsRequiringItem(itemId: ItemId): GatherAction[] {
+  const tags = ITEMS[itemId]?.tags ?? [];
+  return list.filter((g) =>
+    g.provisions?.some((p) =>
+      isTagInput(p) ? tags.includes(p.tag) : p.item === itemId,
+    ),
+  );
 }

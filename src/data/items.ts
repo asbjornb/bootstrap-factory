@@ -109,6 +109,9 @@ const list: Item[] = [
 
 export const ITEMS: Record<ItemId, Item> = Object.fromEntries(list.map((i) => [i.id, i]));
 export const ALL_ITEMS: Item[] = list;
+export const ALL_TAGS: string[] = Array.from(
+  new Set(list.flatMap((i) => i.tags ?? [])),
+).sort();
 
 export function item(id: ItemId): Item {
   const it = ITEMS[id];
