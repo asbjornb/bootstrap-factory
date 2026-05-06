@@ -113,17 +113,18 @@ function renderGatherCard(
   const isThisActive = job?.kind === "gather" && job.gatherId === a.id;
   const at = gatherActiveTime(a);
   const isFloor = a.id === FLOOR_GATHER_ID;
+  const toolOk = !a.requiresTool || bestToolTier(s, a.requiresTool.type) >= a.requiresTool.minTier;
   const dayOk = fitsInDay(s, at);
   const budgetOk = canAfford(s, at, isFloor);
   const provOk = hasProvisions(s, a.provisions);
-  const gate = gateFor(at, dayOk, budgetOk, provOk, a.provisions, busy && !isThisActive, dur);
+  const gate = gateFor(at, dayOk, budgetOk, provOk, a.provisions, busy && !isThisActive, dur, toolOk, a.requiresTool);
   const autoEat = isFloor ? forageAutoEatPreview(s) : [];
   return el("div", { class: "gather-card" }, [
     el(
       "button",
       {
         class: "gather-btn",
-        disabled: busy || !dayOk || !budgetOk || !provOk,
+        disabled: busy || !toolOk || !dayOk || !budgetOk || !provOk,
         title: gate.title,
         onclick: (ev: Event) => flashThen(ev, () => gather(a.id)),
       },
@@ -354,9 +355,17 @@ function gateFor(
   provisions: RecipeInput[] | undefined,
   busyOther: boolean,
   realDur: number,
+  toolOk: boolean = true,
+  toolReq?: { type: string; minTier: number },
 ): { title: string; reason: string | null } {
   if (busyOther) {
     return { title: "Another action is in progress", reason: "Another action is in progress" };
+  }
+  if (!toolOk && toolReq) {
+    return {
+      title: `Needs ${toolReq.type} (tier ≥ ${toolReq.minTier})`,
+      reason: `Needs ${toolReq.type} (tier ≥ ${toolReq.minTier})`,
+    };
   }
   if (!dayOk) {
     return {

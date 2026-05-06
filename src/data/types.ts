@@ -5,7 +5,7 @@ export type GatherId = string;
 export type BiomeId = string;
 export type NodeId = string;
 
-export type ToolType = "axe" | "pickaxe" | "shovel";
+export type ToolType = "axe" | "pickaxe" | "shovel" | "spear";
 
 export interface ToolRequirement {
   type: ToolType;
@@ -180,6 +180,8 @@ export interface GatherAction {
   activeTime?: number;
   /** Items consumed up-front before the action starts (rations for the trip). Tag inputs accept any item carrying the tag. */
   provisions?: RecipeInput[];
+  /** Tool that must be held (not consumed) to start the action. */
+  requiresTool?: ToolRequirement;
 }
 
 /** A finite resource node found by exploring a biome. Charges deplete with each harvest. */

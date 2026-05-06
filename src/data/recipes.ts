@@ -113,6 +113,20 @@ const list: Recipe[] = [
     outputs: [{ item: "flint_shovel", qty: 1 }],
     durationMs: 1200,
   },
+  // A long shaft, a knapped point, a wrap of cordage. Cheaper than the
+  // hatchet — two sticks for the shaft skip the haft step entirely — so
+  // hunting unlocks early and the cooking payoff isn't gated behind ore.
+  {
+    id: "flint_spear",
+    machine: "workbench",
+    inputs: [
+      { item: "stick", qty: 2 },
+      { item: "flint", qty: 1 },
+      { tag: "cordage", qty: 1 },
+    ],
+    outputs: [{ item: "flint_spear", qty: 1 }],
+    durationMs: 1500,
+  },
 
   // ---- workbench: workshop blocks ----
   {
@@ -425,6 +439,16 @@ const list: Recipe[] = [
     outputs: [{ item: "dried_root", qty: 1 }],
     durationMs: 6000,
   },
+  // Strips dried hard on the rack. Loses less to drying than fruit does —
+  // meat concentrates rather than withers — so jerky comes out close to
+  // cooked-meat food value, but ration-tagged for the road.
+  {
+    id: "dry_meat",
+    machine: "drying_rack",
+    inputs: [{ item: "raw_meat", qty: 2 }],
+    outputs: [{ item: "jerky", qty: 1 }],
+    durationMs: 7000,
+  },
 
   // ---- campfire ----
   // Cooking returns more food value than the raw input because heat
@@ -459,6 +483,20 @@ const list: Recipe[] = [
     ],
     outputs: [{ item: "wilted_greens", qty: 1 }],
     durationMs: 2000,
+  },
+  // Cooking meat is where heat actually pays. A raw cut is barely food —
+  // the gut can't crack the muscle — but the same cut on the embers
+  // unfolds into a meal. The food-min jump is roughly 3.5×, much bigger
+  // than roasting a root, because that's how meat works.
+  {
+    id: "cook_meat",
+    machine: "campfire",
+    inputs: [
+      { item: "raw_meat", qty: 1 },
+      { item: "stick", qty: 1 },
+    ],
+    outputs: [{ item: "cooked_meat", qty: 1 }],
+    durationMs: 3000,
   },
 
   // ---- charcoal pit ----

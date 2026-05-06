@@ -1140,6 +1140,10 @@ export function gather(actionId: GatherId): ActionResult {
     }
     const at = gatherActiveTime(action);
     const isFloor = action.id === FLOOR_GATHER_ID;
+    if (!meetsToolReq(s, action.requiresTool)) {
+      result = { ok: false, reason: "missing_tool" };
+      return;
+    }
     if (!fitsInDay(s, at)) {
       result = { ok: false, reason: "no_daytime" };
       return;

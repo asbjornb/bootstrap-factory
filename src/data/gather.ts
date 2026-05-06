@@ -38,6 +38,32 @@ const list: GatherAction[] = [
     ],
   },
   {
+    // Active hunting. The spear is the gate; without one this slot stays
+    // dark. A trip is long and miss-prone — many trips come back with a
+    // handful of sticks and a story — but a kill is a stack of raw meat,
+    // and once the campfire's lit raw meat cooks down to a multiple of its
+    // raw food value. This is where cooking finally pays.
+    id: "stalk_game",
+    name: "Stalk Game",
+    icon: "🦌",
+    description:
+      "Hold the spear low and follow the brush trails. Long, often a wasted afternoon — but a kill is many days of food, especially once you have a fire to cook it on.",
+    baseDurationMs: 9000,
+    activeTime: 80,
+    requiresTool: { type: "spear", minTier: 1 },
+    drops: [
+      // Primary kill: ~70% of trips return at least 1 raw meat.
+      { item: "raw_meat", qty: [1, 3], chance: 0.7 },
+      // Clean-hit bonus on top — turns a good kill into a great one.
+      { item: "raw_meat", qty: [1, 2], chance: 0.3 },
+      // The hide off a kill. Stash for the leather pass.
+      { item: "hide", qty: [1, 1], chance: 0.4 },
+      // Incidental forage on the way back.
+      { item: "stick", qty: [1, 2], chance: 0.5 },
+      { item: "plant_fiber", qty: [1, 1], chance: 0.3 },
+    ],
+  },
+  {
     id: "distant_foray",
     name: "Distant Foray",
     icon: "🥾",
