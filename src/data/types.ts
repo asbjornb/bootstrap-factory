@@ -23,6 +23,8 @@ export interface Item {
   stackSize?: number;
   /** Owning this item adds to the player's carry capacity. Bonuses stack across all owned carry-gear items. */
   carryBonus?: number;
+  /** If set, recipes producing this item are hidden from the crafts list once the player owns one anywhere. */
+  oneTime?: boolean;
   /** If set, this item can be eaten to refund time-budget minutes. */
   food?: { satiatesMinutes: number };
   /**

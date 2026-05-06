@@ -88,7 +88,7 @@ const list: Item[] = [
   { id: "iron_pick", name: "Iron Pick", icon: "⛏️", description: "Cleaves stone in fewer strokes and turns up more iron and coal per swing.", tool: { type: "pickaxe", tier: 4 }, stackSize: 1 },
 
   // carry gear — owning the item buffs your inventory cap (bonuses stack across worn items)
-  { id: "belt_pouch", name: "Belt Pouch", icon: "🎒", description: "A simple belt with loops and pouches. Carry a little more.", stackSize: 1, carryBonus: 2 },
+  { id: "belt_pouch", name: "Belt Pouch", icon: "🎒", description: "A simple belt with loops and pouches. Carry a little more.", stackSize: 1, carryBonus: 2, oneTime: true },
   { id: "haul_pack", name: "Haul Pack", icon: "🎒", description: "Boards and cordage shaped into a proper pack. Hauls a respectable load — pairs well with a belt pouch.", stackSize: 1, carryBonus: 6 },
 
   // workshop blocks (also act as machine "slots" via inventory count)

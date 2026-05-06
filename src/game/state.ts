@@ -610,16 +610,43 @@ export function ownedToolTier(
   return best;
 }
 
+/** Total qty of an item across inventory, floor, and chests. */
+export function ownedQty(state: GameState, itemId: ItemId): number {
+  return (
+    (state.inventory[itemId] ?? 0) +
+    (state.floor[itemId] ?? 0) +
+    state.rooms.reduce(
+      (n, r) =>
+        n +
+        r.cells.reduce(
+          (m, c) => m + (c.kind === "chest" ? (c.contents[itemId] ?? 0) : 0),
+          0,
+        ),
+      0,
+    )
+  );
+}
+
 /**
- * True if every output of the recipe is a tool item the player already owns
- * (anywhere) at the same or higher tier. Hides redundant tool crafts.
+ * True if every output of the recipe is already owned in a way that makes
+ * re-crafting pointless: a tool the player already has at equal/higher tier,
+ * or a one-time item the player already owns. Hides redundant crafts.
  */
-export function producesObsoleteTool(state: GameState, recipe: Recipe): boolean {
+export function producesObsoleteCraft(state: GameState, recipe: Recipe): boolean {
   if (recipe.outputs.length === 0) return false;
   for (const out of recipe.outputs) {
-    const tool = ITEMS[out.item]?.tool;
-    if (!tool) return false;
-    if (ownedToolTier(state, tool.type) < tool.tier) return false;
+    const item = ITEMS[out.item];
+    if (!item) return false;
+    const tool = item.tool;
+    if (tool) {
+      if (ownedToolTier(state, tool.type) < tool.tier) return false;
+      continue;
+    }
+    if (item.oneTime) {
+      if (ownedQty(state, out.item) <= 0) return false;
+      continue;
+    }
+    return false;
   }
   return true;
 }
