@@ -118,6 +118,19 @@ export interface PlacedMachine {
   /** Active job running on this machine, if any. */
   jobId: string | null;
   /**
+   * Items loaded into the machine, waiting to be processed. The machine pulls
+   * from this buffer instead of the player's inventory and auto-starts the
+   * next batch when one finishes — like a Minecraft furnace's input slot.
+   * Total qty across items is capped at MACHINE_INPUT_CAP.
+   */
+  input?: Record<ItemId, number>;
+  /**
+   * The recipe this machine is currently set up to run. Only items that match
+   * this recipe's inputs can be loaded; the machine auto-starts another batch
+   * after each completion while the buffer still holds enough.
+   */
+  loadedRecipeId?: RecipeId;
+  /**
    * Crop-only. The game-minute past which an unclaimed harvest "goes to seed"
    * and loses everything but the seed. Set when a recipe with goToSeedDays
    * deposits to this cell; cleared when output is taken.
