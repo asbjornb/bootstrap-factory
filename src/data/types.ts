@@ -118,6 +118,13 @@ export interface PlacedMachine {
   /** Active job running on this machine, if any. */
   jobId: string | null;
   /**
+   * Additional starts of the currently-running recipe waiting in line. When the
+   * active job finishes, the machine consumes one batch of inputs and starts
+   * the next run automatically. Cleared if the next start fails (out of inputs,
+   * wrong season, etc.).
+   */
+  queueCount?: number;
+  /**
    * Crop-only. The game-minute past which an unclaimed harvest "goes to seed"
    * and loses everything but the seed. Set when a recipe with goToSeedDays
    * deposits to this cell; cleared when output is taken.

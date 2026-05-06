@@ -796,6 +796,45 @@ function depositOutputsToInstance(
 }
 
 /**
+ * Start the next queued run on a placed machine. Returns true if a job was
+ * launched. Mutates the draft state in place. Caller is responsible for
+ * decrementing/clearing queueCount based on the result.
+ */
+function startQueuedJob(
+  state: GameState,
+  cell: PlacedMachine,
+  recipe: Recipe,
+  now: number,
+): boolean {
+  if (cell.jobId) return false;
+  if (!meetsToolReq(state, recipe.tool)) return false;
+  if (!inSeason(state, recipe)) return false;
+  for (const i of recipe.inputs) {
+    if (totalAvailableForInput(state, i) < i.qty) return false;
+  }
+  if (!tryConsumeLenient(state, recipe.inputs)) return false;
+  const dur = recipe.durationMs ?? 0;
+  if (dur <= 0) {
+    depositOutputsToInstance(state, cell, recipe);
+    for (const o of recipe.outputs) {
+      if (MACHINES[o.item]) state.everBuilt[o.item] = true;
+    }
+    return true;
+  }
+  const jobId = newJobId();
+  cell.jobId = jobId;
+  state.jobs.push({
+    id: jobId,
+    machineId: recipe.machine,
+    instanceId: cell.instanceId,
+    recipeId: recipe.id,
+    startedAt: now,
+    endsAt: now + dur * DURATION_SCALE,
+  });
+  return true;
+}
+
+/**
  * Craft a recipe. For hand recipes outputs go straight to inventory; for
  * machine recipes the call is forwarded to the first idle instance and outputs
  * land in that instance's output buffer.
@@ -840,7 +879,11 @@ export function craft(recipeId: RecipeId): CraftResult {
   return result;
 }
 
-/** Run a recipe at a specific placed machine. Outputs go into the machine's output buffer. */
+/**
+ * Run a recipe at a specific placed machine. Outputs go into the machine's
+ * output buffer. If the machine is already busy with the same recipe, this
+ * adds another run to its queue instead of failing.
+ */
 export function craftAt(instanceId: string, recipeId: RecipeId): CraftResult {
   const recipe = RECIPES[recipeId];
   if (!recipe) throw new Error(`Unknown recipe: ${recipeId}`);
@@ -852,6 +895,12 @@ export function craftAt(instanceId: string, recipeId: RecipeId): CraftResult {
       return;
     }
     if (found.cell.jobId) {
+      const running = s.jobs.find((j) => j.id === found.cell.jobId);
+      if (running && running.recipeId === recipeId) {
+        found.cell.queueCount = (found.cell.queueCount ?? 0) + 1;
+        result = { ok: true };
+        return;
+      }
       result = { ok: false, reason: "machine_busy" };
       return;
     }
@@ -895,6 +944,56 @@ export function craftAt(instanceId: string, recipeId: RecipeId): CraftResult {
     result = { ok: true };
   });
   return result;
+}
+
+/**
+ * Number of additional runs of `recipe` that the player could queue at this
+ * instance right now, given current inputs. Tag inputs and per-item inputs
+ * are both considered; the binding input wins.
+ */
+export function maxQueueable(state: GameState, recipe: Recipe): number {
+  if (recipe.inputs.length === 0) return 0;
+  let best = Infinity;
+  for (const i of recipe.inputs) {
+    const have = totalAvailableForInput(state, i);
+    const can = Math.floor(have / i.qty);
+    if (can < best) best = can;
+    if (best === 0) return 0;
+  }
+  return best === Infinity ? 0 : best;
+}
+
+/**
+ * Queue this recipe `times` runs at the given instance. If the machine is
+ * idle the first run starts immediately and the rest go into the queue.
+ * Inputs are consumed lazily — only as each run actually starts.
+ */
+export function queueCraftAt(
+  instanceId: string,
+  recipeId: RecipeId,
+  times: number,
+): CraftResult {
+  if (times <= 0) return { ok: false };
+  let last: CraftResult = { ok: false };
+  for (let i = 0; i < times; i++) {
+    last = craftAt(instanceId, recipeId);
+    if (!last.ok) break;
+  }
+  return last;
+}
+
+/** Clear the pending queue on a placed machine without affecting its current job. */
+export function cancelQueue(instanceId: string): boolean {
+  let changed = false;
+  store.update((s) => {
+    const found = findMachineInstance(s, instanceId);
+    if (!found) return;
+    if (found.cell.queueCount && found.cell.queueCount > 0) {
+      delete found.cell.queueCount;
+      changed = true;
+    }
+  });
+  return changed;
 }
 
 /** Move output buffer contents back into the player's inventory (overflow → floor). */
@@ -944,6 +1043,18 @@ export function tickJobs(now: number = gameNow()): boolean {
             if (MACHINES[o.item]) draft.everBuilt[o.item] = true;
           }
           found.cell.jobId = null;
+          // Advance the per-instance queue: if more runs are pending and we
+          // can still afford the inputs (and tool/season), start the next
+          // run immediately. Otherwise drop the queue.
+          if (found.cell.queueCount && found.cell.queueCount > 0) {
+            const started = startQueuedJob(draft, found.cell, r, now);
+            if (started) {
+              found.cell.queueCount -= 1;
+              if (found.cell.queueCount <= 0) delete found.cell.queueCount;
+            } else {
+              delete found.cell.queueCount;
+            }
+          }
         }
         // else: instance was somehow removed; output is lost.
       } else {
@@ -1772,6 +1883,7 @@ export function pickupMachine(instanceId: string): boolean {
       if (idx < 0) continue;
       const cell = r.cells[idx] as PlacedMachine;
       if (cell.jobId) return;
+      if (cell.queueCount && cell.queueCount > 0) return;
       if (Object.values(cell.output).some((q) => q > 0)) return;
       r.cells.splice(idx, 1);
       s.inventory[cell.machineId] = (s.inventory[cell.machineId] ?? 0) + 1;
