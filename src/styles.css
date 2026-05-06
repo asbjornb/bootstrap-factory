@@ -1157,6 +1157,13 @@ body.trash-armed .chest-row:hover {
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
+.ri-item-tag .name {
+  font-style: italic;
+}
+.ri-item-tag .qty {
+  color: var(--muted);
+  font-style: italic;
+}
 
 .ri-detail {
   background: var(--panel-2);
