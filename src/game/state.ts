@@ -1792,26 +1792,58 @@ export function questContext(state: GameState): import("../data/types").QuestCon
   };
 }
 
+function questUnlocked(q: (typeof ALL_QUESTS)[number], ctx: import("../data/types").QuestContext): boolean {
+  for (const p of q.prereq ?? []) if (!ctx.completed(p)) return false;
+  return q.visible ? q.visible(ctx) : true;
+}
+
 /** Mark any visible quest whose `done` predicate now holds. Mutates the draft. */
 function evaluateQuests(draft: GameState): void {
   const ctx = questContext(draft);
   const already = new Set(draft.completedQuests);
   for (const q of ALL_QUESTS) {
     if (already.has(q.id)) continue;
-    if (!q.visible(ctx)) continue;
+    if (!questUnlocked(q, ctx)) continue;
     if (q.done(ctx)) draft.completedQuests.push(q.id);
   }
 }
 
-export function questsForDisplay(state: GameState): {
-  active: typeof ALL_QUESTS;
-  completed: typeof ALL_QUESTS;
-} {
+export type QuestStatus = "done" | "active" | "locked";
+
+export interface QuestNode {
+  quest: (typeof ALL_QUESTS)[number];
+  status: QuestStatus;
+  /** Longest path from a root, used as the column index in the tree view. */
+  depth: number;
+  /** Index in `ALL_QUESTS`, used as a stable secondary sort key. */
+  order: number;
+}
+
+/** Returns every quest with computed status and tree depth, ordered by ALL_QUESTS. */
+export function questsForTree(state: GameState): QuestNode[] {
   const ctx = questContext(state);
   const completedSet = new Set(state.completedQuests);
-  const active = ALL_QUESTS.filter((q) => !completedSet.has(q.id) && q.visible(ctx));
-  const completed = ALL_QUESTS.filter((q) => completedSet.has(q.id));
-  return { active, completed };
+  const depthCache = new Map<string, number>();
+  const depthOf = (id: string): number => {
+    const cached = depthCache.get(id);
+    if (cached !== undefined) return cached;
+    const q = ALL_QUESTS.find((x) => x.id === id);
+    if (!q || !q.prereq || q.prereq.length === 0) {
+      depthCache.set(id, 0);
+      return 0;
+    }
+    let d = 0;
+    for (const p of q.prereq) d = Math.max(d, depthOf(p) + 1);
+    depthCache.set(id, d);
+    return d;
+  };
+  return ALL_QUESTS.map((q, i) => {
+    let status: QuestStatus;
+    if (completedSet.has(q.id)) status = "done";
+    else if (questUnlocked(q, ctx)) status = "active";
+    else status = "locked";
+    return { quest: q, status, depth: depthOf(q.id), order: i };
+  });
 }
 
 // ---- pinned recipes ----
