@@ -7,7 +7,6 @@ import {
   ROOM_BUILD_TOOL,
   bestToolTier,
   buildRoom,
-  cancelQueue,
   canBuildRoom,
   chestPreserveFactor,
   chestSlotCap,
@@ -18,8 +17,11 @@ import {
   hasInputsAndTool,
   hasInputsAndToolIgnoringSeason,
   inSeason,
+  inputBufferFree,
+  inputBufferTotal,
   jobForInstance,
-  maxQueueable,
+  MACHINE_INPUT_CAP,
+  maxLoadable,
   meetsToolReq,
   onTick,
   pickupChest,
@@ -27,13 +29,13 @@ import {
   placeChest,
   placeMachine,
   producesObsoleteCraft,
-  queueCraftAt,
   renameRoom,
   save,
   SEASONS,
   store,
   takeMachineOutput,
   totalAvailableForInput,
+  unloadMachine,
   withdrawFromChest,
 } from "../game/state";
 import { isTagInput } from "../data/types";
@@ -245,11 +247,13 @@ function renderMachineTile(cell: PlacedMachine): HTMLElement {
       : "idle";
   const isSelected = selectedInstanceId === cell.instanceId;
 
-  const queueCount = cell.queueCount ?? 0;
+  const bufferTotal = inputBufferTotal(cell);
   const statusLabel =
-    queueCount > 0 && status === "working"
-      ? `Working (+${queueCount} queued)`
-      : tileStatusLabel(status);
+    bufferTotal > 0 && status === "working"
+      ? `Working (${bufferTotal} loaded)`
+      : bufferTotal > 0
+        ? `${tileStatusLabel(status)} · ${bufferTotal} loaded`
+        : tileStatusLabel(status);
 
   const tile = el(
     "div",
@@ -275,14 +279,14 @@ function renderMachineTile(cell: PlacedMachine): HTMLElement {
           ])
         : null,
       el("span", { class: "tile-status small" }, statusLabel),
-      queueCount > 0
+      bufferTotal > 0
         ? el(
             "span",
             {
-              class: "tile-queue-badge small",
-              title: `${queueCount} queued run${queueCount === 1 ? "" : "s"}`,
+              class: "tile-input-badge small",
+              title: `${bufferTotal} / ${MACHINE_INPUT_CAP} items in input`,
             },
-            `+${queueCount}`,
+            `📥 ${bufferTotal}`,
           )
         : null,
     ],
@@ -342,32 +346,35 @@ function renderMachineDetail(cell: PlacedMachine): HTMLElement {
       !producesObsoleteCraft(s, r),
   );
 
-  const queueCount = cell.queueCount ?? 0;
-  const canPickup = !job && queueCount === 0 && outputEntries.length === 0;
+  const inputEntries = Object.entries(cell.input ?? {}).filter(([, q]) => q > 0);
+  const bufferTotal = inputBufferTotal(cell);
+  const canPickup = !job && outputEntries.length === 0;
   const statusText = job
-    ? queueCount > 0
-      ? `Working (+${queueCount} queued)`
+    ? bufferTotal > 0
+      ? `Working (${bufferTotal} loaded)`
       : "Working"
     : outputEntries.length > 0
       ? "Output ready"
-      : "Idle";
+      : bufferTotal > 0
+        ? `Loaded (${bufferTotal})`
+        : "Idle";
 
   return el("div", { class: "cell-detail machine-detail" }, [
     el("div", { class: "detail-head" }, [
       el("span", { class: "icon big" }, m.icon),
       el("span", { class: "detail-title" }, m.name),
       el("span", { class: "detail-status small" }, statusText),
-      queueCount > 0
+      bufferTotal > 0
         ? el(
             "button",
             {
-              class: "cancel-queue-btn small",
-              title: `Stop queueing — current job will still finish (${queueCount} pending)`,
+              class: "unload-btn small",
+              title: "Unload remaining inputs back to inventory",
               onclick: () => {
-                if (cancelQueue(cell.instanceId)) save();
+                if (unloadMachine(cell.instanceId)) save();
               },
             },
-            "Stop queue",
+            "Unload",
           )
         : null,
       el(
@@ -376,14 +383,12 @@ function renderMachineDetail(cell: PlacedMachine): HTMLElement {
           class: "pickup-btn small",
           disabled: !canPickup,
           title: canPickup
-            ? "Take this machine back into inventory"
+            ? bufferTotal > 0
+              ? "Take this machine back into inventory (loaded items refund to you)"
+              : "Take this machine back into inventory"
             : job
-              ? queueCount > 0
-                ? "Stop the queue and wait for the current job to finish"
-                : "Wait for the current job to finish"
-              : queueCount > 0
-                ? "Stop the queue first"
-                : "Empty the output buffer first",
+              ? "Wait for the current job to finish"
+              : "Empty the output buffer first",
           onclick: () => {
             if (pickupMachine(cell.instanceId)) {
               selectedInstanceId = null;
@@ -404,6 +409,26 @@ function renderMachineDetail(cell: PlacedMachine): HTMLElement {
       ),
     ]),
     job && recipe ? renderJobProgress(job.startedAt, job.endsAt, recipe) : null,
+    inputEntries.length > 0
+      ? el("div", { class: "detail-section" }, [
+          el("h4", {}, `Input · ${bufferTotal} / ${MACHINE_INPUT_CAP}`),
+          el(
+            "div",
+            { class: "input-row" },
+            inputEntries.map(([id, qty]) => {
+              const it = ITEMS[id]!;
+              return el(
+                "span",
+                {
+                  class: "input-chip",
+                  title: `${qty}× ${it.name} loaded`,
+                },
+                [el("span", { class: "icon" }, it.icon), ` ${qty}`],
+              );
+            }),
+          ),
+        ])
+      : null,
     outputEntries.length > 0
       ? el("div", { class: "detail-section" }, [
           el("h4", {}, "Output"),
@@ -485,79 +510,67 @@ function renderInstanceRecipe(cell: PlacedMachine, r: Recipe): HTMLElement {
   const out = r.outputs[0]!;
   const outItem = ITEMS[out.item]!;
   const s = store.get();
-  const job = jobForInstance(s, cell.instanceId);
-  const runningSameRecipe = !!job && job.recipeId === r.id;
   const toolOk = meetsToolReq(s, r.tool);
   const seasonOk = inSeason(s, r);
-  const inputsOk = r.inputs.every(
-    (i) => totalAvailableForInput(s, i) >= i.qty,
-  );
-  // Idle slot can start; busy-with-same-recipe slot can queue +1.
-  const canActHere = (cell.jobId === null || runningSameRecipe)
-    && toolOk
-    && seasonOk
-    && inputsOk;
-  const blockedByOther = !!cell.jobId && !runningSameRecipe;
-  const disabled = !canActHere;
-  const queueable = maxQueueable(s, r);
-  const queueCount = cell.queueCount ?? 0;
-  const showQueueAll = canActHere && queueable > 1;
+  const otherRecipeLoaded =
+    !!cell.loadedRecipeId && cell.loadedRecipeId !== r.id;
+  const loadable = maxLoadable(s, cell, r);
+  const free = inputBufferFree(cell);
+  const canLoadOne = toolOk && seasonOk && !otherRecipeLoaded && loadable >= 1;
+  const showLoadAll = canLoadOne && loadable > 1;
   const seasonNote =
     !seasonOk && r.seasons
       ? `Plant in ${r.seasons.map((i) => SEASONS[i]).join("/")}`
       : null;
+  const inputsOk = r.inputs.every(
+    (i) => totalAvailableForInput(s, i) >= i.qty,
+  );
   const primaryTitle = seasonNote
     ? seasonNote
-    : blockedByOther
-      ? `${MACHINES[r.machine]!.name} is busy with another recipe`
+    : otherRecipeLoaded
+      ? `${MACHINES[r.machine]!.name} is loaded with another recipe — unload it first`
       : !toolOk && r.tool
         ? `Need ${r.tool.type} (tier ≥${r.tool.minTier})`
         : !inputsOk
           ? `Need more inputs`
-          : runningSameRecipe
-            ? `Queue another ${out.qty}× ${outItem.name} (running +${queueCount} queued)`
-            : `Craft ${out.qty}× ${outItem.name} here`;
+          : free <= 0
+            ? `Input buffer full (${MACHINE_INPUT_CAP}/${MACHINE_INPUT_CAP})`
+            : `Load 1× ${outItem.name} into ${MACHINES[r.machine]!.name}`;
 
-  return el("div", { class: "recipe-card" + (disabled ? " locked" : "") }, [
+  return el("div", { class: "recipe-card" + (canLoadOne ? "" : " locked") }, [
     el(
       "button",
       {
         class: "recipe-craft-btn",
-        disabled: disabled,
+        disabled: !canLoadOne,
         title: primaryTitle,
         onclick: (ev: Event) => {
           const btn = ev.currentTarget as HTMLElement;
           btn.classList.add("flash");
           requestAnimationFrame(() => {
             setTimeout(() => {
-              if (craftAt(cell.instanceId, r.id).ok) save();
+              if (craftAt(cell.instanceId, r.id, 1).ok) save();
             }, 60);
           });
         },
       },
       [
         el("span", { class: "icon big" }, outItem.icon),
-        el(
-          "span",
-          {},
-          runningSameRecipe
-            ? `+1 ${outItem.name}`
-            : `${out.qty}× ${outItem.name}`,
-        ),
+        el("span", {}, `${out.qty}× ${outItem.name}`),
       ],
     ),
-    showQueueAll
+    showLoadAll
       ? el(
           "button",
           {
-            class: "recipe-queue-all-btn small",
-            title: `Queue ${queueable} run${queueable === 1 ? "" : "s"} from current inputs`,
+            class: "recipe-load-all-btn small",
+            title: `Load ${loadable} batch${loadable === 1 ? "" : "es"} (limited by inputs and ${MACHINE_INPUT_CAP}-item buffer)`,
             onclick: (ev: Event) => {
               ev.stopPropagation();
-              if (queueCraftAt(cell.instanceId, r.id, queueable).ok) save();
+              if (craftAt(cell.instanceId, r.id, loadable).ok) save();
             },
           },
-          `+${queueable}`,
+          `+${loadable}`,
         )
       : null,
     el(

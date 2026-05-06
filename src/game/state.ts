@@ -795,24 +795,150 @@ function depositOutputsToInstance(
   }
 }
 
+/** Max total qty of items a placed machine can hold in its input buffer. */
+export const MACHINE_INPUT_CAP = 25;
+
+/** Total qty of all items currently loaded in a machine's input buffer. */
+export function inputBufferTotal(cell: PlacedMachine): number {
+  let total = 0;
+  for (const q of Object.values(cell.input ?? {})) total += q;
+  return total;
+}
+
+/** Free space remaining in a machine's input buffer. */
+export function inputBufferFree(cell: PlacedMachine): number {
+  return Math.max(0, MACHINE_INPUT_CAP - inputBufferTotal(cell));
+}
+
+/** Does the buffer contain enough to run one more batch of `recipe`? */
+function bufferHasEnoughFor(
+  buffer: Record<ItemId, number>,
+  inputs: readonly RecipeInput[],
+): boolean {
+  for (const i of inputs) {
+    if (isTagInput(i)) {
+      let total = 0;
+      for (const it of itemsWithTag(i.tag)) total += buffer[it.id] ?? 0;
+      if (total < i.qty) return false;
+    } else if ((buffer[i.item] ?? 0) < i.qty) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** Drain `inputs` from the buffer in-place. Caller has verified there's enough. */
+function consumeFromBuffer(
+  buffer: Record<ItemId, number>,
+  inputs: readonly RecipeInput[],
+): void {
+  for (const i of inputs) {
+    if (isTagInput(i)) {
+      let need = i.qty;
+      for (const it of itemsWithTag(i.tag)) {
+        if (need <= 0) break;
+        const have = buffer[it.id] ?? 0;
+        const take = Math.min(need, have);
+        if (take > 0) {
+          buffer[it.id] = have - take;
+          if (buffer[it.id]! <= 0) delete buffer[it.id];
+          need -= take;
+        }
+      }
+    } else {
+      const have = buffer[i.item] ?? 0;
+      buffer[i.item] = have - i.qty;
+      if (buffer[i.item]! <= 0) delete buffer[i.item];
+    }
+  }
+}
+
 /**
- * Start the next queued run on a placed machine. Returns true if a job was
- * launched. Mutates the draft state in place. Caller is responsible for
- * decrementing/clearing queueCount based on the result.
+ * Number of additional batches of `recipe` the player could load into this
+ * machine right now, given inventory + chests and remaining buffer cap. Returns
+ * 0 if a different recipe is already loaded.
  */
-function startQueuedJob(
+export function maxLoadable(
   state: GameState,
   cell: PlacedMachine,
   recipe: Recipe,
+): number {
+  if (cell.machineId !== recipe.machine) return 0;
+  if (cell.loadedRecipeId && cell.loadedRecipeId !== recipe.id) return 0;
+  const perBatch = recipe.inputs.reduce((sum, i) => sum + i.qty, 0);
+  if (perBatch <= 0) return 0;
+  const byCap = Math.floor(inputBufferFree(cell) / perBatch);
+  let byInputs = Infinity;
+  for (const i of recipe.inputs) {
+    const have = totalAvailableForInput(state, i);
+    const can = Math.floor(have / i.qty);
+    if (can < byInputs) byInputs = can;
+  }
+  return Math.min(byCap, byInputs === Infinity ? 0 : byInputs);
+}
+
+/**
+ * Move `batches` batches of recipe inputs from inventory/chests into this
+ * machine's input buffer. Pulls perishables oldest-first. Returns the number
+ * of batches actually loaded (clamped by inventory and buffer cap).
+ */
+function loadBatchesInto(
+  state: GameState,
+  cell: PlacedMachine,
+  recipe: Recipe,
+  batches: number,
+): number {
+  const max = maxLoadable(state, cell, recipe);
+  const n = Math.min(Math.max(0, batches), max);
+  if (n <= 0) return 0;
+  cell.input = cell.input ?? {};
+  cell.loadedRecipeId = recipe.id;
+  for (let b = 0; b < n; b++) {
+    for (const i of recipe.inputs) {
+      if (isTagInput(i)) {
+        let need = i.qty;
+        for (const id of tagSpendOrder(state, i.tag)) {
+          if (need <= 0) break;
+          const have = totalAvailable(state, id);
+          const take = Math.min(need, have);
+          if (take > 0) {
+            consumeOneItem(state, id, take);
+            cell.input[id] = (cell.input[id] ?? 0) + take;
+            need -= take;
+          }
+        }
+      } else {
+        consumeOneItem(state, i.item, i.qty);
+        cell.input[i.item] = (cell.input[i.item] ?? 0) + i.qty;
+      }
+    }
+  }
+  return n;
+}
+
+/**
+ * Try to start the next batch of the loaded recipe from the machine's input
+ * buffer. Returns true if a job was kicked off (or an instant recipe ran).
+ */
+function tryStartFromBuffer(
+  state: GameState,
+  cell: PlacedMachine,
   now: number,
 ): boolean {
   if (cell.jobId) return false;
+  if (!cell.loadedRecipeId) return false;
+  const recipe = RECIPES[cell.loadedRecipeId];
+  if (!recipe) return false;
   if (!meetsToolReq(state, recipe.tool)) return false;
   if (!inSeason(state, recipe)) return false;
-  for (const i of recipe.inputs) {
-    if (totalAvailableForInput(state, i) < i.qty) return false;
+  const buffer = cell.input ?? {};
+  if (!bufferHasEnoughFor(buffer, recipe.inputs)) return false;
+  consumeFromBuffer(buffer, recipe.inputs);
+  if (Object.keys(buffer).length === 0) {
+    delete cell.input;
+  } else {
+    cell.input = buffer;
   }
-  if (!tryConsumeLenient(state, recipe.inputs)) return false;
   const dur = recipe.durationMs ?? 0;
   if (dur <= 0) {
     depositOutputsToInstance(state, cell, recipe);
@@ -843,11 +969,15 @@ export function craft(recipeId: RecipeId): CraftResult {
   const recipe = RECIPES[recipeId];
   if (!recipe) throw new Error(`Unknown recipe: ${recipeId}`);
   if (recipe.machine !== "hand") {
-    const idle = machineInstancesFor(store.get(), recipe.machine).find(
-      (m) => !m.jobId,
-    );
-    if (!idle) return { ok: false, reason: "machine_busy" };
-    return craftAt(idle.instanceId, recipeId);
+    // Prefer an instance that's already loaded with this recipe (so loads
+    // stack on the same machine), then any instance that has no recipe
+    // loaded. Skip instances loaded with a different recipe.
+    const candidates = machineInstancesFor(store.get(), recipe.machine);
+    const target =
+      candidates.find((m) => m.loadedRecipeId === recipeId) ??
+      candidates.find((m) => !m.loadedRecipeId);
+    if (!target) return { ok: false, reason: "machine_busy" };
+    return craftAt(target.instanceId, recipeId);
   }
   let result: CraftResult = { ok: false };
   store.update((s) => {
@@ -880,11 +1010,17 @@ export function craft(recipeId: RecipeId): CraftResult {
 }
 
 /**
- * Run a recipe at a specific placed machine. Outputs go into the machine's
- * output buffer. If the machine is already busy with the same recipe, this
- * adds another run to its queue instead of failing.
+ * Load `batches` runs of `recipe` into a placed machine's input buffer and
+ * — if the machine is idle and the loaded recipe is still feasible — start
+ * processing the first batch. Pulls items from inventory/chests into the
+ * buffer so the machine can run independently. If the machine is already
+ * loaded with a different recipe, returns machine_busy.
  */
-export function craftAt(instanceId: string, recipeId: RecipeId): CraftResult {
+export function craftAt(
+  instanceId: string,
+  recipeId: RecipeId,
+  batches: number = 1,
+): CraftResult {
   const recipe = RECIPES[recipeId];
   if (!recipe) throw new Error(`Unknown recipe: ${recipeId}`);
   let result: CraftResult = { ok: false };
@@ -894,13 +1030,7 @@ export function craftAt(instanceId: string, recipeId: RecipeId): CraftResult {
       result = { ok: false, reason: "machine_busy" };
       return;
     }
-    if (found.cell.jobId) {
-      const running = s.jobs.find((j) => j.id === found.cell.jobId);
-      if (running && running.recipeId === recipeId) {
-        found.cell.queueCount = (found.cell.queueCount ?? 0) + 1;
-        result = { ok: true };
-        return;
-      }
+    if (found.cell.loadedRecipeId && found.cell.loadedRecipeId !== recipeId) {
       result = { ok: false, reason: "machine_busy" };
       return;
     }
@@ -912,86 +1042,41 @@ export function craftAt(instanceId: string, recipeId: RecipeId): CraftResult {
       result = { ok: false, reason: "wrong_season" };
       return;
     }
-    for (const i of recipe.inputs) {
-      if (totalAvailableForInput(s, i) < i.qty) {
-        result = { ok: false, reason: "missing_inputs" };
-        return;
-      }
-    }
-    if (!tryConsumeLenient(s, recipe.inputs)) {
+    const loaded = loadBatchesInto(s, found.cell, recipe, batches);
+    if (loaded <= 0) {
       result = { ok: false, reason: "missing_inputs" };
       return;
     }
-    const dur = recipe.durationMs ?? 0;
-    if (dur <= 0) {
-      depositOutputsToInstance(s, found.cell, recipe);
-      for (const o of recipe.outputs) {
-        if (MACHINES[o.item]) s.everBuilt[o.item] = true;
-      }
-    } else {
-      const now = gameNow();
-      const jobId = newJobId();
-      found.cell.jobId = jobId;
-      s.jobs.push({
-        id: jobId,
-        machineId: recipe.machine,
-        instanceId: found.cell.instanceId,
-        recipeId: recipe.id,
-        startedAt: now,
-        endsAt: now + dur * DURATION_SCALE,
-      });
-    }
+    tryStartFromBuffer(s, found.cell, gameNow());
     result = { ok: true };
   });
   return result;
 }
 
 /**
- * Number of additional runs of `recipe` that the player could queue at this
- * instance right now, given current inputs. Tag inputs and per-item inputs
- * are both considered; the binding input wins.
+ * Empty a machine's input buffer, refunding the items to the player's
+ * inventory (overflow → floor). Stops auto-restart since the buffer is then
+ * empty. Does not affect the currently-running job, if any.
  */
-export function maxQueueable(state: GameState, recipe: Recipe): number {
-  if (recipe.inputs.length === 0) return 0;
-  let best = Infinity;
-  for (const i of recipe.inputs) {
-    const have = totalAvailableForInput(state, i);
-    const can = Math.floor(have / i.qty);
-    if (can < best) best = can;
-    if (best === 0) return 0;
-  }
-  return best === Infinity ? 0 : best;
-}
-
-/**
- * Queue this recipe `times` runs at the given instance. If the machine is
- * idle the first run starts immediately and the rest go into the queue.
- * Inputs are consumed lazily — only as each run actually starts.
- */
-export function queueCraftAt(
-  instanceId: string,
-  recipeId: RecipeId,
-  times: number,
-): CraftResult {
-  if (times <= 0) return { ok: false };
-  let last: CraftResult = { ok: false };
-  for (let i = 0; i < times; i++) {
-    last = craftAt(instanceId, recipeId);
-    if (!last.ok) break;
-  }
-  return last;
-}
-
-/** Clear the pending queue on a placed machine without affecting its current job. */
-export function cancelQueue(instanceId: string): boolean {
+export function unloadMachine(instanceId: string): boolean {
   let changed = false;
   store.update((s) => {
     const found = findMachineInstance(s, instanceId);
     if (!found) return;
-    if (found.cell.queueCount && found.cell.queueCount > 0) {
-      delete found.cell.queueCount;
-      changed = true;
+    const buf = found.cell.input;
+    if (!buf) {
+      if (found.cell.loadedRecipeId && !found.cell.jobId) {
+        delete found.cell.loadedRecipeId;
+        changed = true;
+      }
+      return;
     }
+    for (const [id, qty] of Object.entries(buf)) {
+      if (qty > 0) add(s, id, qty);
+    }
+    delete found.cell.input;
+    if (!found.cell.jobId) delete found.cell.loadedRecipeId;
+    changed = true;
   });
   return changed;
 }
@@ -1043,16 +1128,14 @@ export function tickJobs(now: number = gameNow()): boolean {
             if (MACHINES[o.item]) draft.everBuilt[o.item] = true;
           }
           found.cell.jobId = null;
-          // Advance the per-instance queue: if more runs are pending and we
-          // can still afford the inputs (and tool/season), start the next
-          // run immediately. Otherwise drop the queue.
-          if (found.cell.queueCount && found.cell.queueCount > 0) {
-            const started = startQueuedJob(draft, found.cell, r, now);
-            if (started) {
-              found.cell.queueCount -= 1;
-              if (found.cell.queueCount <= 0) delete found.cell.queueCount;
-            } else {
-              delete found.cell.queueCount;
+          // Auto-restart from the input buffer: if the player loaded enough
+          // for another batch, immediately start the next one.
+          if (!tryStartFromBuffer(draft, found.cell, now)) {
+            // Buffer empty (or recipe no longer feasible). Forget the recipe
+            // selection so a different one can be loaded next.
+            if (!found.cell.input || Object.keys(found.cell.input).length === 0) {
+              delete found.cell.loadedRecipeId;
+              delete found.cell.input;
             }
           }
         }
@@ -1883,8 +1966,13 @@ export function pickupMachine(instanceId: string): boolean {
       if (idx < 0) continue;
       const cell = r.cells[idx] as PlacedMachine;
       if (cell.jobId) return;
-      if (cell.queueCount && cell.queueCount > 0) return;
       if (Object.values(cell.output).some((q) => q > 0)) return;
+      // Refund any items still loaded in the input buffer.
+      if (cell.input) {
+        for (const [id, qty] of Object.entries(cell.input)) {
+          if (qty > 0) add(s, id, qty);
+        }
+      }
       r.cells.splice(idx, 1);
       s.inventory[cell.machineId] = (s.inventory[cell.machineId] ?? 0) + 1;
       ok = true;

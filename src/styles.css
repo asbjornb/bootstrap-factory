@@ -997,7 +997,7 @@ body.trash-armed .chest-row:hover {
   cursor: not-allowed;
   opacity: 0.5;
 }
-.cancel-queue-btn {
+.unload-btn {
   background: transparent;
   color: var(--muted);
   border: 1px solid var(--border);
@@ -1007,11 +1007,11 @@ body.trash-armed .chest-row:hover {
   font-size: 11px;
   line-height: 1.2;
 }
-.cancel-queue-btn:hover {
+.unload-btn:hover {
   color: var(--warn, #c66);
   border-color: var(--warn, #c66);
 }
-.tile-queue-badge {
+.tile-input-badge {
   display: inline-block;
   background: var(--accent, #5b8);
   color: #111;
@@ -1024,7 +1024,7 @@ body.trash-armed .chest-row:hover {
 .recipe-card {
   position: relative;
 }
-.recipe-queue-all-btn {
+.recipe-load-all-btn {
   position: absolute;
   top: 4px;
   right: 4px;
@@ -1038,9 +1038,26 @@ body.trash-armed .chest-row:hover {
   line-height: 1.4;
   font-variant-numeric: tabular-nums;
 }
-.recipe-queue-all-btn:hover {
+.recipe-load-all-btn:hover {
   color: var(--accent);
   border-color: var(--accent);
+}
+.input-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.input-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  background: rgba(255, 255, 255, 0.03);
 }
 .room-place-row {
   display: flex;
