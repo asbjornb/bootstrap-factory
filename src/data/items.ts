@@ -17,8 +17,8 @@ const list: Item[] = [
 
   // preserved food (long shelf life, modest nutrition loss vs. fresh). Tagged
   // "ration" so any of them can be packed for an expedition.
-  { id: "dried_berries", name: "Dried Berries", icon: "🍇", description: "Sun-and-rack dried. Keeps for a season — preserves the food, with a small loss of nourishment from the drying.", food: { satiatesMinutes: 80 }, stackSize: 32, tags: ["ration"] },
-  { id: "dried_root", name: "Dried Root", icon: "🍠", description: "Sliced thin and racked in sun and wind until leathery. Road-ready and shelf-stable, with a small loss of nourishment from the drying.", food: { satiatesMinutes: 100 }, stackSize: 32, tags: ["ration"] },
+  { id: "dried_berries", name: "Dried Berries", icon: "🍇", description: "Sun-and-rack dried. Keeps for a season — preserves the food, with a small loss of nourishment from the drying.", food: { satiatesMinutes: 80 }, tags: ["ration"] },
+  { id: "dried_root", name: "Dried Root", icon: "🍠", description: "Sliced thin and racked in sun and wind until leathery. Road-ready and shelf-stable, with a small loss of nourishment from the drying.", food: { satiatesMinutes: 100 }, tags: ["ration"] },
 
   // cooked food (campfire). Heat breaks down starches and lignin, freeing
   // calories the raw form locked away. Spoils slower than raw but isn't
@@ -30,32 +30,32 @@ const list: Item[] = [
   // hunting — raw and prepared meat. Raw meat is a poor eat on its own; the
   // payoff is in cooking, where heat unlocks the calories the gut can't reach
   // raw. Jerky is the travel form — most of the food value of cooked, kept.
-  { id: "raw_meat", name: "Raw Meat", icon: "🥩", description: "A bloody slab off the day's kill. Filling raw, but the gut barely cracks it — heat is what makes a meal of it.", food: { satiatesMinutes: 40 }, spoilsAfter: 10 * 60, stackSize: 16 },
-  { id: "cooked_meat", name: "Cooked Meat", icon: "🍖", description: "Charred outside, hot through. Heat breaks the muscle and frees calories the raw cut hoarded — a kill goes a long way once it's been on the embers.", food: { satiatesMinutes: 140 }, spoilsAfter: 48 * 60, stackSize: 16 },
-  { id: "jerky", name: "Jerky", icon: "🥓", description: "Strips dried hard on the rack. Most of the meat's calories, none of its weight or rot — the ration that travels furthest.", food: { satiatesMinutes: 110 }, stackSize: 32, tags: ["ration"] },
-  { id: "hide", name: "Hide", icon: "🟫", description: "A green hide pulled off the carcass. Stiff and unfinished — leather is a job for later, but you stash it for the day you can work it.", stackSize: 16 },
+  { id: "raw_meat", name: "Raw Meat", icon: "🥩", description: "A bloody slab off the day's kill. Filling raw, but the gut barely cracks it — heat is what makes a meal of it.", food: { satiatesMinutes: 40 }, spoilsAfter: 10 * 60 },
+  { id: "cooked_meat", name: "Cooked Meat", icon: "🍖", description: "Charred outside, hot through. Heat breaks the muscle and frees calories the raw cut hoarded — a kill goes a long way once it's been on the embers.", food: { satiatesMinutes: 140 }, spoilsAfter: 48 * 60 },
+  { id: "jerky", name: "Jerky", icon: "🥓", description: "Strips dried hard on the rack. Most of the meat's calories, none of its weight or rot — the ration that travels furthest.", food: { satiatesMinutes: 110 }, tags: ["ration"] },
+  { id: "hide", name: "Hide", icon: "🟫", description: "A green hide pulled off the carcass. Stiff and unfinished — leather is a job for later, but you stash it for the day you can work it." },
 
   // soil
   { id: "loam", name: "Loam", icon: "🟤", description: "Dark crumbly soil. Binds clay into daub." },
   { id: "clay_lump", name: "Clay Lump", icon: "🟫", description: "Wet, plastic clay. Fires into bricks." },
-  { id: "wheat_seed", name: "Wheat Seed", icon: "🌾", description: "Plant in spring. With luck the soil gives back more than it took.", stackSize: 32 },
-  { id: "sunflower_seed", name: "Sunflower Seed", icon: "🌻", description: "Bright. Pressable. Probably.", stackSize: 32 },
+  { id: "wheat_seed", name: "Wheat Seed", icon: "🌾", description: "Plant in spring. With luck the soil gives back more than it took." },
+  { id: "sunflower_seed", name: "Sunflower Seed", icon: "🌻", description: "Bright. Pressable. Probably." },
 
   // agriculture — wheat chain
-  { id: "wheat_grain", name: "Wheat Grain", icon: "🌾", description: "Threshed wheat. Gritty raw — milled to flour, baked to bread.", stackSize: 32 },
-  { id: "flour", name: "Flour", icon: "🥣", description: "Stone-milled wheat. Lasts the winter on a shelf, but only becomes food once it meets a fire.", stackSize: 32 },
-  { id: "bread", name: "Bread", icon: "🍞", description: "Flour and a fire and a little patience. The first food worth carrying that the season can't take from you.", food: { satiatesMinutes: 110 }, spoilsAfter: 32 * 60, stackSize: 16, tags: ["ration"] },
+  { id: "wheat_grain", name: "Wheat Grain", icon: "🌾", description: "Threshed wheat. Gritty raw — milled to flour, baked to bread." },
+  { id: "flour", name: "Flour", icon: "🥣", description: "Stone-milled wheat. Lasts the winter on a shelf, but only becomes food once it meets a fire." },
+  { id: "bread", name: "Bread", icon: "🍞", description: "Flour and a fire and a little patience. The first food worth carrying that the season can't take from you.", food: { satiatesMinutes: 110 }, spoilsAfter: 32 * 60, tags: ["ration"] },
 
   // agriculture — sunflower chain
-  { id: "sunflower_head", name: "Sunflower Head", icon: "🌻", description: "A heavy disc dense with seeds. Press for oil; what's left over feeds you another day.", stackSize: 16 },
-  { id: "sunflower_oil", name: "Sunflower Oil", icon: "🫙", description: "Pale gold and slow to pour. The first ingredient that doesn't come out of the ground or off a tree.", stackSize: 16 },
-  { id: "seedcake", name: "Seedcake", icon: "🟫", description: "Sunflower pulp left behind in the press. Mealy, oily, filling.", food: { satiatesMinutes: 60 }, stackSize: 32, tags: ["ration"] },
+  { id: "sunflower_head", name: "Sunflower Head", icon: "🌻", description: "A heavy disc dense with seeds. Press for oil; what's left over feeds you another day." },
+  { id: "sunflower_oil", name: "Sunflower Oil", icon: "🫙", description: "Pale gold and slow to pour. The first ingredient that doesn't come out of the ground or off a tree." },
+  { id: "seedcake", name: "Seedcake", icon: "🟫", description: "Sunflower pulp left behind in the press. Mealy, oily, filling.", food: { satiatesMinutes: 60 }, tags: ["ration"] },
 
   // agriculture — flax chain
-  { id: "flax_seed", name: "Flax Seed", icon: "🌱", description: "Plant in spring. The stalks are the prize — straight fibers that twist into stronger cordage than wild brush.", stackSize: 32 },
-  { id: "flax_stalks", name: "Flax Stalks", icon: "🌾", description: "Bundled stems pulled at harvest. Useless until the retting pit softens the bast away from the woody core.", stackSize: 32 },
-  { id: "retted_flax", name: "Retted Flax", icon: "🪶", description: "Long pale fibers, water-rotted free of their stems. Spins clean to thread.", stackSize: 32 },
-  { id: "linen_thread", name: "Linen Thread", icon: "🧵", description: "Tight-spun flax. Thin enough to weave, strong enough to twist.", stackSize: 32 },
+  { id: "flax_seed", name: "Flax Seed", icon: "🌱", description: "Plant in spring. The stalks are the prize — straight fibers that twist into stronger cordage than wild brush." },
+  { id: "flax_stalks", name: "Flax Stalks", icon: "🌾", description: "Bundled stems pulled at harvest. Useless until the retting pit softens the bast away from the woody core." },
+  { id: "retted_flax", name: "Retted Flax", icon: "🪶", description: "Long pale fibers, water-rotted free of their stems. Spins clean to thread." },
+  { id: "linen_thread", name: "Linen Thread", icon: "🧵", description: "Tight-spun flax. Thin enough to weave, strong enough to twist." },
   { id: "strong_cordage", name: "Strong Cordage", icon: "🪢", description: "Plied linen rope. Holds where plant-fiber twist parts, and one length goes where two of the rough kind used to.", tags: ["cordage"] },
 
   // quarry
@@ -78,10 +78,10 @@ const list: Item[] = [
   { id: "crucible", name: "Crucible", icon: "🍶", description: "A fired clay vessel for alloying. Cracks after one pour." },
 
   // metal ingots
-  { id: "copper_ingot", name: "Copper Ingot", icon: "🟧", description: "Smelted copper. Soft enough to cold-hammer.", stackSize: 32 },
-  { id: "tin_ingot", name: "Tin Ingot", icon: "◽", description: "Smelted tin. Useless alone, transformative in alloy.", stackSize: 32 },
-  { id: "bronze_ingot", name: "Bronze Ingot", icon: "🟡", description: "Copper and tin married in a crucible. The first real metal.", stackSize: 32 },
-  { id: "iron_ingot", name: "Iron Ingot", icon: "⚙️", description: "Hammered out of a bloom. Hard, stubborn, worth it.", stackSize: 32 },
+  { id: "copper_ingot", name: "Copper Ingot", icon: "🟧", description: "Smelted copper. Soft enough to cold-hammer." },
+  { id: "tin_ingot", name: "Tin Ingot", icon: "◽", description: "Smelted tin. Useless alone, transformative in alloy." },
+  { id: "bronze_ingot", name: "Bronze Ingot", icon: "🟡", description: "Copper and tin married in a crucible. The first real metal." },
+  { id: "iron_ingot", name: "Iron Ingot", icon: "⚙️", description: "Hammered out of a bloom. Hard, stubborn, worth it." },
 
   // tools (tier 1 = flint, 2 = copper, 3 = bronze, 4 = iron)
   { id: "flint_hatchet", name: "Flint Hatchet", icon: "🪓", description: "A knapped flint head lashed to a haft. Cuts wood, just barely.", tool: { type: "axe", tier: 1 }, stackSize: 1 },
@@ -129,7 +129,7 @@ export function item(id: ItemId): Item {
 }
 
 export function stackSize(id: ItemId): number {
-  return ITEMS[id]?.stackSize ?? 64;
+  return ITEMS[id]?.stackSize ?? 25;
 }
 
 /** All items that carry the given tag. */
