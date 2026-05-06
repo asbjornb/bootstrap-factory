@@ -474,14 +474,16 @@ const list: Recipe[] = [
     outputs: [{ item: "roast_tuber", qty: 1 }],
     durationMs: 3000,
   },
+  // Heat-set egg. Smaller jump than meat or root, but eggs are easy
+  // calories — the cook still pays at any plausible stick cost.
   {
-    id: "wilt_greens",
+    id: "cook_egg",
     machine: "campfire",
     inputs: [
-      { item: "spring_shoots", qty: 1 },
+      { item: "bird_egg", qty: 1 },
       { item: "stick", qty: 1 },
     ],
-    outputs: [{ item: "wilted_greens", qty: 1 }],
+    outputs: [{ item: "cooked_egg", qty: 1 }],
     durationMs: 2000,
   },
   // Cooking meat is where heat actually pays. A raw cut is barely food —
