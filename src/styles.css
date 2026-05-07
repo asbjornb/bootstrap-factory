@@ -270,6 +270,44 @@ body {
   font-size: 36px;
 }
 
+/* PNG-backed icons (rendered as <img>); size matches the emoji equivalents. */
+.icon-img {
+  display: inline-block;
+  vertical-align: middle;
+  object-fit: contain;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+.icon.icon-img {
+  width: 22px;
+  height: 22px;
+}
+.icon.big.icon-img {
+  width: 30px;
+  height: 30px;
+}
+.icon.huge.icon-img {
+  width: 48px;
+  height: 48px;
+}
+.slot-icon.icon-img {
+  width: 30px;
+  height: 30px;
+}
+.tile-icon.icon-img {
+  width: 40px;
+  height: 40px;
+  margin-top: 4px;
+}
+.drop-icon-glyph.icon-img {
+  width: 22px;
+  height: 22px;
+}
+.gather-btn .icon.icon-img {
+  width: 24px;
+  height: 24px;
+}
+
 /* timebar (horizontal, lives in the top bar) */
 .timebar {
   display: flex;

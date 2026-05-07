@@ -27,6 +27,7 @@ import {
 import { isTagInput } from "../data/types";
 import type { Biome, GatherAction, ItemId, RecipeInput, ResourceNode } from "../data/types";
 import { clear, el } from "./dom";
+import { iconEl } from "./icon";
 
 export function mountGather(root: HTMLElement): void {
   const render = () => {
@@ -346,7 +347,7 @@ function renderDropIcons(available: ItemId[], toolLocked: Set<ItemId>): HTMLElem
             ? `${item?.name ?? id} (better tool yields more)`
             : item?.name ?? id,
         },
-        item?.icon ?? "❓",
+        [iconEl(id as string, item?.icon ?? "❓", "drop-icon-glyph")],
       );
     }),
   );
