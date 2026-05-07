@@ -47,6 +47,7 @@ import type {
   Room,
 } from "../data/types";
 import { clear, el } from "./dom";
+import { iconEl } from "./icon";
 import {
   applyTrash,
   isTrashMode,
@@ -200,7 +201,7 @@ function renderRoom(
                   if (placeMachine(room.id, m.id)) save();
                 },
               },
-              [el("span", { class: "icon" }, m.icon), ` ${m.name}`],
+              [iconEl(m.id, m.icon), ` ${m.name}`],
             );
           }),
           ...placeableChests.map((id) => {
@@ -216,7 +217,7 @@ function renderRoom(
                   if (placeChest(room.id, id)) save();
                 },
               },
-              [el("span", { class: "icon" }, it.icon), ` ${it.name}`],
+              [iconEl(it.id, it.icon), ` ${it.name}`],
             );
           }),
         ])
@@ -266,7 +267,7 @@ function renderMachineTile(cell: PlacedMachine): HTMLElement {
       onclick: () => selectCell(cell.instanceId),
     },
     [
-      el("span", { class: "tile-icon" }, m.icon),
+      iconEl(m.id, m.icon, "tile-icon"),
       el("span", { class: "tile-name small" }, m.name),
       job
         ? el("div", { class: "job-progress tile-progress" }, [
@@ -321,7 +322,7 @@ function renderChestTile(cell: PlacedChest): HTMLElement {
       onclick: () => selectCell(cell.instanceId),
     },
     [
-      el("span", { class: "tile-icon" }, it.icon),
+      iconEl(it.id, it.icon, "tile-icon"),
       el("span", { class: "tile-name small" }, it.name),
       el("span", { class: "tile-status small" }, `${used}/${cap}`),
     ],
@@ -361,7 +362,7 @@ function renderMachineDetail(cell: PlacedMachine): HTMLElement {
 
   return el("div", { class: "cell-detail machine-detail" }, [
     el("div", { class: "detail-head" }, [
-      el("span", { class: "icon big" }, m.icon),
+      iconEl(m.id, m.icon, "icon big"),
       el("span", { class: "detail-title" }, m.name),
       el("span", { class: "detail-status small" }, statusText),
       bufferTotal > 0
@@ -423,7 +424,7 @@ function renderMachineDetail(cell: PlacedMachine): HTMLElement {
                   class: "input-chip",
                   title: `${qty}× ${it.name} loaded`,
                 },
-                [el("span", { class: "icon" }, it.icon), ` ${qty}`],
+                [iconEl(it.id, it.icon), ` ${qty}`],
               );
             }),
           ),
@@ -447,7 +448,7 @@ function renderMachineDetail(cell: PlacedMachine): HTMLElement {
                   },
                 },
                 [
-                  el("span", { class: "icon" }, it.icon),
+                  iconEl(it.id, it.icon),
                   ` ${qty}`,
                 ],
               );
@@ -488,7 +489,7 @@ function renderJobProgress(start: number, end: number, recipe: Recipe): HTMLElem
   const outItem = out ? ITEMS[out.item] : undefined;
   return el("div", { class: "detail-section job-running" }, [
     el("div", { class: "job-row" }, [
-      el("span", { class: "icon" }, outItem?.icon ?? "⏳"),
+      iconEl(outItem?.id, outItem?.icon ?? "⏳"),
       el(
         "span",
         { class: "job-label small" },
@@ -555,7 +556,7 @@ function renderInstanceRecipe(cell: PlacedMachine, r: Recipe): HTMLElement {
         },
       },
       [
-        el("span", { class: "icon big" }, outItem.icon),
+        iconEl(outItem.id, outItem.icon, "icon big"),
         el("span", {}, `${out.qty}× ${outItem.name}`),
       ],
     ),
@@ -593,7 +594,7 @@ function renderInstanceRecipe(cell: PlacedMachine, r: Recipe): HTMLElement {
                 },
               },
               [
-                el("span", { class: "icon" }, first?.icon ?? "•"),
+                iconEl(first?.id, first?.icon ?? "•"),
                 ` ${i.qty} any ${i.tag}`,
               ],
             );
@@ -609,7 +610,7 @@ function renderInstanceRecipe(cell: PlacedMachine, r: Recipe): HTMLElement {
               },
             },
             [
-              el("span", { class: "icon" }, ITEMS[i.item]!.icon),
+              iconEl(i.item, ITEMS[i.item]!.icon),
               ` ${i.qty}`,
             ],
           );
@@ -670,7 +671,7 @@ function renderChestDetail(roomId: string, chest: PlacedChest): HTMLElement {
 
   return el("div", { class: "cell-detail chest-detail" }, [
     el("div", { class: "detail-head" }, [
-      el("span", { class: "icon big" }, chestItem.icon),
+      iconEl(chestItem.id, chestItem.icon, "icon big"),
       el("span", { class: "detail-title" }, chestItem.name),
       el("span", { class: "detail-status small" }, statusText),
       el(
@@ -716,7 +717,7 @@ function renderChestDetail(roomId: string, chest: PlacedChest): HTMLElement {
                   if (depositToChest(roomId, chest.instanceId, id)) save();
                 },
               },
-              [el("span", { class: "icon" }, it.icon), ` ${qty}`],
+              [iconEl(it.id, it.icon), ` ${qty}`],
             );
           }),
         ])
@@ -776,7 +777,7 @@ function renderChestSlotGrid(
         },
       },
       [
-        el("span", { class: "slot-icon" }, it.icon),
+        iconEl(it.id, it.icon, "slot-icon"),
         el("span", { class: "slot-qty" }, String(f.qty)),
       ],
     );

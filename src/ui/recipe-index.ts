@@ -17,6 +17,7 @@ import { isPinned, SEASONS, store, togglePin } from "../game/state";
 import { isTagInput } from "../data/types";
 import type { Biome, DropEntry, GatherAction, ItemId, Recipe, RecipeInput, ResourceNode } from "../data/types";
 import { clear, el } from "./dom";
+import { iconEl } from "./icon";
 
 type Selection =
   | { kind: "item"; id: ItemId }
@@ -116,7 +117,7 @@ function renderItemList(): HTMLElement {
         onclick: () => selectTag(tag),
       },
       [
-        el("span", { class: "icon" }, sample?.icon ?? "🏷️"),
+        iconEl(sample?.id, sample?.icon ?? "🏷️"),
         el("span", { class: "name" }, `Any ${tag}`),
         el("span", { class: "qty muted small" }, "tag"),
       ],
@@ -134,7 +135,7 @@ function renderItemList(): HTMLElement {
         onclick: () => selectItem(i.id),
       },
       [
-        el("span", { class: "icon" }, i.icon),
+        iconEl(i.id, i.icon),
         el("span", { class: "name" }, i.name),
         owned > 0 ? el("span", { class: "qty" }, String(owned)) : null,
       ],
@@ -179,7 +180,7 @@ function renderItemDetail(id: ItemId): HTMLElement {
       state.history.length > 0
         ? el("button", { class: "back-btn", onclick: back, title: "Back" }, "←")
         : null,
-      el("span", { class: "icon huge" }, it.icon),
+      iconEl(it.id, it.icon, "icon huge"),
       el("div", {}, [
         el("h3", {}, it.name),
         el("p", { class: "muted small" }, it.description ?? ""),
@@ -259,7 +260,7 @@ function renderTagDetail(tag: string): HTMLElement {
     state.history.length > 0
       ? el("button", { class: "back-btn", onclick: back, title: "Back" }, "←")
       : null,
-    el("span", { class: "icon huge" }, matches[0]?.icon ?? "🏷️"),
+    iconEl(matches[0]?.id, matches[0]?.icon ?? "🏷️", "icon huge"),
     el("div", {}, [
       el("h3", {}, `Any ${tag}`),
       el(
@@ -521,7 +522,7 @@ function dropChip(d: DropEntry): HTMLElement {
       onclick: () => selectItem(d.item),
     },
     [
-      el("span", { class: "icon" }, it.icon),
+      iconEl(it.id, it.icon),
       el("span", {}, ` ${qty} ${it.name} (${pct}${tool}${machine}${season})`),
     ],
   );
@@ -545,7 +546,7 @@ function inputChip(
         onclick: () => selectTag(i.tag),
       },
       [
-        el("span", { class: "icon" }, first?.icon ?? "•"),
+        iconEl(first?.id, first?.icon ?? "•"),
         el("span", {}, ` ${i.qty} any ${i.tag}`),
       ],
     );
@@ -568,7 +569,7 @@ function stackChip(
       onclick: () => selectItem(id),
     },
     [
-      el("span", { class: "icon" }, it.icon),
+      iconEl(it.id, it.icon),
       el("span", {}, opts.hideQty ? ` ${it.name}` : ` ${qty} ${it.name}`),
     ],
   );

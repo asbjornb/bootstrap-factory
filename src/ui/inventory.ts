@@ -14,6 +14,7 @@ import {
 } from "../game/state";
 import type { ItemId } from "../data/types";
 import { clear, el } from "./dom";
+import { iconEl } from "./icon";
 import { selectItem } from "./recipe-index";
 import {
   applyTrash,
@@ -67,7 +68,7 @@ function renderSlot(
       onclick: () => opts.onClick(fill.id),
     },
     [
-      el("span", { class: "slot-icon" }, it.icon),
+      iconEl(it.id, it.icon, "slot-icon"),
       el("span", { class: "slot-qty" }, String(fill.qty)),
     ],
   );
@@ -255,7 +256,7 @@ function renderPantry(
             },
           },
           [
-            el("span", { class: "icon" }, it.icon),
+            iconEl(it.id, it.icon),
             el("span", {}, `Eat ${it.name}`),
             el("span", { class: "eat-mins" }, `+${mins}m`),
             el("span", { class: "eat-qty" }, `×${qty}`),

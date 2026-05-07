@@ -2,6 +2,7 @@ import { ITEMS } from "../data/items";
 import { questsForTree, store, type QuestNode } from "../game/state";
 import type { ItemId } from "../data/types";
 import { clear, el } from "./dom";
+import { iconEl } from "./icon";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -137,7 +138,7 @@ function requiredChip(id: ItemId, opts: QuestbookOptions): HTMLElement {
       title: `${it.name} — open in recipe index`,
       onclick: () => opts.onOpenItem?.(id),
     },
-    [el("span", { class: "icon" }, it.icon), el("span", {}, ` ${it.name}`)],
+    [iconEl(it.id, it.icon), el("span", {}, ` ${it.name}`)],
   );
 }
 

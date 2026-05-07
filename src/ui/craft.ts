@@ -22,6 +22,7 @@ import { isTagInput } from "../data/types";
 import type { ItemId, Machine, Recipe, RecipeInput } from "../data/types";
 import type { MachineJob } from "../game/state";
 import { clear, el } from "./dom";
+import { iconEl } from "./icon";
 
 interface CraftOptions {
   onOpenItem: (id: ItemId) => void;
@@ -124,7 +125,7 @@ export function mountCraft(root: HTMLElement, opts: CraftOptions): void {
 function machineHeader(m: Machine, capacity: number, busy: number): HTMLElement {
   const free = capacity - busy;
   return el("h3", {}, [
-    el("span", { class: "icon" }, m.icon),
+    iconEl(m.id, m.icon),
     " ",
     m.name,
     capacity > 0
@@ -148,7 +149,7 @@ function jobRow(j: MachineJob): HTMLElement {
   const end = j.endsAt;
   const pct = Math.min(100, Math.max(0, ((gameNow() - start) / (end - start)) * 100));
   return el("div", { class: "job-row" }, [
-    el("span", { class: "icon" }, outItem?.icon ?? "⏳"),
+    iconEl(outItem?.id, outItem?.icon ?? "⏳"),
     el(
       "span",
       { class: "job-label small" },
@@ -217,7 +218,7 @@ function recipeButton(
           },
         },
         [
-          el("span", { class: "icon big" }, outItem.icon),
+          iconEl(outItem.id, outItem.icon, "icon big"),
           el("span", {}, `${out.qty}× ${outItem.name}`),
         ],
       ),
@@ -247,7 +248,7 @@ function recipeButton(
                   },
                 },
                 [
-                  el("span", { class: "icon" }, first?.icon ?? "•"),
+                  iconEl(first?.id, first?.icon ?? "•"),
                   ` ${pinned && short ? `${have}/${i.qty}` : i.qty} ${label}`,
                 ],
               );
@@ -268,7 +269,7 @@ function recipeButton(
                 },
               },
               [
-                el("span", { class: "icon" }, ITEMS[i.item]!.icon),
+                iconEl(i.item, ITEMS[i.item]!.icon),
                 ` ${pinned && short ? `${have}/${i.qty}` : i.qty}`,
               ],
             );
