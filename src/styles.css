@@ -128,82 +128,25 @@ body {
   color: var(--bg);
 }
 
-/* shell: left rail + main area */
+/* shell: two columns — left (inventory + gather), right (rooms + workshop) */
 .app-shell {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
   gap: 12px;
   padding: 12px;
   align-items: start;
 }
-.rail {
+.shell-col {
   display: flex;
   flex-direction: column;
   gap: 12px;
   min-width: 0;
-  position: sticky;
-  top: 56px;
-  max-height: calc(100vh - 68px);
-  overflow-y: auto;
-}
-.main-area {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  min-width: 0;
-}
-
-/* tabs */
-.tab-strip {
-  display: flex;
-  gap: 2px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 12px;
-}
-.tab {
-  background: transparent;
-  border: 1px solid transparent;
-  border-bottom: none;
-  color: var(--muted);
-  padding: 8px 14px;
-  border-radius: 6px 6px 0 0;
-  cursor: pointer;
-  font-size: 13px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: -1px;
-  transition: color 60ms ease, background-color 60ms ease, border-color 60ms ease;
-}
-.tab:hover {
-  color: var(--text);
-  background: var(--panel-2);
-}
-.tab.active {
-  color: var(--accent);
-  background: var(--panel);
-  border-color: var(--border);
-  border-bottom-color: var(--panel);
-}
-.tab-icon {
-  font-size: 15px;
-  line-height: 1;
-}
-.tab-pane {
-  display: none;
-}
-.tab-pane.active {
-  display: block;
 }
 
 @media (max-width: 900px) {
   .app-shell {
     grid-template-columns: 1fr;
-  }
-  .rail {
-    position: static;
-    max-height: none;
   }
   .topbar {
     flex-wrap: wrap;
@@ -211,9 +154,6 @@ body {
   .topbar-timebar {
     order: 3;
     flex-basis: 100%;
-  }
-  .tab-label {
-    display: none;
   }
 }
 
