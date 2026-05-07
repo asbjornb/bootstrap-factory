@@ -11,15 +11,6 @@ import { mountRooms } from "./ui/rooms";
 import { mountTimebar } from "./ui/timebar";
 import { showToast, startMachineCraftedToasts } from "./ui/toast";
 
-type TabId = "gather" | "workshop" | "rooms";
-
-interface TabDef {
-  id: TabId;
-  label: string;
-  icon: string;
-  mount: HTMLElement;
-}
-
 function buildShell(): void {
   const app = document.getElementById("app")!;
   app.innerHTML = "";
@@ -69,56 +60,15 @@ function buildShell(): void {
     ]),
   ]);
 
-  // Main shell: left inventory rail + tabbed main area
+  // Two-column shell: left = inventory + gather, right = rooms + workshop
   const inventoryMount = el("div", { id: "inventory-mount" });
+  const gatherMount = el("div", { id: "gather-mount" });
+  const roomsMount = el("div", { id: "rooms-mount" });
+  const craftMount = el("div", { id: "craft-mount" });
 
-  const gatherMount = el("div", { id: "gather-mount", class: "tab-pane" });
-  const craftMount = el("div", { id: "craft-mount", class: "tab-pane" });
-  const roomsMount = el("div", { id: "rooms-mount", class: "tab-pane" });
-
-  const tabs: TabDef[] = [
-    { id: "gather", label: "Gather", icon: "🌿", mount: gatherMount },
-    { id: "workshop", label: "Workshop", icon: "🔨", mount: craftMount },
-    { id: "rooms", label: "Rooms", icon: "🏠", mount: roomsMount },
-  ];
-
-  const tabButtons: Record<TabId, HTMLButtonElement> = {} as Record<TabId, HTMLButtonElement>;
-  let activeTab: TabId = "gather";
-  const setTab = (id: TabId) => {
-    activeTab = id;
-    for (const t of tabs) {
-      const isActive = t.id === id;
-      t.mount.classList.toggle("active", isActive);
-      tabButtons[t.id].classList.toggle("active", isActive);
-      tabButtons[t.id].setAttribute("aria-selected", isActive ? "true" : "false");
-    }
-  };
-
-  const tabStrip = el(
-    "nav",
-    { class: "tab-strip", role: "tablist" },
-    tabs.map((t) => {
-      const btn = el(
-        "button",
-        {
-          class: "tab",
-          role: "tab",
-          title: t.label,
-          onclick: () => setTab(t.id),
-        },
-        [el("span", { class: "tab-icon" }, t.icon), el("span", { class: "tab-label" }, t.label)],
-      );
-      tabButtons[t.id] = btn;
-      return btn;
-    }),
-  );
-
-  const rail = el("aside", { class: "rail" }, [inventoryMount]);
-  const mainArea = el("section", { class: "main-area" }, [
-    tabStrip,
-    el("div", { class: "tab-panes" }, [gatherMount, craftMount, roomsMount]),
-  ]);
-  const shell = el("main", { class: "app-shell" }, [rail, mainArea]);
+  const leftCol = el("aside", { class: "shell-col shell-col-left" }, [inventoryMount, gatherMount]);
+  const rightCol = el("section", { class: "shell-col shell-col-right" }, [roomsMount, craftMount]);
+  const shell = el("main", { class: "app-shell" }, [leftCol, rightCol]);
 
   app.appendChild(topbar);
   app.appendChild(shell);
@@ -137,8 +87,6 @@ function buildShell(): void {
   mountGather(gatherMount);
   mountCraft(craftMount, { onOpenItem: openItemInRecipes, onOpenTag: openTagInRecipes });
   mountRooms(roomsMount, { onOpenItem: openItemInRecipes, onOpenTag: openTagInRecipes });
-
-  setTab(activeTab);
 
   document.addEventListener("keydown", (ev) => {
     const target = ev.target as HTMLElement | null;
