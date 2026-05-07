@@ -38,8 +38,12 @@ export function mountGather(root: HTMLElement): void {
 
     const cards: (HTMLElement | null)[] = [];
 
-    // Always-on gather actions (currently empty by design).
+    // Always-on gather actions. Tool-gated actions (e.g. stalk_game needs a
+    // spear) stay hidden until the player owns at least a tier-1 of that tool.
     for (const a of ALL_GATHER_ACTIONS) {
+      if (a.requiresTool && bestToolTier(s, a.requiresTool.type) < a.requiresTool.minTier) {
+        continue;
+      }
       cards.push(renderGatherCard(a, s, busy, job));
     }
 
@@ -147,19 +151,23 @@ function renderGatherCard(
         onclick: (ev: Event) => flashThen(ev, () => gather(a.id)),
       },
       [
-        el("span", { class: "icon" }, a.icon),
-        el("span", { class: "gather-name" }, a.name),
-        el("span", { class: "gather-time" }, `⏱ ${formatMinutes(at)}`),
-        renderDropIcons(available, toolLocked),
-        renderWarns({
-          toolOk,
-          toolReq: a.requiresTool,
-          dayOk,
-          budgetOk,
-          activeTime: at,
-          provOk,
-          provisions: a.provisions,
-        }),
+        el("span", { class: "gather-row gather-row-head" }, [
+          el("span", { class: "icon" }, a.icon),
+          el("span", { class: "gather-name" }, a.name),
+          el("span", { class: "gather-time" }, `⏱ ${formatMinutes(at)}`),
+        ]),
+        el("span", { class: "gather-row gather-row-foot" }, [
+          renderDropIcons(available, toolLocked),
+          renderWarns({
+            toolOk,
+            toolReq: a.requiresTool,
+            dayOk,
+            budgetOk,
+            activeTime: at,
+            provOk,
+            provisions: a.provisions,
+          }),
+        ]),
       ],
     ),
     isThisActive ? renderProgressBar(job!.startedAt, job!.endsAt) : null,
@@ -193,17 +201,21 @@ function renderExploreCard(
         onclick: (ev: Event) => flashThen(ev, () => exploreBiome(biome.id)),
       },
       [
-        el("span", { class: "icon" }, biome.icon),
-        el("span", { class: "gather-name" }, `Explore ${biome.name}`),
-        el("span", { class: "gather-time" }, `⏱ ${formatMinutes(at)}`),
-        renderWarns({
-          toolOk: true,
-          dayOk,
-          budgetOk,
-          activeTime: at,
-          provOk,
-          provisions: biome.provisions,
-        }),
+        el("span", { class: "gather-row gather-row-head" }, [
+          el("span", { class: "icon" }, biome.icon),
+          el("span", { class: "gather-name" }, `Explore ${biome.name}`),
+          el("span", { class: "gather-time" }, `⏱ ${formatMinutes(at)}`),
+        ]),
+        el("span", { class: "gather-row gather-row-foot" }, [
+          renderWarns({
+            toolOk: true,
+            dayOk,
+            budgetOk,
+            activeTime: at,
+            provOk,
+            provisions: biome.provisions,
+          }),
+        ]),
       ],
     ),
     isThisActive ? renderProgressBar(job!.startedAt, job!.endsAt) : null,
@@ -235,17 +247,21 @@ function renderWanderCard(
         onclick: (ev: Event) => flashThen(ev, () => wander()),
       },
       [
-        el("span", { class: "icon" }, "🧭"),
-        el("span", { class: "gather-name" }, "Wander Further"),
-        el("span", { class: "gather-time" }, `⏱ ${formatMinutes(at)}`),
-        renderWarns({
-          toolOk: true,
-          dayOk,
-          budgetOk,
-          activeTime: at,
-          provOk: true,
-          provisions: undefined,
-        }),
+        el("span", { class: "gather-row gather-row-head" }, [
+          el("span", { class: "icon" }, "🧭"),
+          el("span", { class: "gather-name" }, "Wander Further"),
+          el("span", { class: "gather-time" }, `⏱ ${formatMinutes(at)}`),
+        ]),
+        el("span", { class: "gather-row gather-row-foot" }, [
+          renderWarns({
+            toolOk: true,
+            dayOk,
+            budgetOk,
+            activeTime: at,
+            provOk: true,
+            provisions: undefined,
+          }),
+        ]),
       ],
     ),
     isThisActive ? renderProgressBar(job!.startedAt, job!.endsAt) : null,
@@ -309,22 +325,26 @@ function renderNodeCard(
         onclick: (ev: Event) => flashThen(ev, () => harvestNode(node.id)),
       },
       [
-        el("span", { class: "icon" }, node.icon),
-        el("span", { class: "gather-name" }, node.name),
-        el("span", { class: "gather-time" }, `⏱ ${formatMinutes(at)}`),
-        renderDropIcons(available, toolLocked),
-        charges > 0
-          ? el("span", { class: "node-charges", title: `${charges} charges left` }, `×${charges}`)
-          : null,
-        renderWarns({
-          toolOk,
-          toolReq: node.requiresTool,
-          dayOk,
-          budgetOk,
-          activeTime: at,
-          provOk: true,
-          provisions: undefined,
-        }),
+        el("span", { class: "gather-row gather-row-head" }, [
+          el("span", { class: "icon" }, node.icon),
+          el("span", { class: "gather-name" }, node.name),
+          el("span", { class: "gather-time" }, `⏱ ${formatMinutes(at)}`),
+        ]),
+        el("span", { class: "gather-row gather-row-foot" }, [
+          renderDropIcons(available, toolLocked),
+          charges > 0
+            ? el("span", { class: "node-charges", title: `${charges} charges left` }, `×${charges}`)
+            : null,
+          renderWarns({
+            toolOk,
+            toolReq: node.requiresTool,
+            dayOk,
+            budgetOk,
+            activeTime: at,
+            provOk: true,
+            provisions: undefined,
+          }),
+        ]),
       ],
     ),
     isThisActive ? renderProgressBar(job!.startedAt, job!.endsAt) : null,

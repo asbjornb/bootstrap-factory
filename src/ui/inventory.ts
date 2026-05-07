@@ -267,7 +267,10 @@ function renderPantry(
                     class: "eat-fresh small",
                     title: "Time until the oldest batch spoils",
                   },
-                  `🪰 ${fresh}${batchSuffix}`,
+                  [
+                    iconEl("ui_spoilage", "🪰", "eat-fresh-icon"),
+                    el("span", {}, ` ${fresh}${batchSuffix}`),
+                  ],
                 )
               : null,
           ],
