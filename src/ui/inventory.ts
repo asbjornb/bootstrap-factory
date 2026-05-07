@@ -230,7 +230,7 @@ function renderPantry(
   const now = gameMinutes(state);
   return el("div", { class: "pantry" }, [
     el("h3", {}, "Pantry"),
-    el("p", { class: "muted small" }, "Eat to refill your time-budget."),
+    el("p", { class: "muted small" }, "Eat to refill stamina."),
     el(
       "div",
       { class: "pantry-list" },

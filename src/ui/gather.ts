@@ -373,7 +373,7 @@ function renderWarns(c: WarnContext): HTMLElement | null {
     icons.push(warnIcon("💤", `Needs ${formatMinutes(c.activeTime)} day-time — sleep first`));
   }
   if (!c.budgetOk) {
-    icons.push(warnIcon("🍞", `Needs ${formatMinutes(c.activeTime)} energy — eat first`));
+    icons.push(warnIcon("🍞", `Needs ${formatMinutes(c.activeTime)} stamina — eat first`));
   }
   if (c.provisions) {
     const label = `Pack: ${c.provisions.map(provisionLabel).join(", ")}`;
@@ -444,7 +444,7 @@ function gateReason(
   if (busyOther) return "Another action is in progress";
   if (!toolOk && toolReq) return `Needs ${toolReq.type} (tier ≥ ${toolReq.minTier})`;
   if (!dayOk) return `Needs ${formatMinutes(activeTime)} day-time — sleep first`;
-  if (!budgetOk) return `Needs ${formatMinutes(activeTime)} energy — eat first`;
+  if (!budgetOk) return `Needs ${formatMinutes(activeTime)} stamina — eat first`;
   if (!provOk) return `Pack rations first`;
   return null;
 }
